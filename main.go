@@ -33,16 +33,9 @@ func main() {
 			fmt.Fprintf(os.Stderr, "ERROR: The --repo argument is required. Run \"%s --help\" for full usage info.", app.Name)
 			os.Exit(1)
 		}
-		//name := "someone"
-		//if c.NArg() > 0 {
-		//	name = c.Args()[0]
-		//}
-		//if c.String("repo") == "josh" {
-		//	println("Hola")
-		//} else {
-		//	println("Hello")
-		//}
-		releases, err := FetchReleases(c.String("repo"), c.String("github-oauth-token"))
+
+		// Get the tags for the given repo
+		tags, err := FetchTags(c.String("repo"), c.String("github-oauth-token"))
 		if err != nil {
 			if err.errorCode == 401 {
 				fmt.Fprintf(os.Stderr, getErrorMessage(401, err.details))
@@ -53,7 +46,10 @@ func main() {
 			}
 		}
 
-		fmt.Printf("%v", releases)
+		// Find the specific release that matches the latest version constraint
+		//tag
+
+		fmt.Printf("%v", tags)
 	}
 
 	app.Run(os.Args)

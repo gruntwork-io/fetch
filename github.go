@@ -8,7 +8,7 @@ import (
 	"encoding/json"
 )
 
-type GitHubRepo struct {
+type gitHubRepo struct {
 	Owner string // The GitHub account name under which the repo exists
 	Name  string // The GitHub repo name
 }
@@ -27,13 +27,14 @@ type gitHubTagsCommitApiResponse struct {
 	Url string // The URL at which additional API information can be found for the given commit
 }
 
-func FetchReleases(githubRepoUrl string, gitHubOAuthToken string) ([]string, *fetchError) {
+// Fetch all tags from the given GitHub repo
+func FetchTags(githubRepoUrl string, gitHubOAuthToken string) ([]string, *fetchError) {
 	repo, err := ExtractUrlIntoGitHubRepo(githubRepoUrl)
 	if err != nil {
 		return []string{}, newErr(err)
 	}
 
-	// Make an HTTP request with the gitHubOAuthToken in the header
+	// Make an HTTP request, possibly with the gitHubOAuthToken in the header
 	httpClient := &http.Client{}
 	req, err := http.NewRequest("GET", fmt.Sprintf("https://api.github.com/repos/%s/%s/tags", repo.Owner, repo.Name), nil)
 	if err != nil {
@@ -78,21 +79,22 @@ func FetchReleases(githubRepoUrl string, gitHubOAuthToken string) ([]string, *fe
 	return tagsString, newEmptyError()
 }
 
-func ExtractUrlIntoGitHubRepo(url string) (GitHubRepo, error) {
+// Convert a URL into a GitHubRepo struct
+func ExtractUrlIntoGitHubRepo(url string) (gitHubRepo, error) {
 	if url[0:17] == "http://github.com" {
 		tokens := strings.Split(url[18:], "/")
-		return GitHubRepo{
+		return gitHubRepo{
 			Owner: tokens[0],
 			Name: tokens[1],
 		}, nil
 	} else if url[0:18] == "https://github.com" {
 		tokens := strings.Split(url[19:], "/")
-		return GitHubRepo{
+		return gitHubRepo{
 			Owner: tokens[0],
 			Name: tokens[1],
 		}, nil
 	} else {
-		return GitHubRepo{}, fmt.Errorf("GitHub Repo URL %s did not begin with http://github.com or https://github.com", url)
+		return gitHubRepo{}, fmt.Errorf("GitHub Repo URL %s did not begin with http://github.com or https://github.com", url)
 	}
 }
 

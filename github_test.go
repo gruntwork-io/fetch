@@ -2,6 +2,7 @@ package main
 
 import (
 	"testing"
+	"os"
 )
 
 func TestGetListOfReleasesFromGitHubRepo(t *testing.T) {
@@ -15,12 +16,11 @@ func TestGetListOfReleasesFromGitHubRepo(t *testing.T) {
 		{"https://github.com/brikis98/ping-play", "v0.0.13", "v0.0.2", ""},
 
 		// Private repo
-		// For the security-minded, this GitHub oAuth Token is for a dummy GitHub account with limited privileges.
-		{"https://github.com/gruntwork-io/fetch-test-private", "v0.0.2", "v0.0.2", "5eed5aa8ac6fb700b9dd850f29ddbff42a755514"},
+		{"https://github.com/gruntwork-io/fetch-test-private", "v0.0.2", "v0.0.2", os.Getenv("GITHUB_OAUTH_TOKEN")},
 	}
 
 	for _, tc := range cases {
-		releases, err := FetchReleases(tc.repoUrl, tc.gitHubOAuthToken)
+		releases, err := FetchTags(tc.repoUrl, tc.gitHubOAuthToken)
 		if err != nil {
 			t.Fatalf("error fetching releases: %s", err)
 		}
