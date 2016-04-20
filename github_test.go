@@ -6,17 +6,21 @@ import (
 
 func TestGetListOfReleasesFromGitHubRepo(t *testing.T) {
 	cases := []struct {
-		repoUrl string
-		lastReleaseTag string
-		firstReleaseTag string
+		repoUrl          string
+		lastReleaseTag   string
+		firstReleaseTag  string
+		gitHubOAuthToken string
 	}{
 		// These tests are obviously brittle. Suggestions welcome on a more durable way to test.
-		//{"https://github.com/gruntwork-io/script-modules", "v0.0.19", "v0.0.1"}, // private repo, requires GitHub oAuth Token
-		{"https://github.com/brikis98/ping-play", "v0.0.13", "v0.0.2"},
+		{"https://github.com/brikis98/ping-play", "v0.0.13", "v0.0.2", ""},
+
+		// Private repo
+		// For the security-minded, this GitHub oAuth Token is for a dummy GitHub account with limited privileges.
+		{"https://github.com/gruntwork-io/fetch-test-private", "v0.0.2", "v0.0.2", "5eed5aa8ac6fb700b9dd850f29ddbff42a755514"},
 	}
 
 	for _, tc := range cases {
-		releases, err := FetchReleases(tc.repoUrl)
+		releases, err := FetchReleases(tc.repoUrl, tc.gitHubOAuthToken)
 		if err != nil {
 			t.Fatalf("error fetching releases: %s", err)
 		}
@@ -29,12 +33,12 @@ func TestGetListOfReleasesFromGitHubRepo(t *testing.T) {
 			t.Fatalf("expected non-empty list of releases for repo %s, but no releases were found", tc.repoUrl)
 		}
 
-		if releases[len(releases)-1] != tc.firstReleaseTag {
+		if releases[len(releases) - 1] != tc.firstReleaseTag {
 			t.Fatalf("error parsing github releases for repo %s. expected first release = %s. actual = %s", tc.repoUrl, tc.firstReleaseTag, releases[0])
 		}
 
 		if releases[0] != tc.lastReleaseTag {
-			t.Fatalf("error parsing github releases for repo %s. expected first release = %s. actual = %s", tc.repoUrl, tc.lastReleaseTag, releases[len(releases)-1])
+			t.Fatalf("error parsing github releases for repo %s. expected first release = %s. actual = %s", tc.repoUrl, tc.lastReleaseTag, releases[len(releases) - 1])
 		}
 	}
 }
@@ -42,8 +46,8 @@ func TestGetListOfReleasesFromGitHubRepo(t *testing.T) {
 func TestExtractUrlIntoGitHubRepo(t *testing.T) {
 	cases := []struct {
 		repoUrl string
-		owner string
-		name string
+		owner   string
+		name    string
 	}{
 		{"https://github.com/brikis98/ping-play", "brikis98", "ping-play"},
 		{"http://github.com/brikis98/ping-play", "brikis98", "ping-play"},

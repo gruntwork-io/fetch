@@ -27,15 +27,26 @@ type gitHubTagsCommitApiResponse struct {
 	Url string // The URL at which additional API information can be found for the given commit
 }
 
-func FetchReleases(githubRepoUrl string) ([]string, error) {
+func FetchReleases(githubRepoUrl string, gitHubOAuthToken string) ([]string, *fetchError) {
 	repo, err := ExtractUrlIntoGitHubRepo(githubRepoUrl)
 	if err != nil {
-		return []string{}, err
+		return []string{}, newErr(err)
 	}
 
-	resp, err := http.Get(fmt.Sprintf("https://api.github.com/repos/%s/%s/tags", repo.Owner, repo.Name))
+	// Make an HTTP request with the gitHubOAuthToken in the header
+	httpClient := &http.Client{}
+	req, err := http.NewRequest("GET", fmt.Sprintf("https://api.github.com/repos/%s/%s/tags", repo.Owner, repo.Name), nil)
 	if err != nil {
-		return []string{}, err
+		return []string{}, newErr(err)
+	}
+
+	if gitHubOAuthToken != "" {
+		req.Header.Set("Authorization", fmt.Sprintf("token %s", gitHubOAuthToken))
+	}
+
+	resp, err := httpClient.Do(req)
+	if err != nil {
+		return []string{}, newErr(err)
 	}
 	if resp.StatusCode != 200 {
 		// Convert the resp.Body to a string
@@ -43,7 +54,8 @@ func FetchReleases(githubRepoUrl string) ([]string, error) {
 		buf.ReadFrom(resp.Body)
 		respBody := buf.String()
 
-		return []string{}, fmt.Errorf("Received HTTP Response %d while fetching releases for GitHub URL %s. Full HTTP response: %s", resp.StatusCode, githubRepoUrl, respBody)
+		// We leverage the HTTP Response Code as our ErrorCode here.
+		return []string{}, newError(resp.StatusCode, fmt.Sprintf("Received HTTP Response %d while fetching releases for GitHub URL %s. Full HTTP response: %s", resp.StatusCode, githubRepoUrl, respBody))
 	}
 
 	// Convert the response body to a byte array
@@ -55,7 +67,7 @@ func FetchReleases(githubRepoUrl string) ([]string, error) {
 	var tags []gitHubTagsApiResponse
 	err = json.Unmarshal(jsonResp, &tags)
 	if err != nil {
-		return []string{}, err
+		return []string{}, newErr(err)
 	}
 
 	var tagsString []string
@@ -63,7 +75,7 @@ func FetchReleases(githubRepoUrl string) ([]string, error) {
 		tagsString = append(tagsString, tag.Name)
 	}
 
-	return tagsString, nil
+	return tagsString, newEmptyError()
 }
 
 func ExtractUrlIntoGitHubRepo(url string) (GitHubRepo, error) {
