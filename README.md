@@ -1,8 +1,8 @@
 # fetch
 
-fetch will download a specific release of a GitHub repo subject to the [Semantic Versioning](http://semver.org/) constraints you impose.
+fetch will download a file or folder from a specific tag of a GitHub repo, subject to the [Semantic Versioning](http://semver.org/) constraints you impose.
 
-It is well-suited to downloading the latest version of a file or set of files published in a GitHub repo such that you get 
+It is well-suited to downloading the latest version of a file or folder published in a GitHub repo such that you get 
 the latest non-breaking-change version. Basically, it's like a package manager, but for arbitrary GitHub repos.
 
 ## Motivation
@@ -14,11 +14,15 @@ we wish to verify the integrity of the git commit being downloaded.
 ## Installation
 Download the binary from the [GitHub Releases](https://github.com/gruntwork-io/script-modules/releases) tab. 
 
+## Assumptions
+fetch assumes that a repo's tags are in the format `vx.y.z` or `x.y.z` to support Semantic Versioning parsing. Repos that
+use git tags not in this format cannot be used with fetch.
+
 ## Usage
 
 #### General Usage
 ```
-fetch --repo=<github-repo-url> --version=<version-constraint> /repo/path/to/file/or/directory /output/path/to/file/or/directory
+fetch --repo=<github-repo-url> --tag=<version-constraint> /repo/path/to/file/or/directory /output/path/to/file/or/directory
 ```
 
 Run `fetch --help` to see more information about each argument. See [Version Constraint Operators](#version-constraint-operators)
@@ -30,14 +34,14 @@ Download `/modules/cloudwatch-log-aggregation/install-cloudwatch-logs-agent.sh` 
 `/tmp/script-modules/cloudwatch-log-aggregation`:
 
 ```
-fetch --repo=https://github.com/gruntwork-io/script-modules --version=~>0.1.5 /modules/cloudwatch-log-aggregation/install-cloudwatch-logs-agent.sh /tmp/cloudwatch-log-aggregation/
+fetch --repo=https://github.com/gruntwork-io/script-modules --tag=~>0.1.5 /modules/cloudwatch-log-aggregation/install-cloudwatch-logs-agent.sh /tmp/cloudwatch-log-aggregation/
 ```
 
 Download all files in `/modules/cloudwatch-log-aggregation` from a GitHub tagged release where the tag is exactly 0.1.5, and save them to `/tmp/cloudwatch-log-aggregation/`. 
 `/tmp/script-modules/cloudwatch-log-aggregation`:
 
 ```
-fetch --repo=https://github.com/gruntwork-io/script-modules --version=~>0.1.5 /modules/cloudwatch-log-aggregation /tmp/cloudwatch-log-aggregation
+fetch --repo=https://github.com/gruntwork-io/script-modules --tag=~>0.1.5 /modules/cloudwatch-log-aggregation /tmp/cloudwatch-log-aggregation
 
 ```
 
