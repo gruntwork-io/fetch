@@ -34,14 +34,22 @@ Download `/modules/cloudwatch-log-aggregation/install-cloudwatch-logs-agent.sh` 
 `/tmp/script-modules/cloudwatch-log-aggregation`:
 
 ```
-fetch --repo=https://github.com/gruntwork-io/script-modules --tag=~>0.1.5 /modules/cloudwatch-log-aggregation/install-cloudwatch-logs-agent.sh /tmp/cloudwatch-log-aggregation/
+fetch --repo="https://github.com/gruntwork-io/script-modules" --tag="~>0.1.5" /modules/cloudwatch-log-aggregation/install-cloudwatch-logs-agent.sh /tmp/cloudwatch-log-aggregation/
 ```
 
 Download all files in `/modules/cloudwatch-log-aggregation` from a GitHub tagged release where the tag is exactly 0.1.5, and save them to `/tmp/cloudwatch-log-aggregation/`. 
 `/tmp/script-modules/cloudwatch-log-aggregation`:
 
 ```
-fetch --repo=https://github.com/gruntwork-io/script-modules --tag=~>0.1.5 /modules/cloudwatch-log-aggregation /tmp/cloudwatch-log-aggregation
+fetch --repo="https://github.com/gruntwork-io/script-modules" --tag="~>0.1.5" /modules/cloudwatch-log-aggregation /tmp/cloudwatch-log-aggregation
+
+```
+
+Download all files in `/modules/cloudwatch-log-aggregation` from a private GitHub repo using the GitHUb oAuth Token "123". Get the release whose tag is exactly 0.1.5, and save the files to `/tmp/cloudwatch-log-aggregation/`. 
+`/tmp/script-modules/cloudwatch-log-aggregation`:
+
+```
+fetch --repo="https://github.com/gruntwork-io/script-modules" --tag="~>0.1.5" --github-oauth-token="123" /modules/cloudwatch-log-aggregation /tmp/cloudwatch-log-aggregation
 
 ```
 

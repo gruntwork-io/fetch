@@ -47,9 +47,20 @@ func main() {
 		}
 
 		// Find the specific release that matches the latest version constraint
-		//tag
+		tag, err := getLatestAcceptableTag(c.String("tag"), tags)
+		if err != nil {
+			if err.errorCode == 100 {
+				fmt.Fprintf(os.Stderr, getErrorMessage(100, err.details))
+			} else {
+				panic(err)
+			}
+		}
 
-		fmt.Printf("%v", tags)
+		// Download that release as a tar.gz or .zip file
+
+		// Unzip, move the files we need to our destination, and delete the remaining files
+
+		fmt.Printf("%v", tag)
 	}
 
 	app.Run(os.Args)
@@ -66,6 +77,14 @@ func getVersion(version string, versionPreRelease string) string {
 
 func getErrorMessage(errorCode int, errorDetails string) string {
 	switch errorCode {
+	case 100:
+		return fmt.Sprintf(`
+ERROR: The --tag value you entered is not a valid constraint expression.
+See https://github.com/gruntwork-io/fetch#version-constraint-operators for examples.
+
+Underlying error message:
+%s
+`, errorDetails)
 	case 401:
 		return fmt.Sprintf(`
 ERROR: Received an HTTP 401 Response when attempting to fetch your files.
