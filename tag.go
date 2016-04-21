@@ -45,5 +45,13 @@ func getLatestAcceptableTag(tagConstraint string, tags []string) (string, *fetch
 		}
 	}
 
-	return latestAcceptableVersion.String(), nil
+	// The tag name may have started with a "v" or other string. If so, re-apply that string now
+	var latestTag string
+	for _, originalTagName := range tags {
+		if strings.Contains(originalTagName, latestAcceptableVersion.String()) {
+			latestTag = originalTagName
+		}
+	}
+
+	return latestTag, nil
 }

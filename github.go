@@ -28,7 +28,7 @@ type gitHubTagsCommitApiResponse struct {
 }
 
 // Fetch all tags from the given GitHub repo
-func FetchTags(githubRepoUrl string, gitHubOAuthToken string) ([]string, *fetchError) {
+func FetchTags(githubRepoUrl string, githubToken string) ([]string, *fetchError) {
 	repo, err := ExtractUrlIntoGitHubRepo(githubRepoUrl)
 	if err != nil {
 		return []string{}, newErr(err)
@@ -41,8 +41,8 @@ func FetchTags(githubRepoUrl string, gitHubOAuthToken string) ([]string, *fetchE
 		return []string{}, newErr(err)
 	}
 
-	if gitHubOAuthToken != "" {
-		req.Header.Set("Authorization", fmt.Sprintf("token %s", gitHubOAuthToken))
+	if githubToken != "" {
+		req.Header.Set("Authorization", fmt.Sprintf("token %s", githubToken))
 	}
 
 	resp, err := httpClient.Do(req)

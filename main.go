@@ -12,7 +12,7 @@ func main() {
 	app.Usage = "download a file or folder from a specific release of a GitHub repo subject to the Semantic Versioning constraints you impose"
 	app.Version = getVersion(Version, VersionPrerelease)
 
-	app.Flags = []cli.Flag {
+	app.Flags = []cli.Flag{
 		cli.StringFlag{
 			Name: "repo",
 			Usage: "Required. Fully qualified URL of the GitHub repo.",
@@ -28,39 +28,66 @@ func main() {
 	}
 
 	app.Action = func(c *cli.Context) {
+
+		repoUrl := c.String("repo")
+		tagConstraint := c.String("tag")
+		githubToken := c.String("github-oauth-token")
+		// repoFilePath := ""
+		// localFileDst := ""
+
 		// Validate required args
-		if c.String("repo") == "" {
+		if repoUrl == "" {
 			fmt.Fprintf(os.Stderr, "ERROR: The --repo argument is required. Run \"%s --help\" for full usage info.", app.Name)
 			os.Exit(1)
 		}
 
 		// Get the tags for the given repo
-		tags, err := FetchTags(c.String("repo"), c.String("github-oauth-token"))
+		tags, err := FetchTags(repoUrl, githubToken)
 		if err != nil {
 			if err.errorCode == 401 {
 				fmt.Fprintf(os.Stderr, getErrorMessage(401, err.details))
+				os.Exit(1)
 			} else if err.errorCode == 404 {
 				fmt.Fprintf(os.Stderr, getErrorMessage(404, err.details))
+				os.Exit(1)
 			} else {
 				panic(err)
 			}
 		}
 
 		// Find the specific release that matches the latest version constraint
-		tag, err := getLatestAcceptableTag(c.String("tag"), tags)
+		latestTag, err := getLatestAcceptableTag(tagConstraint, tags)
 		if err != nil {
 			if err.errorCode == 100 {
 				fmt.Fprintf(os.Stderr, getErrorMessage(100, err.details))
+				os.Exit(1)
 			} else {
 				panic(err)
 			}
 		}
 
-		// Download that release as a tar.gz or .zip file
+		// Download that release as a .zip file
+		fmt.Printf("Downloading tag \"%s\" of GitHub repo %s...\n", latestTag, repoUrl)
+
+		repo, goErr := ExtractUrlIntoGitHubRepo(repoUrl)
+		if goErr != nil {
+			panic(err)
+		}
+
+		localZipFilePath, localFolderContainingZipFilePath, err := downloadGithubZipFile(repo.Owner, repo.Name, latestTag, githubToken)
+		if err != nil {
+			panic(err)
+		}
+		defer os.RemoveAll(localFolderContainingZipFilePath)
+		fmt.Println(localZipFilePath)
+		fmt.Println(localFolderContainingZipFilePath)
 
 		// Unzip, move the files we need to our destination, and delete the remaining files
+		//defer deleteLocalFiles(localFolderPathContainingZipFile)
+		//localZipFileExplodedPath := unzip(filePath)
+		//moveFiles(localZipFileExplodedPath, repoFilePath, localFileDst)
 
-		fmt.Printf("%v", tag)
+		fmt.Printf("Download and file extraction complete.")
 	}
 
 	app.Run(os.Args)
@@ -87,7 +114,7 @@ Underlying error message:
 `, errorDetails)
 	case 401:
 		return fmt.Sprintf(`
-ERROR: Received an HTTP 401 Response when attempting to fetch your files.
+ERROR: Received an HTTP 401 Response when attempting to query the repo for its tags.
 
 This means that either your GitHub oAuth Token is invalid, or that the token is valid but is being used to request access
 to either a public repo or a private repo to which you don't have access.
@@ -97,7 +124,7 @@ Underlying error message:
 `, errorDetails)
 	case 404:
 		return fmt.Sprintf(`
-ERROR: Received an HTTP 404 Response when attempting to fetch your files.
+ERROR: Received an HTTP 404 Response when attempting to query the repo for its tags.
 
 This means that either no GitHub repo exists at the URL provided, or that you don't have permission to access it.
 If the URL is correct, you may need to pass in a --github-oauth-token.
