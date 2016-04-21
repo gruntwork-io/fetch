@@ -5,6 +5,8 @@ import (
 )
 
 func TestGetLatestAcceptableTag(t *testing.T) {
+	t.Parallel()
+
 	cases := []struct {
 		tagConstraint string
 		tags          []string
@@ -39,6 +41,8 @@ func TestGetLatestAcceptableTag(t *testing.T) {
 }
 
 func TestGetLatestAcceptableTagOnEmptyConstraint(t *testing.T) {
+	t.Parallel()
+
 	cases := []struct {
 		tagConstraint string
 		tags          []string
@@ -61,6 +65,8 @@ func TestGetLatestAcceptableTagOnEmptyConstraint(t *testing.T) {
 }
 
 func TestGetLatestAcceptableTagOnMalformedConstraint(t *testing.T) {
+	t.Parallel()
+
 	cases := []struct {
 		tagConstraint string
 	}{

@@ -8,6 +8,8 @@ import (
 )
 
 func TestDownloadZipFile(t *testing.T) {
+	t.Parallel()
+
 	cases := []struct {
 		repoOwner   string
 		repoName    string
@@ -39,6 +41,8 @@ func TestDownloadZipFile(t *testing.T) {
 }
 
 func TestDownloadZipFileWithBadRepoValues(t *testing.T) {
+	t.Parallel()
+
 	cases := []struct {
 		repoOwner   string
 		repoName    string
@@ -65,6 +69,8 @@ func TestDownloadZipFileWithBadRepoValues(t *testing.T) {
 }
 
 func TestExtractFiles(t *testing.T) {
+	t.Parallel()
+
 	cases := []struct {
 		localFilePath     string
 		filePathToExtract string

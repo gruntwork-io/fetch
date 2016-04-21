@@ -91,3 +91,4 @@ Specifically, this includes:
 - Capture final two args properly from CLI
 - Add circle.yml
 - Introduce code verification using something like GPG signatures or published checksums
+- Explicitly test for exotic repo and org names

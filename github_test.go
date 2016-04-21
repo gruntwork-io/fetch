@@ -6,6 +6,8 @@ import (
 )
 
 func TestGetListOfReleasesFromGitHubRepo(t *testing.T) {
+	t.Parallel()
+
 	cases := []struct {
 		repoUrl          string
 		lastReleaseTag   string
@@ -44,6 +46,8 @@ func TestGetListOfReleasesFromGitHubRepo(t *testing.T) {
 }
 
 func TestExtractUrlIntoGitHubRepo(t *testing.T) {
+	t.Parallel()
+
 	cases := []struct {
 		repoUrl string
 		owner   string
@@ -71,7 +75,9 @@ func TestExtractUrlIntoGitHubRepo(t *testing.T) {
 	}
 }
 
-func TextExtractUrlThrowsErrorOnMalformedUrl(t *testing.T) {
+func TestExtractUrlThrowsErrorOnMalformedUrl(t *testing.T) {
+	t.Parallel()
+
 	cases := []struct {
 		repoUrl string
 	}{
