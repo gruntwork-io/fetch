@@ -5,4 +5,3 @@
 # https://github.com/mitchellh/gox
 #
 gox -os "darwin linux windows" -output bin/fetch_{{.OS}}_{{.Arch}}
-gox -os "windows" -output bin/fetch_{{.OS}}_{{.Arch}}.exe
