@@ -11,6 +11,7 @@ func main() {
 	app := cli.NewApp()
 	app.Name = "fetch"
 	app.Usage = "download a file or folder from a specific release of a public or private GitHub repo subject to the Semantic Versioning constraints you impose"
+	app.UsageText = "fetch [global options] [<repo-download-filter>] <local-download-path>\n   (See https://github.com/gruntwork-io/fetch for additional docs.)"
 	app.Version = getVersion(Version, VersionPrerelease)
 
 	app.Flags = []cli.Flag{
@@ -46,17 +47,33 @@ func runFetchWrapper (c *cli.Context) {
 // Run the fetch program
 func runFetch (c *cli.Context) error {
 
+	// Validate required flags
+	if c.String("repo") == "" {
+		return fmt.Errorf("The --repo flag is required. Run \"fetch --help\" for full usage info.")
+	}
+
 	repoUrl := c.String("repo")
 	tagConstraint := c.String("tag")
 	githubToken := c.String("github-oauth-token")
 
-	// TODO: process repoFilePath and localFileDst args from command line
-	repoFilePath := "/"
-	localFileDst := "/Users/josh/temp"
+	// Validate args
+	if len(c.Args()) == 0 || len(c.Args()) > 2 {
+		return fmt.Errorf("Missing required arguments. Run \"fetch --help\" for full usage info.")
+	}
 
-	// Validate required args
-	if repoUrl == "" {
-		return fmt.Errorf("The --repo argument is required. Run \"fetch --help\" for full usage info.")
+	var repoDownloadFilter string
+	var localFileDst string
+
+	// Assume the <repo-download-filter> arg is missing, so set a default
+	if len(c.Args()) == 1 {
+		repoDownloadFilter = "/"
+		localFileDst = c.Args()[0]
+	}
+
+	// We have two args so load both
+	if len(c.Args()) == 2 {
+		repoDownloadFilter = c.Args()[0]
+		localFileDst = c.Args()[1]
 	}
 
 	// Get the tags for the given repo
@@ -67,7 +84,7 @@ func runFetch (c *cli.Context) error {
 		} else if err.errorCode == REPO_DOES_NOT_EXIST_OR_ACCESS_DENIED {
 			return errors.New(getErrorMessage(REPO_DOES_NOT_EXIST_OR_ACCESS_DENIED, err.details))
 		} else {
-			return fmt.Errorf("Unknown error occurred while getting tags from GitHub repo: %s", err)
+			return fmt.Errorf("Error occurred while getting tags from GitHub repo: %s", err)
 		}
 	}
 
@@ -77,7 +94,7 @@ func runFetch (c *cli.Context) error {
 		if err.errorCode == INVALID_TAG_CONSTRAINT_EXPRESSION {
 			return errors.New(getErrorMessage(INVALID_TAG_CONSTRAINT_EXPRESSION, err.details))
 		} else {
-			return fmt.Errorf("Unknown error occurred while computing latest tag that satisfies version contraint expression: %s", err)
+			return fmt.Errorf("Error occurred while computing latest tag that satisfies version contraint expression: %s", err)
 		}
 	}
 
@@ -86,7 +103,7 @@ func runFetch (c *cli.Context) error {
 
 	repo, goErr := ParseUrlIntoGitHubRepo(repoUrl)
 	if goErr != nil {
-		return fmt.Errorf("Unknown error occurred while parsing GitHub URL: %s", err)
+		return fmt.Errorf("Error occurred while parsing GitHub URL: %s", err)
 	}
 
 	gitHubCommit := GitHubCommit{
@@ -96,14 +113,14 @@ func runFetch (c *cli.Context) error {
 
 	localZipFilePath, err := downloadGithubZipFile(gitHubCommit, githubToken)
 	if err != nil {
-		return fmt.Errorf("Unknown error occurred while downloading zip file from GitHub repo: %s", err)
+		return fmt.Errorf("Error occurred while downloading zip file from GitHub repo: %s", err)
 	}
 	defer cleanupZipFile(localZipFilePath)
 
 	// Unzip and move the files we need to our destination
 	fmt.Printf("Unzipping...\n")
-	if goErr = extractFiles(localZipFilePath, repoFilePath, localFileDst); err != nil {
-		return fmt.Errorf("Unknown error occurred while extracting files from GitHub zip file: %s", err)
+	if goErr = extractFiles(localZipFilePath, repoDownloadFilter, localFileDst); goErr != nil {
+		return fmt.Errorf("Error occurred while extracting files from GitHub zip file: %s", goErr)
 	}
 
 	fmt.Println("Download and file extraction complete.")

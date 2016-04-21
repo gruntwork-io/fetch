@@ -7,27 +7,42 @@ It is well-suited to downloading the latest version of a file or folder publishe
 the latest non-breaking-change version. Basically, it's like a package manager, but for arbitrary GitHub repos.
 
 ## Motivation
+
 [Gruntwork](http://gruntwork.io) helps software teams get up and running on AWS with DevOps best practices and world-class 
 infrastructure in about 2 weeks. Sometimes we publish scripts that clients use in their infrastructure, and we want clients
 to auto-download the latest non-breaking version of a script when we publish updates. In addition, for security reasons,
 we wish to verify the integrity of the git commit being downloaded.
- 
+
 ## Installation
+
 Download the binary from the [GitHub Releases](https://github.com/gruntwork-io/script-modules/releases) tab. 
 
 ## Assumptions
+
 fetch assumes that a repo's tags are in the format `vX.Y.Z` or `X.Y.Z` to support Semantic Versioning parsing. Repos that
 use git tags not in this format cannot be used with fetch.
 
 ## Usage
 
 #### General Usage
+
 ```
 fetch \
---repo=<github-repo-url> --tag=<version-constraint> /repo/path/to/file/or/directory /output/path/to/file/or/directory
+--repo=<github-repo-url> --tag=<version-constraint> [<repo-download-filter>] <local-download-path>
 ```
 
-Run `fetch --help` to see more information about each argument. See [Version Constraint Operators](#version-constraint-operators)
+- `<repo-download-filter>` 
+  **Optional**.
+  If blank, all files in the repo will be downloaded. Otherwise, only files located in the given path
+  will be downloaded. 
+  - Example: `/` Download all files in the repo
+  - Example: `/folder` Download only files in the `/folder` path and below from the repo
+- `<local-download-path>`
+  **Required**.
+  The local path where all files should be downloaded.
+  - Example: `/tmp` Download all files to `/tmp`
+
+Run `fetch --help` to see more information about the flags, some of which are required. See [Version Constraint Operators](#version-constraint-operators)
 for examples of version constraints you can use.
 
 #### Example 1
@@ -88,8 +103,8 @@ Specifically, this includes:
 | `~>1.0`                    | The latest version that is greater than `1.0` and less than `2.0` |
 
 ## TODO
-- Capture final two args properly from CLI
+
 - Add circle.yml
 - Introduce code verification using something like GPG signatures or published checksums
 - Explicitly test for exotic repo and org names
-- Consider streamlining code for error handling
+- Apply stricter parsing for repo-filter arg

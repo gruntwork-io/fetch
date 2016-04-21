@@ -60,7 +60,7 @@ func downloadGithubZipFile(gitHubCommit GitHubCommit, gitHubToken string) (strin
 	return zipFilePath, nil
 }
 
-// Decompresse the file at zipFileAbsPath and move only those files under filesToExtractFromZipPath to localPath
+// Decompress the file at zipFileAbsPath and move only those files under filesToExtractFromZipPath to localPath
 func extractFiles(zipFilePath, filesToExtractFromZipPath, localPath string) error {
 
 	// Open the zip file for reading.
