@@ -70,3 +70,9 @@ Specifically, this includes:
 | `<=1.0.7`                  | The latest version that's less than or equal to `1.0.7` |
 | `~>1.0.7`                  | The latest version that is greater than `1.0.7` and less than `1.1.0` |
 | `~>1.0`                    | The latest version that is greater than `1.0` and less than `2.0` |
+
+## TODO
+- Finish implementing `extractFiles()` function
+- Capture final two args properly from CLI
+- Add circle.yml
+- Introduce code verification using something like GPG signatures or published checksums
