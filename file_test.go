@@ -3,6 +3,8 @@ package main
 import (
 	"os"
 	"testing"
+	"path/filepath"
+	"io/ioutil"
 )
 
 func TestDownloadZipFile(t *testing.T) {
@@ -43,5 +45,26 @@ func TestDownloadZipFileWithBadRepoValues(t *testing.T) {
 		if err == nil {
 			t.Fatalf("Expected error for bad repo values: %s/%s:%s", tc.repoOwner, tc.repoName, tc.gitTag)
 		}
+	}
+}
+
+func TestExtractFiles(t *testing.T) {
+	cases := []struct {
+		localFilePath    string
+		expectedNumFiles int
+	}{
+		{"test-fixtures/fetch-test-public-0.0.1.zip", 1},
+		{"test-fixtures/fetch-test-public-0.0.2.zip", 2},
+	}
+
+	for _, tc := range cases {
+		// Create a temp directory
+		tempDir, err := ioutil.TempDir("", "")
+		if err != nil {
+			t.Fatalf("Failed to create temp directory: %s", err)
+		}
+		defer os.RemoveAll(tempDir)
+
+		extractFiles(filepath.Dir(tc.localFilePath), "/", tempDir)
 	}
 }

@@ -27,13 +27,15 @@ func main() {
 		},
 	}
 
+	// TODO: process repoFilePath and localFileDst args
+
 	app.Action = func(c *cli.Context) {
 
 		repoUrl := c.String("repo")
 		tagConstraint := c.String("tag")
 		githubToken := c.String("github-oauth-token")
-		// repoFilePath := ""
-		// localFileDst := ""
+		repoFilePath := ""
+		localFileDst := ""
 
 		// Validate required args
 		if repoUrl == "" {
@@ -78,14 +80,15 @@ func main() {
 		if err != nil {
 			panic(err)
 		}
-		defer os.RemoveAll(localFolderContainingZipFilePath)
+		defer deleteLocalFiles(localFolderContainingZipFilePath)
 		fmt.Println(localZipFilePath)
 		fmt.Println(localFolderContainingZipFilePath)
 
 		// Unzip, move the files we need to our destination, and delete the remaining files
-		//defer deleteLocalFiles(localFolderPathContainingZipFile)
-		//localZipFileExplodedPath := unzip(filePath)
-		//moveFiles(localZipFileExplodedPath, repoFilePath, localFileDst)
+		fmt.Printf("Unzipping %s...\n", localZipFilePath)
+		if goErr = extractFiles(localZipFilePath, repoFilePath, localFileDst); err != nil {
+			panic(err)
+		}
 
 		fmt.Printf("Download and file extraction complete.")
 	}
@@ -100,6 +103,11 @@ func getVersion(version string, versionPreRelease string) string {
 	} else {
 		return fmt.Sprintf("%s-%s", version, versionPreRelease)
 	}
+}
+
+// deleteLocalFiles recursively deletes the given folder path
+func deleteLocalFiles(folderPath string) {
+	os.RemoveAll(folderPath)
 }
 
 func getErrorMessage(errorCode int, errorDetails string) string {

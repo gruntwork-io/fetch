@@ -29,7 +29,6 @@ func downloadGithubZipFile(repoOwner, repoName, gitTag, githubToken string) (str
 
 	// Define the url
 	url := fmt.Sprintf("https://api.github.com/repos/%s/%s/zipball/%s", repoOwner, repoName, gitTag)
-	fmt.Printf("url = %s\n", url)
 
 	// Download the file, possibly using the GitHub oAuth Token
 	httpClient := &http.Client{}
@@ -65,4 +64,10 @@ func downloadGithubZipFile(repoOwner, repoName, gitTag, githubToken string) (str
 	}
 
 	return tempDir, filepath.Join(tempDir, "repo.zip"), newEmptyError()
+}
+
+// extractFiles decompresses the file at zipFileAbsPath and moves only those files under filesToExtractFromZipPath to localPath
+func extractFiles(zipFileAbsPath, filesToExtractFromZipPath, localPath string) error {
+	// TODO: Implement this method
+	return nil
 }
