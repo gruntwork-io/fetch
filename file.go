@@ -14,7 +14,7 @@ import (
 // Download the zip file at the given URL to a temporary local directory.
 // Returns the absolute path to the downloaded zip file.
 // IMPORTANT: You must call "defer os.RemoveAll(dir)" in the calling function when done with the downloaded zip file!
-func downloadGithubZipFile(gitHubCommit gitHubCommit, gitHubToken string) (string, *fetchError) {
+func downloadGithubZipFile(gitHubCommit GitHubCommit, gitHubToken string) (string, *FetchError) {
 
 	var zipFilePath string
 
@@ -117,7 +117,7 @@ func extractFiles(zipFilePath, filesToExtractFromZipPath, localPath string) erro
 }
 
 // Return an HTTP request that will fetch the given GitHub repo's zip file for the given tag, possibly with the gitHubOAuthToken in the header
-func MakeGitHubZipFileRequest(gitHubcommit gitHubCommit, gitHubToken string) (*http.Request, error) {
+func MakeGitHubZipFileRequest(gitHubcommit GitHubCommit, gitHubToken string) (*http.Request, error) {
 	var request *http.Request
 
 	url := fmt.Sprintf("https://api.github.com/repos/%s/%s/zipball/%s", gitHubcommit.repo.Owner, gitHubcommit.repo.Name, gitHubcommit.gitTag)

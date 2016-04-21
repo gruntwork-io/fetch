@@ -92,3 +92,4 @@ Specifically, this includes:
 - Add circle.yml
 - Introduce code verification using something like GPG signatures or published checksums
 - Explicitly test for exotic repo and org names
+- Consider streamlining code for error handling

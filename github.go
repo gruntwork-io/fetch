@@ -3,40 +3,40 @@ package main
 import (
 	"net/http"
 	"fmt"
-	"strings"
 	"bytes"
 	"encoding/json"
+	"regexp"
 )
 
-type gitHubRepo struct {
+type GitHubRepo struct {
 	Owner string // The GitHub account name under which the repo exists
 	Name  string // The GitHub repo name
 }
 
-type gitHubCommit struct {
-	repo   gitHubRepo // The GitHub repo where this release lives
+type GitHubCommit struct {
+	repo   GitHubRepo // The GitHub repo where this release lives
 	gitTag string     // The specific git tag for this release
 }
 
 // Modeled directly after the api.github.com response
-type gitHubTagsApiResponse struct {
+type GitHubTagsApiResponse struct {
 	Name       string // The tag name
 	ZipBallUrl string // The URL where a ZIP of the release can be downloaded
 	TarballUrl string // The URL where a Tarball of the release can be downloaded
-	Commit     gitHubTagsCommitApiResponse
+	Commit     GitHubTagsCommitApiResponse
 }
 
 // Modeled directly after the api.github.com response
-type gitHubTagsCommitApiResponse struct {
+type GitHubTagsCommitApiResponse struct {
 	Sha string // The SHA of the commit associated with a given tag
 	Url string // The URL at which additional API information can be found for the given commit
 }
 
 // Fetch all tags from the given GitHub repo
-func FetchTags(githubRepoUrl string, githubToken string) ([]string, *fetchError) {
+func FetchTags(githubRepoUrl string, githubToken string) ([]string, *FetchError) {
 	var tagsString []string
 
-	repo, err := ExtractUrlIntoGitHubRepo(githubRepoUrl)
+	repo, err := ParseUrlIntoGitHubRepo(githubRepoUrl)
 	if err != nil {
 		return tagsString, wrapError(err)
 	}
@@ -69,7 +69,7 @@ func FetchTags(githubRepoUrl string, githubToken string) ([]string, *fetchError)
 	jsonResp := buf.Bytes()
 
 	// Extract the JSON into our array of gitHubTagsCommitApiResponse's
-	var tags []gitHubTagsApiResponse
+	var tags []GitHubTagsApiResponse
 	err = json.Unmarshal(jsonResp, &tags)
 	if err != nil {
 		return tagsString, wrapError(err)
@@ -83,27 +83,30 @@ func FetchTags(githubRepoUrl string, githubToken string) ([]string, *fetchError)
 }
 
 // Convert a URL into a GitHubRepo struct
-func ExtractUrlIntoGitHubRepo(url string) (gitHubRepo, error) {
-	if url[0:17] == "http://github.com" {
-		tokens := strings.Split(url[18:], "/")
-		return gitHubRepo{
-			Owner: tokens[0],
-			Name: tokens[1],
-		}, nil
-	} else if url[0:18] == "https://github.com" {
-		tokens := strings.Split(url[19:], "/")
-		return gitHubRepo{
-			Owner: tokens[0],
-			Name: tokens[1],
-		}, nil
-	} else {
-		return gitHubRepo{}, fmt.Errorf("GitHub Repo URL %s did not begin with http://github.com or https://github.com", url)
+func ParseUrlIntoGitHubRepo(url string) (GitHubRepo, error) {
+	var gitHubRepo GitHubRepo
+
+	regex, regexErr := regexp.Compile("https?://(?:www\\.)?github.com/(.+?)/(.+?)(?:$|\\?|#|/)")
+	if regexErr != nil {
+		return gitHubRepo, newError(300, fmt.Sprintf("GitHub Repo URL %s is malformed.", url))
 	}
+
+	matches := regex.FindStringSubmatch(url)
+	if len(matches) != 3 {
+		return gitHubRepo, newError(300, fmt.Sprintf("GitHub Repo URL %s could not be parsed correctly", url))
+	}
+
+	gitHubRepo = GitHubRepo{
+		Owner: matches[1],
+		Name: matches[2],
+	}
+
+	return gitHubRepo, nil
 }
 
 
 // Return an HTTP request that will fetch the given GitHub repo's tags, possibly with the gitHubOAuthToken in the header
-func MakeGitHubTagsRequest(repo gitHubRepo, gitHubToken string) (*http.Request, error) {
+func MakeGitHubTagsRequest(repo GitHubRepo, gitHubToken string) (*http.Request, error) {
 	var request *http.Request
 
 	request, err := http.NewRequest("GET", fmt.Sprintf("https://api.github.com/repos/%s/%s/tags", repo.Owner, repo.Name), nil)

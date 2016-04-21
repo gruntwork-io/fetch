@@ -10,14 +10,14 @@ func TestGetListOfReleasesFromGitHubRepo(t *testing.T) {
 
 	cases := []struct {
 		repoUrl          string
-		lastReleaseTag   string
 		firstReleaseTag  string
+		lastReleaseTag   string
 		gitHubOAuthToken string
 	}{
-		// These tests are obviously brittle. Suggestions welcome on a more durable way to test.
-		{"https://github.com/brikis98/ping-play", "v0.0.13", "v0.0.2", ""},
+		// Test on a public repo whose sole purpose is to be a test fixture for this tool
+		{"https://github.com/gruntwork-io/fetch-test-public", "v0.0.1", "v0.0.3", ""},
 
-		// Private repo
+		// Private repo equivalent
 		{"https://github.com/gruntwork-io/fetch-test-private", "v0.0.2", "v0.0.2", os.Getenv("GITHUB_OAUTH_TOKEN")},
 	}
 
@@ -36,16 +36,16 @@ func TestGetListOfReleasesFromGitHubRepo(t *testing.T) {
 		}
 
 		if releases[len(releases) - 1] != tc.firstReleaseTag {
-			t.Fatalf("error parsing github releases for repo %s. expected first release = %s. actual = %s", tc.repoUrl, tc.firstReleaseTag, releases[0])
+			t.Fatalf("error parsing github releases for repo %s. expected first release = %s, actual = %s", tc.repoUrl, tc.firstReleaseTag, releases[len(releases) - 1])
 		}
 
 		if releases[0] != tc.lastReleaseTag {
-			t.Fatalf("error parsing github releases for repo %s. expected first release = %s. actual = %s", tc.repoUrl, tc.lastReleaseTag, releases[len(releases) - 1])
+			t.Fatalf("error parsing github releases for repo %s. expected first release = %s, actual = %s", tc.repoUrl, tc.lastReleaseTag, releases[0])
 		}
 	}
 }
 
-func TestExtractUrlIntoGitHubRepo(t *testing.T) {
+func TestParseUrlIntoGitHubRepo(t *testing.T) {
 	t.Parallel()
 
 	cases := []struct {
@@ -60,7 +60,7 @@ func TestExtractUrlIntoGitHubRepo(t *testing.T) {
 	}
 
 	for _, tc := range cases {
-		repo, err := ExtractUrlIntoGitHubRepo(tc.repoUrl)
+		repo, err := ParseUrlIntoGitHubRepo(tc.repoUrl)
 		if err != nil {
 			t.Fatalf("error extracting url %s into a GitHubRepo struct: %s", tc.repoUrl, err)
 		}
@@ -87,7 +87,7 @@ func TestExtractUrlThrowsErrorOnMalformedUrl(t *testing.T) {
 	}
 
 	for _, tc := range cases {
-		_, err := ExtractUrlIntoGitHubRepo(tc.repoUrl)
+		_, err := ParseUrlIntoGitHubRepo(tc.repoUrl)
 		if err == nil {
 			t.Fatalf("Expected error on malformed url %s, but no error was received.", tc.repoUrl)
 		}

@@ -71,12 +71,12 @@ func main() {
 		// Download that release as a .zip file
 		fmt.Printf("Downloading tag \"%s\" of GitHub repo %s\n", latestTag, repoUrl)
 
-		repo, goErr := ExtractUrlIntoGitHubRepo(repoUrl)
+		repo, goErr := ParseUrlIntoGitHubRepo(repoUrl)
 		if goErr != nil {
 			panic(err)
 		}
 
-		gitHubCommit := gitHubCommit{
+		gitHubCommit := GitHubCommit{
 			repo: repo,
 			gitTag: latestTag,
 		}

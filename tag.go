@@ -7,7 +7,7 @@ import (
 	"strings"
 )
 
-func getLatestAcceptableTag(tagConstraint string, tags []string) (string, *fetchError) {
+func getLatestAcceptableTag(tagConstraint string, tags []string) (string, *FetchError) {
 	var latestTag string
 
 	// Sort all tags
