@@ -12,35 +12,30 @@ import (
 )
 
 // Download the zip file at the given URL to a temporary local directory.
-// Returns the asbolute path to the downloaded zip file.
+// Returns the absolute path to the downloaded zip file.
 // IMPORTANT: You must call "defer os.RemoveAll(dir)" in the calling function when done with the downloaded zip file!
-func downloadGithubZipFile(githubRelease gitHubCommit, githubToken string) (string, *fetchError) {
+func downloadGithubZipFile(gitHubCommit gitHubCommit, gitHubToken string) (string, *fetchError) {
+
+	var zipFilePath string
 
 	// Create a temp directory
 	// Note that ioutil.TempDir has a peculiar interface. We need not specify any meaningful values to achieve our
 	// goal of getting a temporary directory.
 	tempDir, err := ioutil.TempDir("", "")
 	if err != nil {
-		return "", wrapError(err)
+		return zipFilePath, wrapError(err)
 	}
 
-	// Define the url
-	url := fmt.Sprintf("https://api.github.com/repos/%s/%s/zipball/%s", githubRelease.repo.Owner, githubRelease.repo.Name, githubRelease.gitTag)
-
-	// Download the file, possibly using the GitHub oAuth Token
+	// Download the zip file, possibly using the GitHub oAuth Token
 	httpClient := &http.Client{}
-	req, err := http.NewRequest("GET", url, nil)
+	req, err := MakeGitHubZipFileRequest(gitHubCommit, gitHubToken)
 	if err != nil {
-		return "", wrapError(err)
-	}
-
-	if githubToken != "" {
-		req.Header.Set("Authorization", fmt.Sprintf("token %s", githubToken))
+		return zipFilePath, wrapError(err)
 	}
 
 	resp, err := httpClient.Do(req)
 	if err != nil {
-		return "", wrapError(err)
+		return zipFilePath, wrapError(err)
 	}
 
 	// Load the resp.Body into a buffer so we can convert it to a string or []bytes as necessary
@@ -48,19 +43,21 @@ func downloadGithubZipFile(githubRelease gitHubCommit, githubToken string) (stri
 	respBodyBuffer.ReadFrom(resp.Body)
 
 	if resp.StatusCode != 200 {
-		return "", newError(500, fmt.Sprintf("Failed to download file at the url %s. Received HTTP Response %d. Body: %s", url, resp.StatusCode, respBodyBuffer.String()))
+		return zipFilePath, newError(500, fmt.Sprintf("Failed to download file at the url %s. Received HTTP Response %d. Body: %s", req.URL.String(), resp.StatusCode, respBodyBuffer.String()))
 	}
 	if resp.Header.Get("Content-Type") != "application/zip" {
-		return "", newError(500, fmt.Sprintf("Failed to download file at the url %s. Expected HTTP Response's \"Content-Type\" header to be \"application/zip\", but was \"%s\"", url, resp.Header.Get("Content-Type")))
+		return zipFilePath, newError(500, fmt.Sprintf("Failed to download file at the url %s. Expected HTTP Response's \"Content-Type\" header to be \"application/zip\", but was \"%s\"", req.URL.String(), resp.Header.Get("Content-Type")))
 	}
 
 	// Copy the contents of the downloaded file to our empty file
 	err = ioutil.WriteFile(filepath.Join(tempDir, "repo.zip"), respBodyBuffer.Bytes(), 0644)
 	if err != nil {
-		return "", wrapError(err)
+		return zipFilePath, wrapError(err)
 	}
 
-	return filepath.Join(tempDir, "repo.zip"), nil
+	zipFilePath = filepath.Join(tempDir, "repo.zip")
+
+	return zipFilePath, nil
 }
 
 // Decompresse the file at zipFileAbsPath and move only those files under filesToExtractFromZipPath to localPath
@@ -117,4 +114,22 @@ func extractFiles(zipFilePath, filesToExtractFromZipPath, localPath string) erro
 	}
 
 	return nil
+}
+
+// Return an HTTP request that will fetch the given GitHub repo's zip file for the given tag, possibly with the gitHubOAuthToken in the header
+func MakeGitHubZipFileRequest(gitHubcommit gitHubCommit, gitHubToken string) (*http.Request, error) {
+	var request *http.Request
+
+	url := fmt.Sprintf("https://api.github.com/repos/%s/%s/zipball/%s", gitHubcommit.repo.Owner, gitHubcommit.repo.Name, gitHubcommit.gitTag)
+
+	request, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return request, wrapError(err)
+	}
+
+	if gitHubToken != "" {
+		request.Header.Set("Authorization", fmt.Sprintf("token %s", gitHubToken))
+	}
+
+	return request, nil
 }

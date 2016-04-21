@@ -34,25 +34,24 @@ type gitHubTagsCommitApiResponse struct {
 
 // Fetch all tags from the given GitHub repo
 func FetchTags(githubRepoUrl string, githubToken string) ([]string, *fetchError) {
+	var tagsString []string
+
 	repo, err := ExtractUrlIntoGitHubRepo(githubRepoUrl)
 	if err != nil {
-		return []string{}, wrapError(err)
+		return tagsString, wrapError(err)
 	}
 
 	// Make an HTTP request, possibly with the gitHubOAuthToken in the header
 	httpClient := &http.Client{}
-	req, err := http.NewRequest("GET", fmt.Sprintf("https://api.github.com/repos/%s/%s/tags", repo.Owner, repo.Name), nil)
-	if err != nil {
-		return []string{}, wrapError(err)
-	}
 
-	if githubToken != "" {
-		req.Header.Set("Authorization", fmt.Sprintf("token %s", githubToken))
+	req, err := MakeGitHubTagsRequest(repo, githubToken)
+	if err != nil {
+		return tagsString, wrapError(err)
 	}
 
 	resp, err := httpClient.Do(req)
 	if err != nil {
-		return []string{}, wrapError(err)
+		return tagsString, wrapError(err)
 	}
 	if resp.StatusCode != 200 {
 		// Convert the resp.Body to a string
@@ -61,7 +60,7 @@ func FetchTags(githubRepoUrl string, githubToken string) ([]string, *fetchError)
 		respBody := buf.String()
 
 		// We leverage the HTTP Response Code as our ErrorCode here.
-		return []string{}, newError(resp.StatusCode, fmt.Sprintf("Received HTTP Response %d while fetching releases for GitHub URL %s. Full HTTP response: %s", resp.StatusCode, githubRepoUrl, respBody))
+		return tagsString, newError(resp.StatusCode, fmt.Sprintf("Received HTTP Response %d while fetching releases for GitHub URL %s. Full HTTP response: %s", resp.StatusCode, githubRepoUrl, respBody))
 	}
 
 	// Convert the response body to a byte array
@@ -73,10 +72,9 @@ func FetchTags(githubRepoUrl string, githubToken string) ([]string, *fetchError)
 	var tags []gitHubTagsApiResponse
 	err = json.Unmarshal(jsonResp, &tags)
 	if err != nil {
-		return []string{}, wrapError(err)
+		return tagsString, wrapError(err)
 	}
 
-	var tagsString []string
 	for _, tag := range tags {
 		tagsString = append(tagsString, tag.Name)
 	}
@@ -103,3 +101,19 @@ func ExtractUrlIntoGitHubRepo(url string) (gitHubRepo, error) {
 	}
 }
 
+
+// Return an HTTP request that will fetch the given GitHub repo's tags, possibly with the gitHubOAuthToken in the header
+func MakeGitHubTagsRequest(repo gitHubRepo, gitHubToken string) (*http.Request, error) {
+	var request *http.Request
+
+	request, err := http.NewRequest("GET", fmt.Sprintf("https://api.github.com/repos/%s/%s/tags", repo.Owner, repo.Name), nil)
+	if err != nil {
+		return request, wrapError(err)
+	}
+
+	if gitHubToken != "" {
+		request.Header.Set("Authorization", fmt.Sprintf("token %s", gitHubToken))
+	}
+
+	return request, nil
+}

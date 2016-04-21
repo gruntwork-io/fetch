@@ -76,12 +76,12 @@ func main() {
 			panic(err)
 		}
 
-		githubCommit := gitHubCommit{
+		gitHubCommit := gitHubCommit{
 			repo: repo,
 			gitTag: latestTag,
 		}
 
-		localZipFilePath, err := downloadGithubZipFile(githubCommit, githubToken)
+		localZipFilePath, err := downloadGithubZipFile(gitHubCommit, githubToken)
 		if err != nil {
 			panic(err)
 		}

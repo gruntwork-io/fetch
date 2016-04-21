@@ -5,7 +5,17 @@ import (
 	"testing"
 	"path/filepath"
 	"io/ioutil"
+	"fmt"
 )
+
+// Although other tests besides those in this file require this env var, this init() func will cover all tests.
+func init() {
+	if os.Getenv("GITHUB_OAUTH_TOKEN") == "" {
+		fmt.Println("ERROR: These tests require that env var GITHUB_OAUTH_TOKEN be set to a GitHub Personal Access Token.")
+		fmt.Println("See the tests cases to see which GitHub repos the oAuth token needs access to.")
+		os.Exit(1)
+	}
+}
 
 func TestDownloadZipFile(t *testing.T) {
 	t.Parallel()
@@ -21,7 +31,7 @@ func TestDownloadZipFile(t *testing.T) {
 	}
 
 	for _, tc := range cases {
-		githubCommit := gitHubCommit{
+		gitHubCommit := gitHubCommit{
 			repo: gitHubRepo{
 				Owner: tc.repoOwner,
 				Name: tc.repoName,
@@ -29,7 +39,8 @@ func TestDownloadZipFile(t *testing.T) {
 			gitTag: tc.gitTag,
 		}
 
-		zipFilePath, err := downloadGithubZipFile(githubCommit, tc.githubToken)
+		zipFilePath, err := downloadGithubZipFile(gitHubCommit, tc.githubToken)
+		defer os.RemoveAll(zipFilePath)
 		if err != nil {
 			t.Fatalf("Failed to download file: %s", err)
 		}
@@ -53,7 +64,7 @@ func TestDownloadZipFileWithBadRepoValues(t *testing.T) {
 	}
 
 	for _, tc := range cases {
-		githubCommit := gitHubCommit{
+		gitHubCommit := gitHubCommit{
 			repo: gitHubRepo{
 				Owner: tc.repoOwner,
 				Name: tc.repoName,
@@ -61,8 +72,8 @@ func TestDownloadZipFileWithBadRepoValues(t *testing.T) {
 			gitTag: tc.gitTag,
 		}
 
-		_, err := downloadGithubZipFile(githubCommit, tc.githubToken)
-		if err == nil {
+		_, err := downloadGithubZipFile(gitHubCommit, tc.githubToken)
+		if err == nil && err.errorCode != 500 {
 			t.Fatalf("Expected error for bad repo values: %s/%s:%s", tc.repoOwner, tc.repoName, tc.gitTag)
 		}
 	}

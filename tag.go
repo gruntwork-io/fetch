@@ -8,6 +8,7 @@ import (
 )
 
 func getLatestAcceptableTag(tagConstraint string, tags []string) (string, *fetchError) {
+	var latestTag string
 
 	// Sort all tags
 	// Our use of the library go-version means that each tag will each be represented as a *version.Version
@@ -15,7 +16,7 @@ func getLatestAcceptableTag(tagConstraint string, tags []string) (string, *fetch
 	for i, tag := range tags {
 		v, err := version.NewVersion(tag)
 		if err != nil {
-			return "", wrapError(err)
+			return latestTag, wrapError(err)
 		}
 
 		versions[i] = v
@@ -32,9 +33,9 @@ func getLatestAcceptableTag(tagConstraint string, tags []string) (string, *fetch
 	if err != nil {
 		// Explicitly check for a malformed tag value so we can return a nice error to the user
 		if strings.Contains(err.Error(), "Malformed constraint") {
-			return "", newError(100, err.Error())
+			return latestTag, newError(100, err.Error())
 		} else {
-			return "", wrapError(err)
+			return latestTag, wrapError(err)
 		}
 	}
 
@@ -46,7 +47,6 @@ func getLatestAcceptableTag(tagConstraint string, tags []string) (string, *fetch
 	}
 
 	// The tag name may have started with a "v" or other string. If so, re-apply that string now
-	var latestTag string
 	for _, originalTagName := range tags {
 		if strings.Contains(originalTagName, latestAcceptableVersion.String()) {
 			latestTag = originalTagName
