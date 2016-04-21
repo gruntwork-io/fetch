@@ -98,7 +98,7 @@ func runFetch (c *cli.Context) error {
 	if err != nil {
 		return fmt.Errorf("Unknown error occurred while downloading zip file from GitHub repo: %s", err)
 	}
-	defer os.Remove(localZipFilePath)
+	defer cleanupZipFile(localZipFilePath)
 
 	// Unzip and move the files we need to our destination
 	fmt.Printf("Unzipping...\n")
@@ -106,7 +106,18 @@ func runFetch (c *cli.Context) error {
 		return fmt.Errorf("Unknown error occurred while extracting files from GitHub zip file: %s", err)
 	}
 
-	fmt.Printf("Download and file extraction complete.")
+	fmt.Println("Download and file extraction complete.")
+	return nil
+}
+
+// Delete the given zip file.
+func cleanupZipFile(localZipFilePath string) error {
+	err := os.Remove(localZipFilePath)
+	if err != nil {
+		return fmt.Errorf("Failed to delete local zip file at %s", localZipFilePath)
+	}
+	fmt.Println("Deleted zip file.")
+
 	return nil
 }
 
