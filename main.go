@@ -27,15 +27,15 @@ func main() {
 		},
 	}
 
-	// TODO: process repoFilePath and localFileDst args
-
 	app.Action = func(c *cli.Context) {
 
 		repoUrl := c.String("repo")
 		tagConstraint := c.String("tag")
 		githubToken := c.String("github-oauth-token")
-		repoFilePath := ""
-		localFileDst := ""
+
+		// TODO: process repoFilePath and localFileDst args from command line
+		repoFilePath := "/"
+		localFileDst := "/Users/josh/temp"
 
 		// Validate required args
 		if repoUrl == "" {
@@ -69,23 +69,21 @@ func main() {
 		}
 
 		// Download that release as a .zip file
-		fmt.Printf("Downloading tag \"%s\" of GitHub repo %s...\n", latestTag, repoUrl)
+		fmt.Printf("Downloading tag \"%s\" of GitHub repo %s\n", latestTag, repoUrl)
 
 		repo, goErr := ExtractUrlIntoGitHubRepo(repoUrl)
 		if goErr != nil {
 			panic(err)
 		}
 
-		localZipFilePath, localFolderContainingZipFilePath, err := downloadGithubZipFile(repo.Owner, repo.Name, latestTag, githubToken)
+		localZipFilePath, err := downloadGithubZipFile(repo.Owner, repo.Name, latestTag, githubToken)
 		if err != nil {
 			panic(err)
 		}
-		defer deleteLocalFiles(localFolderContainingZipFilePath)
-		fmt.Println(localZipFilePath)
-		fmt.Println(localFolderContainingZipFilePath)
+		defer os.Remove(localZipFilePath)
 
-		// Unzip, move the files we need to our destination, and delete the remaining files
-		fmt.Printf("Unzipping %s...\n", localZipFilePath)
+		// Unzip and move the files we need to our destination
+		fmt.Printf("Unzipping...\n")
 		if goErr = extractFiles(localZipFilePath, repoFilePath, localFileDst); err != nil {
 			panic(err)
 		}
@@ -93,6 +91,7 @@ func main() {
 		fmt.Printf("Download and file extraction complete.")
 	}
 
+	// Run the definition of App.Action
 	app.Run(os.Args)
 }
 
@@ -103,11 +102,6 @@ func getVersion(version string, versionPreRelease string) string {
 	} else {
 		return fmt.Sprintf("%s-%s", version, versionPreRelease)
 	}
-}
-
-// deleteLocalFiles recursively deletes the given folder path
-func deleteLocalFiles(folderPath string) {
-	os.RemoveAll(folderPath)
 }
 
 func getErrorMessage(errorCode int, errorDetails string) string {

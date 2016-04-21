@@ -19,7 +19,7 @@ func TestDownloadZipFile(t *testing.T) {
 	}
 
 	for _, tc := range cases {
-		_, zipFilePath, err := downloadGithubZipFile(tc.repoOwner, tc.repoName, tc.gitTag, tc.githubToken)
+		zipFilePath, err := downloadGithubZipFile(tc.repoOwner, tc.repoName, tc.gitTag, tc.githubToken)
 		if err != nil {
 			t.Fatalf("Failed to download file: %s", err)
 		}
@@ -41,7 +41,7 @@ func TestDownloadZipFileWithBadRepoValues(t *testing.T) {
 	}
 
 	for _, tc := range cases {
-		_, _, err := downloadGithubZipFile(tc.repoOwner, tc.repoName, tc.gitTag, tc.githubToken)
+		_, err := downloadGithubZipFile(tc.repoOwner, tc.repoName, tc.gitTag, tc.githubToken)
 		if err == nil {
 			t.Fatalf("Expected error for bad repo values: %s/%s:%s", tc.repoOwner, tc.repoName, tc.gitTag)
 		}
@@ -50,11 +50,14 @@ func TestDownloadZipFileWithBadRepoValues(t *testing.T) {
 
 func TestExtractFiles(t *testing.T) {
 	cases := []struct {
-		localFilePath    string
-		expectedNumFiles int
+		localFilePath     string
+		filePathToExtract string
+		expectedNumFiles  int
 	}{
-		{"test-fixtures/fetch-test-public-0.0.1.zip", 1},
-		{"test-fixtures/fetch-test-public-0.0.2.zip", 2},
+		{"test-fixtures/fetch-test-public-0.0.1.zip", "/", 1},
+		{"test-fixtures/fetch-test-public-0.0.2.zip", "/", 2},
+		{"test-fixtures/fetch-test-public-0.0.3.zip", "/", 4},
+		{"test-fixtures/fetch-test-public-0.0.3.zip", "/folder", 2},
 	}
 
 	for _, tc := range cases {
@@ -65,6 +68,22 @@ func TestExtractFiles(t *testing.T) {
 		}
 		defer os.RemoveAll(tempDir)
 
-		extractFiles(filepath.Dir(tc.localFilePath), "/", tempDir)
+		err = extractFiles(tc.localFilePath, tc.filePathToExtract, tempDir)
+		if err != nil {
+			t.Fatalf("Failed to extract files: %s", err)
+		}
+
+		// Count the number of files in the directory
+		var numFiles int
+		filepath.Walk(tempDir, func(path string, info os.FileInfo, err error) error {
+			if ! info.IsDir() {
+				numFiles++
+			}
+			return nil
+		})
+
+		if (numFiles != tc.expectedNumFiles) {
+			t.Fatalf("While extracting %s, expected to find %d file(s), but found %d. Local path = %s", tc.localFilePath, tc.expectedNumFiles, numFiles, tempDir)
+		}
 	}
 }
