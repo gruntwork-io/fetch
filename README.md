@@ -15,7 +15,7 @@ we wish to verify the integrity of the git commit being downloaded.
 
 ## Installation
 
-Download the binary from the [GitHub Releases](https://github.com/gruntwork-io/script-modules/releases) tab. 
+Download the binary from the [GitHub Releases](https://github.com/gruntwork-io/fetch/releases) tab. 
 
 ## Assumptions
 
