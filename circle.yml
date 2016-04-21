@@ -25,7 +25,7 @@ dependencies:
         cd ${REPO}
         ~/glide/linux-amd64/glide install
 
-cache_directories:
+  cache_directories:
     - ~/glide
 
 test:
