@@ -5,7 +5,6 @@ import (
 	"os"
 	"fmt"
 	"net/http"
-	"io"
 	"path/filepath"
 	"bytes"
 	"archive/zip"
@@ -25,13 +24,6 @@ func downloadGithubZipFile(githubRelease gitHubCommit, githubToken string) (stri
 		return "", wrapError(err)
 	}
 
-	// Create an empty file to write to
-	file, err := os.Create(filepath.Join(tempDir, "repo.zip"))
-	if err != nil {
-		return "", wrapError(err)
-	}
-	defer file.Close()
-
 	// Define the url
 	url := fmt.Sprintf("https://api.github.com/repos/%s/%s/zipball/%s", githubRelease.repo.Owner, githubRelease.repo.Name, githubRelease.gitTag)
 
@@ -50,20 +42,20 @@ func downloadGithubZipFile(githubRelease gitHubCommit, githubToken string) (stri
 	if err != nil {
 		return "", wrapError(err)
 	}
-	if resp.StatusCode != 200 {
-		// Convert the resp.Body to a string
-		buf := new(bytes.Buffer)
-		buf.ReadFrom(resp.Body)
-		respBody := buf.String()
 
-		return "", newError(500, fmt.Sprintf("Failed to download file at the url %s. Received HTTP Response %d. Body: %s", url, resp.StatusCode, respBody))
+	// Load the resp.Body into a buffer so we can convert it to a string or []bytes as necessary
+	respBodyBuffer := new(bytes.Buffer)
+	respBodyBuffer.ReadFrom(resp.Body)
+
+	if resp.StatusCode != 200 {
+		return "", newError(500, fmt.Sprintf("Failed to download file at the url %s. Received HTTP Response %d. Body: %s", url, resp.StatusCode, respBodyBuffer.String()))
 	}
 	if resp.Header.Get("Content-Type") != "application/zip" {
 		return "", newError(500, fmt.Sprintf("Failed to download file at the url %s. Expected HTTP Response's \"Content-Type\" header to be \"application/zip\", but was \"%s\"", url, resp.Header.Get("Content-Type")))
 	}
 
 	// Copy the contents of the downloaded file to our empty file
-	_, err = io.Copy(file, resp.Body)
+	err = ioutil.WriteFile(filepath.Join(tempDir, "repo.zip"), respBodyBuffer.Bytes(), 0644)
 	if err != nil {
 		return "", wrapError(err)
 	}
@@ -71,7 +63,7 @@ func downloadGithubZipFile(githubRelease gitHubCommit, githubToken string) (stri
 	return filepath.Join(tempDir, "repo.zip"), nil
 }
 
-// extractFiles decompresses the file at zipFileAbsPath and moves only those files under filesToExtractFromZipPath to localPath
+// Decompresse the file at zipFileAbsPath and move only those files under filesToExtractFromZipPath to localPath
 func extractFiles(zipFilePath, filesToExtractFromZipPath, localPath string) error {
 
 	// Open the zip file for reading.
@@ -111,29 +103,18 @@ func extractFiles(zipFilePath, filesToExtractFromZipPath, localPath string) erro
 				// Create a directory
 				os.MkdirAll(filepath.Join(localPath, strings.TrimPrefix(f.Name, pathPrefix)), 0777)
 			} else {
-				// Create a new empty file
-				fmt.Printf("Writing file %s\n", filepath.Join(localPath, strings.TrimPrefix(f.Name, pathPrefix)))
-				file, err := os.Create(filepath.Join(localPath, strings.TrimPrefix(f.Name, pathPrefix)))
-				if err != nil {
-					return fmt.Errorf("Failed to create new file: %s", err)
-				}
-				defer file.Close()
+				// Read the file into a byte array
+				var bytesBuffer []byte
+				readCloser.Read(bytesBuffer)
 
-				// Copy the contents to it
-				_, err = io.Copy(file, readCloser)
+				// Write the file
+				err = ioutil.WriteFile(filepath.Join(localPath, strings.TrimPrefix(f.Name, pathPrefix)), bytesBuffer, 0644)
 				if err != nil {
-					return fmt.Errorf("Failed to copy file: %s", err)
+					return fmt.Errorf("Failed to write file: %s", err)
 				}
 			}
 		}
 	}
 
 	return nil
-}
-
-// getZipFileName extracts the zip file name from the absolute file path of the zip file
-// It returns the name without the .zip suffix
-func getZipFileName(zipFilePath string) string {
-	exploded := strings.Split(zipFilePath, "/")
-	return strings.TrimSuffix(exploded[len(exploded)-1], ".zip")
 }
