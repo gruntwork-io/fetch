@@ -1,0 +1,35 @@
+machine:
+  environment:
+    IMPORT_PATH: "github.com/gruntwork-io/${CIRCLE_PROJECT_REPONAME}"
+    REPO: "$HOME/.go_workspace/src/${IMPORT_PATH}"
+    GOOS: linux
+    GO15VENDOREXPERIMENT: 1
+
+dependencies:
+  override:
+    # Get our repo into the CircleCI GOPATH.
+    - |
+        mkdir -p "${REPO}"
+        rm -rf "${REPO}"
+        ln -s "${HOME}/${CIRCLE_PROJECT_REPONAME}" "${REPO}"
+
+    # Install glide to fetch Go dependencies
+    - |
+        if [[ ! -d ~/glide ]]; then
+          wget https://github.com/Masterminds/glide/releases/download/0.10.2/glide-0.10.2-linux-amd64.zip
+          unzip glide-0.10.2-linux-amd64.zip -d ~/glide
+        fi
+
+    # Run glide
+    - |
+        cd ${REPO}
+        ~/glide/linux-amd64/glide install
+
+  cache_directories:
+    - ~/glide
+
+test:
+  override:
+    - |
+        sudo chmod 0755 "${REPO}/_ci/run-tests.sh"
+        ${REPO}/_ci/run-tests.sh
