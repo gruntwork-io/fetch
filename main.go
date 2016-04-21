@@ -9,7 +9,7 @@ import (
 func main() {
 	app := cli.NewApp()
 	app.Name = "fetch"
-	app.Usage = "download a file or folder from a specific release of a GitHub repo subject to the Semantic Versioning constraints you impose"
+	app.Usage = "download a file or folder from a specific release of a public or private GitHub repo subject to the Semantic Versioning constraints you impose"
 	app.Version = getVersion(Version, VersionPrerelease)
 
 	app.Flags = []cli.Flag{
@@ -23,7 +23,7 @@ func main() {
 		},
 		cli.StringFlag{
 			Name: "github-oauth-token",
-			Usage: "A GitHub Personal Access Token (https://help.github.com/articles/creating-an-access-token-for-command-line-use/)\n\tThis is used to authenticate fetch to private GitHub repos.",
+			Usage: "Required for private repos. A GitHub Personal Access Token (https://help.github.com/articles/creating-an-access-token-for-command-line-use/).",
 		},
 	}
 
@@ -46,11 +46,11 @@ func main() {
 		// Get the tags for the given repo
 		tags, err := FetchTags(repoUrl, githubToken)
 		if err != nil {
-			if err.errorCode == 401 {
-				fmt.Fprintf(os.Stderr, getErrorMessage(401, err.details))
+			if err.errorCode == INVALID_GITHUB_TOKEN_OR_ACCESS_DENIED {
+				fmt.Fprintf(os.Stderr, getErrorMessage(INVALID_GITHUB_TOKEN_OR_ACCESS_DENIED, err.details))
 				os.Exit(1)
-			} else if err.errorCode == 404 {
-				fmt.Fprintf(os.Stderr, getErrorMessage(404, err.details))
+			} else if err.errorCode == REPO_DOES_NOT_EXIST_OR_ACCESS_DENIED {
+				fmt.Fprintf(os.Stderr, getErrorMessage(REPO_DOES_NOT_EXIST_OR_ACCESS_DENIED, err.details))
 				os.Exit(1)
 			} else {
 				panic(err)
@@ -60,8 +60,8 @@ func main() {
 		// Find the specific release that matches the latest version constraint
 		latestTag, err := getLatestAcceptableTag(tagConstraint, tags)
 		if err != nil {
-			if err.errorCode == 100 {
-				fmt.Fprintf(os.Stderr, getErrorMessage(100, err.details))
+			if err.errorCode == INVALID_TAG_CONSTRAINT_EXPRESSION {
+				fmt.Fprintf(os.Stderr, getErrorMessage(INVALID_TAG_CONSTRAINT_EXPRESSION, err.details))
 				os.Exit(1)
 			} else {
 				panic(err)
@@ -111,7 +111,7 @@ func getVersion(version string, versionPreRelease string) string {
 
 func getErrorMessage(errorCode int, errorDetails string) string {
 	switch errorCode {
-	case 100:
+	case INVALID_TAG_CONSTRAINT_EXPRESSION:
 		return fmt.Sprintf(`
 ERROR: The --tag value you entered is not a valid constraint expression.
 See https://github.com/gruntwork-io/fetch#version-constraint-operators for examples.
@@ -119,7 +119,7 @@ See https://github.com/gruntwork-io/fetch#version-constraint-operators for examp
 Underlying error message:
 %s
 `, errorDetails)
-	case 401:
+	case INVALID_GITHUB_TOKEN_OR_ACCESS_DENIED:
 		return fmt.Sprintf(`
 ERROR: Received an HTTP 401 Response when attempting to query the repo for its tags.
 
@@ -129,7 +129,7 @@ to either a public repo or a private repo to which you don't have access.
 Underlying error message:
 %s
 `, errorDetails)
-	case 404:
+	case REPO_DOES_NOT_EXIST_OR_ACCESS_DENIED:
 		return fmt.Sprintf(`
 ERROR: Received an HTTP 404 Response when attempting to query the repo for its tags.
 

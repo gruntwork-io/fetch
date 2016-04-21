@@ -88,12 +88,12 @@ func ParseUrlIntoGitHubRepo(url string) (GitHubRepo, error) {
 
 	regex, regexErr := regexp.Compile("https?://(?:www\\.)?github.com/(.+?)/(.+?)(?:$|\\?|#|/)")
 	if regexErr != nil {
-		return gitHubRepo, newError(300, fmt.Sprintf("GitHub Repo URL %s is malformed.", url))
+		return gitHubRepo, newError(GITHUB_REPO_URL_MALFORMED_OR_NOT_PARSEABLE, fmt.Sprintf("GitHub Repo URL %s is malformed.", url))
 	}
 
 	matches := regex.FindStringSubmatch(url)
 	if len(matches) != 3 {
-		return gitHubRepo, newError(300, fmt.Sprintf("GitHub Repo URL %s could not be parsed correctly", url))
+		return gitHubRepo, newError(GITHUB_REPO_URL_MALFORMED_OR_NOT_PARSEABLE, fmt.Sprintf("GitHub Repo URL %s could not be parsed correctly", url))
 	}
 
 	gitHubRepo = GitHubRepo{

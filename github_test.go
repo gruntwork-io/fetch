@@ -57,6 +57,10 @@ func TestParseUrlIntoGitHubRepo(t *testing.T) {
 		{"http://github.com/brikis98/ping-play", "brikis98", "ping-play"},
 		{"https://github.com/gruntwork-io/script-modules", "gruntwork-io", "script-modules"},
 		{"http://github.com/gruntwork-io/script-modules", "gruntwork-io", "script-modules"},
+		{"http://www.github.com/gruntwork-io/script-modules", "gruntwork-io", "script-modules"},
+		{"http://www.github.com/gruntwork-io/script-modules/", "gruntwork-io", "script-modules"},
+		{"http://www.github.com/gruntwork-io/script-modules?foo=bar", "gruntwork-io", "script-modules"},
+		{"http://www.github.com/gruntwork-io/script-modules?foo=bar&foo=baz", "gruntwork-io", "script-modules"},
 	}
 
 	for _, tc := range cases {
@@ -70,12 +74,12 @@ func TestParseUrlIntoGitHubRepo(t *testing.T) {
 		}
 
 		if repo.Name != tc.name {
-			t.Fatalf("while extracting %s, expected owner %s, received %s", tc.repoUrl, tc.name, repo.Name)
+			t.Fatalf("while extracting %s, expected name %s, received %s", tc.repoUrl, tc.name, repo.Name)
 		}
 	}
 }
 
-func TestExtractUrlThrowsErrorOnMalformedUrl(t *testing.T) {
+func TestParseUrlThrowsErrorOnMalformedUrl(t *testing.T) {
 	t.Parallel()
 
 	cases := []struct {

@@ -43,10 +43,10 @@ func downloadGithubZipFile(gitHubCommit GitHubCommit, gitHubToken string) (strin
 	respBodyBuffer.ReadFrom(resp.Body)
 
 	if resp.StatusCode != 200 {
-		return zipFilePath, newError(500, fmt.Sprintf("Failed to download file at the url %s. Received HTTP Response %d. Body: %s", req.URL.String(), resp.StatusCode, respBodyBuffer.String()))
+		return zipFilePath, newError(FAILED_TO_DOWNLOAD_FILE, fmt.Sprintf("Failed to download file at the url %s. Received HTTP Response %d. Body: %s", req.URL.String(), resp.StatusCode, respBodyBuffer.String()))
 	}
 	if resp.Header.Get("Content-Type") != "application/zip" {
-		return zipFilePath, newError(500, fmt.Sprintf("Failed to download file at the url %s. Expected HTTP Response's \"Content-Type\" header to be \"application/zip\", but was \"%s\"", req.URL.String(), resp.Header.Get("Content-Type")))
+		return zipFilePath, newError(FAILED_TO_DOWNLOAD_FILE, fmt.Sprintf("Failed to download file at the url %s. Expected HTTP Response's \"Content-Type\" header to be \"application/zip\", but was \"%s\"", req.URL.String(), resp.Header.Get("Content-Type")))
 	}
 
 	// Copy the contents of the downloaded file to our empty file
