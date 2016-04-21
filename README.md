@@ -27,8 +27,7 @@ use git tags not in this format cannot be used with fetch.
 #### General Usage
 
 ```
-fetch \
---repo=<github-repo-url> --tag=<version-constraint> [<repo-download-filter>] <local-download-path>
+fetch --repo=<github-repo-url> --tag=<version-constraint> [<repo-download-filter>] <local-download-path>
 ```
 
 - `<repo-download-filter>` 
@@ -86,7 +85,7 @@ fetch \
 
 #### Version Constraint Operators
 
-Version contraints can be expressed using any operators defined in [hashicorp/go-version](https://github.com/hashicorp/go-version).
+The value of `--tag` can be expressed using any operators defined in [hashicorp/go-version](https://github.com/hashicorp/go-version).
 
 Specifically, this includes:
 
