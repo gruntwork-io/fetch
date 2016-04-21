@@ -6,7 +6,7 @@ import "fmt"
 type fetchError struct {
 	errorCode int    // an error code is an arbitrary int that allows for strongly typed identification of specific errors
 	details   string // the output of the underlying error message, if any
-	error     error // the underlying golang error, if any
+	err       error  // the underlying golang error, if any
 }
 
 // Implement the golang Error interface
@@ -18,18 +18,14 @@ func newError(errorCode int, details string) *fetchError {
 	return &fetchError{
 		errorCode: errorCode,
 		details: details,
-		error: nil,
+		err: nil,
 	}
 }
 
-func newErr(err error) *fetchError {
+func wrapError(err error) *fetchError {
 	return &fetchError{
 		errorCode: -1,
 		details: err.Error(),
-		error: err,
+		err: err,
 	}
-}
-
-func newEmptyError() *fetchError {
-	return nil
 }

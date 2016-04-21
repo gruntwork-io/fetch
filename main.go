@@ -76,7 +76,12 @@ func main() {
 			panic(err)
 		}
 
-		localZipFilePath, err := downloadGithubZipFile(repo.Owner, repo.Name, latestTag, githubToken)
+		githubCommit := gitHubCommit{
+			repo: repo,
+			gitTag: latestTag,
+		}
+
+		localZipFilePath, err := downloadGithubZipFile(githubCommit, githubToken)
 		if err != nil {
 			panic(err)
 		}

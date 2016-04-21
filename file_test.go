@@ -19,7 +19,15 @@ func TestDownloadZipFile(t *testing.T) {
 	}
 
 	for _, tc := range cases {
-		zipFilePath, err := downloadGithubZipFile(tc.repoOwner, tc.repoName, tc.gitTag, tc.githubToken)
+		githubCommit := gitHubCommit{
+			repo: gitHubRepo{
+				Owner: tc.repoOwner,
+				Name: tc.repoName,
+			},
+			gitTag: tc.gitTag,
+		}
+
+		zipFilePath, err := downloadGithubZipFile(githubCommit, tc.githubToken)
 		if err != nil {
 			t.Fatalf("Failed to download file: %s", err)
 		}
@@ -41,7 +49,15 @@ func TestDownloadZipFileWithBadRepoValues(t *testing.T) {
 	}
 
 	for _, tc := range cases {
-		_, err := downloadGithubZipFile(tc.repoOwner, tc.repoName, tc.gitTag, tc.githubToken)
+		githubCommit := gitHubCommit{
+			repo: gitHubRepo{
+				Owner: tc.repoOwner,
+				Name: tc.repoName,
+			},
+			gitTag: tc.gitTag,
+		}
+
+		_, err := downloadGithubZipFile(githubCommit, tc.githubToken)
 		if err == nil {
 			t.Fatalf("Expected error for bad repo values: %s/%s:%s", tc.repoOwner, tc.repoName, tc.gitTag)
 		}

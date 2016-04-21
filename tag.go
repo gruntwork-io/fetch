@@ -15,7 +15,7 @@ func getLatestAcceptableTag(tagConstraint string, tags []string) (string, *fetch
 	for i, tag := range tags {
 		v, err := version.NewVersion(tag)
 		if err != nil {
-			return "", newErr(err)
+			return "", wrapError(err)
 		}
 
 		versions[i] = v
@@ -34,7 +34,7 @@ func getLatestAcceptableTag(tagConstraint string, tags []string) (string, *fetch
 		if strings.Contains(err.Error(), "Malformed constraint") {
 			return "", newError(100, err.Error())
 		} else {
-			return "", newErr(err)
+			return "", wrapError(err)
 		}
 	}
 

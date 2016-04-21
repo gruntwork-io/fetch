@@ -13,6 +13,11 @@ type gitHubRepo struct {
 	Name  string // The GitHub repo name
 }
 
+type gitHubCommit struct {
+	repo   gitHubRepo // The GitHub repo where this release lives
+	gitTag string     // The specific git tag for this release
+}
+
 // Modeled directly after the api.github.com response
 type gitHubTagsApiResponse struct {
 	Name       string // The tag name
@@ -31,14 +36,14 @@ type gitHubTagsCommitApiResponse struct {
 func FetchTags(githubRepoUrl string, githubToken string) ([]string, *fetchError) {
 	repo, err := ExtractUrlIntoGitHubRepo(githubRepoUrl)
 	if err != nil {
-		return []string{}, newErr(err)
+		return []string{}, wrapError(err)
 	}
 
 	// Make an HTTP request, possibly with the gitHubOAuthToken in the header
 	httpClient := &http.Client{}
 	req, err := http.NewRequest("GET", fmt.Sprintf("https://api.github.com/repos/%s/%s/tags", repo.Owner, repo.Name), nil)
 	if err != nil {
-		return []string{}, newErr(err)
+		return []string{}, wrapError(err)
 	}
 
 	if githubToken != "" {
@@ -47,7 +52,7 @@ func FetchTags(githubRepoUrl string, githubToken string) ([]string, *fetchError)
 
 	resp, err := httpClient.Do(req)
 	if err != nil {
-		return []string{}, newErr(err)
+		return []string{}, wrapError(err)
 	}
 	if resp.StatusCode != 200 {
 		// Convert the resp.Body to a string
@@ -68,7 +73,7 @@ func FetchTags(githubRepoUrl string, githubToken string) ([]string, *fetchError)
 	var tags []gitHubTagsApiResponse
 	err = json.Unmarshal(jsonResp, &tags)
 	if err != nil {
-		return []string{}, newErr(err)
+		return []string{}, wrapError(err)
 	}
 
 	var tagsString []string
@@ -76,7 +81,7 @@ func FetchTags(githubRepoUrl string, githubToken string) ([]string, *fetchError)
 		tagsString = append(tagsString, tag.Name)
 	}
 
-	return tagsString, newEmptyError()
+	return tagsString, nil
 }
 
 // Convert a URL into a GitHubRepo struct

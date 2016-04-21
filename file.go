@@ -14,29 +14,32 @@ import (
 
 // Download the zip file at the given URL to a temporary local directory.
 // Returns the asbolute path to the downloaded zip file.
-// IMPORTANT: You must call defer os.RemoveAll(dir) when done with this directory!
-func downloadGithubZipFile(repoOwner, repoName, gitTag, githubToken string) (string, *fetchError) {
+// IMPORTANT: You must call "defer os.RemoveAll(dir)" in the calling function when done with the downloaded zip file!
+func downloadGithubZipFile(githubRelease gitHubCommit, githubToken string) (string, *fetchError) {
+
 	// Create a temp directory
+	// Note that ioutil.TempDir has a peculiar interface. We need not specify any meaningful values to achieve our
+	// goal of getting a temporary directory.
 	tempDir, err := ioutil.TempDir("", "")
 	if err != nil {
-		return "", newErr(err)
+		return "", wrapError(err)
 	}
 
 	// Create an empty file to write to
 	file, err := os.Create(filepath.Join(tempDir, "repo.zip"))
 	if err != nil {
-		return "", newErr(err)
+		return "", wrapError(err)
 	}
 	defer file.Close()
 
 	// Define the url
-	url := fmt.Sprintf("https://api.github.com/repos/%s/%s/zipball/%s", repoOwner, repoName, gitTag)
+	url := fmt.Sprintf("https://api.github.com/repos/%s/%s/zipball/%s", githubRelease.repo.Owner, githubRelease.repo.Name, githubRelease.gitTag)
 
 	// Download the file, possibly using the GitHub oAuth Token
 	httpClient := &http.Client{}
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
-		return "", newErr(err)
+		return "", wrapError(err)
 	}
 
 	if githubToken != "" {
@@ -45,7 +48,7 @@ func downloadGithubZipFile(repoOwner, repoName, gitTag, githubToken string) (str
 
 	resp, err := httpClient.Do(req)
 	if err != nil {
-		return "", newErr(err)
+		return "", wrapError(err)
 	}
 	if resp.StatusCode != 200 {
 		// Convert the resp.Body to a string
@@ -62,10 +65,10 @@ func downloadGithubZipFile(repoOwner, repoName, gitTag, githubToken string) (str
 	// Copy the contents of the downloaded file to our empty file
 	_, err = io.Copy(file, resp.Body)
 	if err != nil {
-		return "", newErr(err)
+		return "", wrapError(err)
 	}
 
-	return filepath.Join(tempDir, "repo.zip"), newEmptyError()
+	return filepath.Join(tempDir, "repo.zip"), nil
 }
 
 // extractFiles decompresses the file at zipFileAbsPath and moves only those files under filesToExtractFromZipPath to localPath
