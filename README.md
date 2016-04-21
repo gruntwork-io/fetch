@@ -104,7 +104,6 @@ Specifically, this includes:
 
 ## TODO
 
-- Add circle.yml
 - Introduce code verification using something like GPG signatures or published checksums
 - Explicitly test for exotic repo and org names
-- Apply stricter parsing for repo-filter arg
+- Apply stricter parsing for repo-filter command-line arg

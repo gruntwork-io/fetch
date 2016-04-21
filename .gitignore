@@ -4,3 +4,7 @@
 
 # If the binary gets built during dev, don't commit it.
 fetch
+fetch.exe
+
+# Don't upload dependencies
+vendor

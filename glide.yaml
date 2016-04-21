@@ -1,0 +1,4 @@
+package: github.com/gruntwork-io/fetch
+import:
+- package: github.com/codegangsta/cli
+- package: github.com/hashicorp/go-version
