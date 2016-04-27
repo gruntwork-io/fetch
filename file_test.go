@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"io/ioutil"
 	"fmt"
+	"strings"
 )
 
 // Although other tests besides those in this file require this env var, this init() func will cover all tests.
@@ -86,11 +87,12 @@ func TestExtractFiles(t *testing.T) {
 		localFilePath     string
 		filePathToExtract string
 		expectedNumFiles  int
+		nonemptyFiles     []string
 	}{
-		{"test-fixtures/fetch-test-public-0.0.1.zip", "/", 1},
-		{"test-fixtures/fetch-test-public-0.0.2.zip", "/", 2},
-		{"test-fixtures/fetch-test-public-0.0.3.zip", "/", 4},
-		{"test-fixtures/fetch-test-public-0.0.3.zip", "/folder", 2},
+		{"test-fixtures/fetch-test-public-0.0.1.zip", "/", 1, nil},
+		{"test-fixtures/fetch-test-public-0.0.2.zip", "/", 2, nil},
+		{"test-fixtures/fetch-test-public-0.0.3.zip", "/", 4, []string{"/README.md"} },
+		{"test-fixtures/fetch-test-public-0.0.3.zip", "/folder", 2, nil},
 	}
 
 	for _, tc := range cases {
@@ -118,5 +120,28 @@ func TestExtractFiles(t *testing.T) {
 		if (numFiles != tc.expectedNumFiles) {
 			t.Fatalf("While extracting %s, expected to find %d file(s), but found %d. Local path = %s", tc.localFilePath, tc.expectedNumFiles, numFiles, tempDir)
 		}
+
+		// Ensure that files declared to be non-empty are in fact non-empty
+		filepath.Walk(tempDir, func(path string, info os.FileInfo, err error) error {
+			relativeFilename := strings.TrimPrefix(path, tempDir)
+
+			if ! info.IsDir() && stringInSlice(relativeFilename, tc.nonemptyFiles) {
+				if info.Size() == 0 {
+					t.Fatalf("Expected %s in %s to have non-zero file size, but found file size = %d.\n", relativeFilename, tc.localFilePath, info.Size())
+				}
+			}
+			return nil
+		})
+
 	}
+}
+
+// Return ture if the given slice contains the given string
+func stringInSlice(s string, slice []string) bool {
+	for _, val := range slice {
+		if val == s {
+			return true
+		}
+	}
+	return false
 }
