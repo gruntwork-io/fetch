@@ -39,7 +39,7 @@ func main() {
 func runFetchWrapper (c *cli.Context) {
 	err := runFetch(c)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "ERROR: %s", err)
+		fmt.Fprintf(os.Stderr, "ERROR: %s\n", err)
 		os.Exit(1)
 	}
 }
