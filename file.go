@@ -88,24 +88,23 @@ func extractFiles(zipFilePath, filesToExtractFromZipPath, localPath string) erro
 		// If the given file is in the filesToExtractFromZipPath, proceed
 		if strings.Index(f.Name, pathPrefix) == 0 {
 
-			// Read the contents of the file in the .zip file
-			readCloser, err := f.Open()
-			if err != nil {
-				return fmt.Errorf("Failed to open file %s: %s", f.Name, err)
-			}
-			defer readCloser.Close()
-
-
 			if f.FileInfo().IsDir() {
 				// Create a directory
 				os.MkdirAll(filepath.Join(localPath, strings.TrimPrefix(f.Name, pathPrefix)), 0777)
 			} else {
 				// Read the file into a byte array
-				var bytesBuffer []byte
-				readCloser.Read(bytesBuffer)
+				readCloser, err := f.Open()
+				if err != nil {
+					return fmt.Errorf("Failed to open file %s: %s", f.Name, err)
+				}
+
+				byteArray, err := ioutil.ReadAll(readCloser)
+				if err != nil {
+					return fmt.Errorf("Failed to read file %s: %s", f.Name, err)
+				}
 
 				// Write the file
-				err = ioutil.WriteFile(filepath.Join(localPath, strings.TrimPrefix(f.Name, pathPrefix)), bytesBuffer, 0644)
+				err = ioutil.WriteFile(filepath.Join(localPath, strings.TrimPrefix(f.Name, pathPrefix)), byteArray, 0644)
 				if err != nil {
 					return fmt.Errorf("Failed to write file: %s", err)
 				}
