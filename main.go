@@ -11,7 +11,7 @@ func main() {
 	app := cli.NewApp()
 	app.Name = "fetch"
 	app.Usage = "download a file or folder from a specific release of a public or private GitHub repo subject to the Semantic Versioning constraints you impose"
-	app.UsageText = "fetch [global options] [<repo-download-filter>] <local-download-path>\n   (See https://github.com/gruntwork-io/fetch for additional docs.)"
+	app.UsageText = "fetch [global options] [<repo-download-filter>] <local-download-path>\n   (See https://github.com/gruntwork-io/fetch for examples, argument definitions, and additional docs.)"
 	app.Version = getVersion(Version, VersionPrerelease)
 
 	app.Flags = []cli.Flag{
