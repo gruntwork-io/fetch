@@ -99,7 +99,7 @@ func runFetch (c *cli.Context) error {
 	}
 
 	// Download that release as a .zip file
-	fmt.Printf("Downloading tag \"%s\" of GitHub repo %s\n", latestTag, repoUrl)
+	fmt.Printf("Downloading tag \"%s\" of %s ...\n", latestTag, repoUrl)
 
 	repo, goErr := ParseUrlIntoGitHubRepo(repoUrl)
 	if goErr != nil {
@@ -118,7 +118,7 @@ func runFetch (c *cli.Context) error {
 	defer cleanupZipFile(localZipFilePath)
 
 	// Unzip and move the files we need to our destination
-	fmt.Printf("Unzipping...\n")
+	fmt.Printf("Extracting files from <repo>%s to %s ...\n", repoDownloadFilter, localFileDst)
 	if goErr = extractFiles(localZipFilePath, repoDownloadFilter, localFileDst); goErr != nil {
 		return fmt.Errorf("Error occurred while extracting files from GitHub zip file: %s", goErr)
 	}
@@ -133,7 +133,6 @@ func cleanupZipFile(localZipFilePath string) error {
 	if err != nil {
 		return fmt.Errorf("Failed to delete local zip file at %s", localZipFilePath)
 	}
-	fmt.Println("Deleted zip file.")
 
 	return nil
 }
