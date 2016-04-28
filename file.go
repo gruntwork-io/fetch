@@ -119,7 +119,7 @@ func extractFiles(zipFilePath, filesToExtractFromZipPath, localPath string) erro
 func MakeGitHubZipFileRequest(gitHubcommit GitHubCommit, gitHubToken string) (*http.Request, error) {
 	var request *http.Request
 
-	url := fmt.Sprintf("https://api.github.com/repos/%s/%s/zipball/%s", gitHubcommit.repo.Owner, gitHubcommit.repo.Name, gitHubcommit.gitTag)
+	url := fmt.Sprintf("https://api.github.com/repos/%s/%s/zipball/%s", gitHubcommit.Repo.Owner, gitHubcommit.Repo.Name, gitHubcommit.GitTag)
 
 	request, err := http.NewRequest("GET", url, nil)
 	if err != nil {

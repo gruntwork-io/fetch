@@ -14,8 +14,8 @@ type GitHubRepo struct {
 }
 
 type GitHubCommit struct {
-	repo   GitHubRepo // The GitHub repo where this release lives
-	gitTag string     // The specific git tag for this release
+	Repo       GitHubRepo // The GitHub repo where this release lives
+	GitTag     string     // The specific git tag for this release
 }
 
 // Modeled directly after the api.github.com response

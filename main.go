@@ -107,8 +107,8 @@ func runFetch (c *cli.Context) error {
 	}
 
 	gitHubCommit := GitHubCommit{
-		repo: repo,
-		gitTag: latestTag,
+		Repo: repo,
+		GitTag: latestTag,
 	}
 
 	localZipFilePath, err := downloadGithubZipFile(gitHubCommit, githubToken)

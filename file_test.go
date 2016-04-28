@@ -33,11 +33,11 @@ func TestDownloadZipFile(t *testing.T) {
 
 	for _, tc := range cases {
 		gitHubCommit := GitHubCommit{
-			repo: GitHubRepo{
+			Repo: GitHubRepo{
 				Owner: tc.repoOwner,
 				Name: tc.repoName,
 			},
-			gitTag: tc.gitTag,
+			GitTag: tc.gitTag,
 		}
 
 		zipFilePath, err := downloadGithubZipFile(gitHubCommit, tc.githubToken)
@@ -66,11 +66,11 @@ func TestDownloadZipFileWithBadRepoValues(t *testing.T) {
 
 	for _, tc := range cases {
 		gitHubCommit := GitHubCommit{
-			repo: GitHubRepo{
+			Repo: GitHubRepo{
 				Owner: tc.repoOwner,
 				Name: tc.repoName,
 			},
-			gitTag: tc.gitTag,
+			GitTag: tc.gitTag,
 		}
 
 		_, err := downloadGithubZipFile(gitHubCommit, tc.githubToken)
