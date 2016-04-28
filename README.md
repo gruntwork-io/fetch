@@ -1,6 +1,6 @@
 # fetch
 
-fetch will download all or a subset of files or folders from a specific git commit, branch or tag of a public or private GitHub repo.
+fetch downloads all or a subset of files or folders from a specific git commit, branch or tag of a public or private GitHub repo.
 
 #### Features
 
