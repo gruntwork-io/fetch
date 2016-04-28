@@ -1,9 +1,12 @@
 # fetch
 
-fetch downloads all or a subset of files or folders from a specific git commit, branch or tag of a public or private GitHub repo.
+fetch downloads all or a subset of files or folders from a specific git commit, branch or tag of a GitHub repo.
 
 #### Features
 
+- Download from a specific git commit SHA.
+- Download from a specific git tag.
+- Download from a specific git branch.
 - Download from public repos.
 - Download from private repos by specifying a [GitHub Personal Access Token](https://help.github.com/articles/creating-an-access-token-for-command-line-use/).
 - Download a single file, a subset of files, or all files from the repo.
