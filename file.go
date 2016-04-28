@@ -116,10 +116,21 @@ func extractFiles(zipFilePath, filesToExtractFromZipPath, localPath string) erro
 }
 
 // Return an HTTP request that will fetch the given GitHub repo's zip file for the given tag, possibly with the gitHubOAuthToken in the header
-func MakeGitHubZipFileRequest(gitHubcommit GitHubCommit, gitHubToken string) (*http.Request, error) {
+// Respects the GitHubCommit hierachy as defined in the code comments for GitHubCommit (e.g. GitTag > CommitSha)
+func MakeGitHubZipFileRequest(gitHubCommit GitHubCommit, gitHubToken string) (*http.Request, error) {
 	var request *http.Request
 
-	url := fmt.Sprintf("https://api.github.com/repos/%s/%s/zipball/%s", gitHubcommit.Repo.Owner, gitHubcommit.Repo.Name, gitHubcommit.GitTag)
+	var url string
+
+	if gitHubCommit.CommitSha != "" {
+		url = fmt.Sprintf("https://github.com/%s/%s/archive/%s.zip", gitHubCommit.Repo.Owner, gitHubCommit.Repo.Name, gitHubCommit.CommitSha)
+	} else if gitHubCommit.BranchName != "" {
+		url = fmt.Sprintf("https://github.com/%s/%s/archive/%s.zip", gitHubCommit.Repo.Owner, gitHubCommit.Repo.Name, gitHubCommit.BranchName)
+	} else if gitHubCommit.GitTag != "" {
+		url = fmt.Sprintf("https://api.github.com/repos/%s/%s/zipball/%s", gitHubCommit.Repo.Owner, gitHubCommit.Repo.Name, gitHubCommit.GitTag)
+	} else {
+		return request, fmt.Errorf("Neither a GitCommitSha nor a GitTag nor a BranchName were specified so impossible to identify a specific commit to download.")
+	}
 
 	request, err := http.NewRequest("GET", url, nil)
 	if err != nil {

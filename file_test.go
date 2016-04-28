@@ -18,7 +18,7 @@ func init() {
 	}
 }
 
-func TestDownloadZipFile(t *testing.T) {
+func TestDownloadGitTagZipFile(t *testing.T) {
 	t.Parallel()
 
 	cases := []struct {
@@ -48,6 +48,137 @@ func TestDownloadZipFile(t *testing.T) {
 
 		if _, err := os.Stat(zipFilePath); os.IsNotExist(err) {
 			t.Fatalf("Downloaded file doesn't exist at the expected path of %s", zipFilePath)
+		}
+	}
+}
+
+func TestDownloadGitBranchZipFile(t *testing.T) {
+	t.Parallel()
+
+	cases := []struct {
+		repoOwner   string
+		repoName    string
+		branchName  string
+		githubToken string
+	}{
+		{"gruntwork-io", "fetch-test-public", "sample-branch", ""},
+	}
+
+	for _, tc := range cases {
+		gitHubCommit := GitHubCommit{
+			Repo: GitHubRepo{
+				Owner: tc.repoOwner,
+				Name: tc.repoName,
+			},
+			BranchName: tc.branchName,
+		}
+
+		zipFilePath, err := downloadGithubZipFile(gitHubCommit, tc.githubToken)
+		defer os.RemoveAll(zipFilePath)
+		if err != nil {
+			t.Fatalf("Failed to download file: %s", err)
+		}
+
+		if _, err := os.Stat(zipFilePath); os.IsNotExist(err) {
+			t.Fatalf("Downloaded file doesn't exist at the expected path of %s", zipFilePath)
+		}
+	}
+}
+
+func TestDownloadBadGitBranchZipFile(t *testing.T) {
+	t.Parallel()
+
+	cases := []struct {
+		repoOwner   string
+		repoName    string
+		branchName  string
+		githubToken string
+	}{
+		{"gruntwork-io", "fetch-test-public", "branch-that-doesnt-exist", ""},
+	}
+
+	for _, tc := range cases {
+		gitHubCommit := GitHubCommit{
+			Repo: GitHubRepo{
+				Owner: tc.repoOwner,
+				Name: tc.repoName,
+			},
+			BranchName: tc.branchName,
+		}
+
+		zipFilePath, err := downloadGithubZipFile(gitHubCommit, tc.githubToken)
+		defer os.RemoveAll(zipFilePath)
+		if err == nil {
+			t.Fatalf("Expected that attempt to download repo %s/%s for branch \"%s\" would fail, but received no error.", tc.repoOwner, tc.repoName, tc.branchName)
+		}
+	}
+}
+
+func TestDownloadGitCommitFile(t *testing.T) {
+	t.Parallel()
+
+	cases := []struct {
+		repoOwner   string
+		repoName    string
+		commitSha   string
+		githubToken string
+	}{
+		{"gruntwork-io", "fetch-test-public", "d2de34edb4c6564e0674b3f390b3b1fb0468183a", ""},
+		{"gruntwork-io", "fetch-test-public", "57752e7f1df0acbd3c1e61545d5c4d0e87699d84", ""},
+		{"gruntwork-io", "fetch-test-public", "f32a08313e30f116a1f5617b8b68c11f1c1dbb61", ""},
+	}
+
+	for _, tc := range cases {
+		gitHubCommit := GitHubCommit{
+			Repo: GitHubRepo{
+				Owner: tc.repoOwner,
+				Name: tc.repoName,
+			},
+			CommitSha: tc.commitSha,
+		}
+
+		zipFilePath, err := downloadGithubZipFile(gitHubCommit, tc.githubToken)
+		defer os.RemoveAll(zipFilePath)
+		if err != nil {
+			t.Fatalf("Failed to download file: %s", err)
+		}
+
+		if _, err := os.Stat(zipFilePath); os.IsNotExist(err) {
+			t.Fatalf("Downloaded file doesn't exist at the expected path of %s", zipFilePath)
+		}
+	}
+}
+
+func TestDownloadBadGitCommitFile(t *testing.T) {
+	t.Parallel()
+
+	cases := []struct {
+		repoOwner   string
+		repoName    string
+		commitSha   string
+		githubToken string
+	}{
+		{"gruntwork-io", "fetch-test-public", "hello-world", ""},
+		{"gruntwork-io", "fetch-test-public", "i-am-a-non-existent-commit", ""},
+		// remove a single letter from the beginning of an otherwise legit commit sha
+		// interestingly, through testing I found that GitHub will attempt to find the right commit sha if you
+		// truncate the end of it.
+		{"gruntwork-io", "fetch-test-public", "7752e7f1df0acbd3c1e61545d5c4d0e87699d84", ""},
+	}
+
+	for _, tc := range cases {
+		gitHubCommit := GitHubCommit{
+			Repo: GitHubRepo{
+				Owner: tc.repoOwner,
+				Name: tc.repoName,
+			},
+			CommitSha: tc.commitSha,
+		}
+
+		zipFilePath, err := downloadGithubZipFile(gitHubCommit, tc.githubToken)
+		defer os.RemoveAll(zipFilePath)
+		if err == nil {
+			t.Fatalf("Expected that attempt to download repo %s/%s at commmit sha \"%s\" would fail, but received no error.", tc.repoOwner, tc.repoName, tc.commitSha)
 		}
 	}
 }
