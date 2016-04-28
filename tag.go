@@ -2,9 +2,9 @@ package main
 
 import (
 	"sort"
+	"strings"
 
 	"github.com/hashicorp/go-version"
-	"strings"
 )
 
 func getLatestAcceptableTag(tagConstraint string, tags []string) (string, *FetchError) {
@@ -23,9 +23,9 @@ func getLatestAcceptableTag(tagConstraint string, tags []string) (string, *Fetch
 	}
 	sort.Sort(version.Collection(versions))
 
-	// If the tag constraint is empty, just return the latest
+	// If the tag constraint is empty, set it to the latest tag
 	if tagConstraint == "" {
-		return versions[len(versions)-1].String(), nil
+		tagConstraint = versions[len(versions)-1].String()
 	}
 
 	// Find the latest version that matches the given tag constraint
@@ -46,7 +46,7 @@ func getLatestAcceptableTag(tagConstraint string, tags []string) (string, *Fetch
 		}
 	}
 
-	// The tag name may have started with a "v" or other string. If so, re-apply that string now
+	// The tag name may have started with a "v". If so, re-apply that string now
 	for _, originalTagName := range tags {
 		if strings.Contains(originalTagName, latestAcceptableVersion.String()) {
 			latestTag = originalTagName
