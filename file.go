@@ -37,19 +37,16 @@ func downloadGithubZipFile(gitHubCommit GitHubCommit, gitHubToken string) (strin
 	if err != nil {
 		return zipFilePath, wrapError(err)
 	}
-
-	// Load the resp.Body into a buffer so we can convert it to a string or []bytes as necessary
-	respBodyBuffer := new(bytes.Buffer)
-	respBodyBuffer.ReadFrom(resp.Body)
-
 	if resp.StatusCode != 200 {
-		return zipFilePath, newError(FAILED_TO_DOWNLOAD_FILE, fmt.Sprintf("Failed to download file at the url %s. Received HTTP Response %d. Body: %s", req.URL.String(), resp.StatusCode, respBodyBuffer.String()))
+		return zipFilePath, newError(FAILED_TO_DOWNLOAD_FILE, fmt.Sprintf("Failed to download file at the url %s. Received HTTP Response %d.", req.URL.String(), resp.StatusCode))
 	}
 	if resp.Header.Get("Content-Type") != "application/zip" {
 		return zipFilePath, newError(FAILED_TO_DOWNLOAD_FILE, fmt.Sprintf("Failed to download file at the url %s. Expected HTTP Response's \"Content-Type\" header to be \"application/zip\", but was \"%s\"", req.URL.String(), resp.Header.Get("Content-Type")))
 	}
 
 	// Copy the contents of the downloaded file to our empty file
+	respBodyBuffer := new(bytes.Buffer)
+	respBodyBuffer.ReadFrom(resp.Body)
 	err = ioutil.WriteFile(filepath.Join(tempDir, "repo.zip"), respBodyBuffer.Bytes(), 0644)
 	if err != nil {
 		return zipFilePath, wrapError(err)
@@ -120,17 +117,19 @@ func extractFiles(zipFilePath, filesToExtractFromZipPath, localPath string) erro
 func MakeGitHubZipFileRequest(gitHubCommit GitHubCommit, gitHubToken string) (*http.Request, error) {
 	var request *http.Request
 
-	var url string
-
+	// This represents either a commit, branch, or git tag
+	var gitRef string
 	if gitHubCommit.CommitSha != "" {
-		url = fmt.Sprintf("https://github.com/%s/%s/archive/%s.zip", gitHubCommit.Repo.Owner, gitHubCommit.Repo.Name, gitHubCommit.CommitSha)
+		gitRef = gitHubCommit.CommitSha
 	} else if gitHubCommit.BranchName != "" {
-		url = fmt.Sprintf("https://github.com/%s/%s/archive/%s.zip", gitHubCommit.Repo.Owner, gitHubCommit.Repo.Name, gitHubCommit.BranchName)
+		gitRef = gitHubCommit.BranchName
 	} else if gitHubCommit.GitTag != "" {
-		url = fmt.Sprintf("https://api.github.com/repos/%s/%s/zipball/%s", gitHubCommit.Repo.Owner, gitHubCommit.Repo.Name, gitHubCommit.GitTag)
+		gitRef = gitHubCommit.GitTag
 	} else {
 		return request, fmt.Errorf("Neither a GitCommitSha nor a GitTag nor a BranchName were specified so impossible to identify a specific commit to download.")
 	}
+
+	url := fmt.Sprintf("https://api.github.com/repos/%s/%s/zipball/%s", gitHubCommit.Repo.Owner, gitHubCommit.Repo.Name, gitRef)
 
 	request, err := http.NewRequest("GET", url, nil)
 	if err != nil {

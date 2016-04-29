@@ -62,6 +62,7 @@ func TestDownloadGitBranchZipFile(t *testing.T) {
 		githubToken string
 	}{
 		{"gruntwork-io", "fetch-test-public", "sample-branch", ""},
+		{"gruntwork-io", "fetch-test-private", "sample-branch", os.Getenv("GITHUB_OAUTH_TOKEN")},
 	}
 
 	for _, tc := range cases {
@@ -126,6 +127,7 @@ func TestDownloadGitCommitFile(t *testing.T) {
 		{"gruntwork-io", "fetch-test-public", "d2de34edb4c6564e0674b3f390b3b1fb0468183a", ""},
 		{"gruntwork-io", "fetch-test-public", "57752e7f1df0acbd3c1e61545d5c4d0e87699d84", ""},
 		{"gruntwork-io", "fetch-test-public", "f32a08313e30f116a1f5617b8b68c11f1c1dbb61", ""},
+		{"gruntwork-io", "fetch-test-private", "676cfb92b54d33538c756c7a9479bfc3f6b44de2", os.Getenv("GITHUB_OAUTH_TOKEN")},
 	}
 
 	for _, tc := range cases {
