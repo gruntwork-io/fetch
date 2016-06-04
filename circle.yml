@@ -47,8 +47,8 @@ deployment:
       - |
          ${REPO}/_ci/build-and-push-release-assets.sh \
              --local-src-path "$REPO" \
-             --local-bin-output-path "/home/ubuntu/bin" \
+             --local-bin-output-path "$HOME/bin/$CIRCLE_PROJECT_REPONAME" \
              --github-repo-owner "$CIRCLE_PROJECT_USERNAME" \
              --github-repo-name "$CIRCLE_PROJECT_REPONAME" \
              --git-tag "$CIRCLE_TAG" \
-             --app-name "fetch"
+             --app-name "$CIRCLE_PROJECT_REPONAME"
