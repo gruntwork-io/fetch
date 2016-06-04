@@ -10,6 +10,10 @@ import (
 func getLatestAcceptableTag(tagConstraint string, tags []string) (string, *FetchError) {
 	var latestTag string
 
+	if len(tags) == 0 {
+		return latestTag, nil
+	}
+
 	// Sort all tags
 	// Our use of the library go-version means that each tag will each be represented as a *version.Version
 	versions := make([]*version.Version, len(tags))
