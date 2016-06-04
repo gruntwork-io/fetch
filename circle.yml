@@ -33,3 +33,17 @@ test:
     - |
         sudo chmod 0755 "${REPO}/_ci/run-tests.sh"
         ${REPO}/_ci/run-tests.sh
+
+deployment:
+  release:
+    tag: /v.*/
+    commands:
+      # If a new release is tagged in GitHub, build the binaries and upload them to GitHub.
+      - |
+         ${REPO}/_ci/build-and-push-release-assets.sh \
+             --local-src-path "$REPO" \
+             --local-bin-output-path "/home/ubuntu/bin" \
+             --github-repo-owner "$CIRCLE_PROJECT_USERNAME" \
+             --github-repo-name "$CIRCLE_PROJECT_REPONAME" \
+             --git-tag "$CIRCLE_TAG" \
+             --app-name "fetch"
