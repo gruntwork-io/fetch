@@ -26,6 +26,7 @@ func TestGetLatestAcceptableTag(t *testing.T) {
 		{">= 1.3", []string{"1.0.5","1.0.6","1.0.7","1.0.8","1.0.9","1.1.0","1.1.1","1.1.2","1.1.3","1.2.3","1.4.0","2.0.0","2.1.0"}, "2.1.0"},
 
 		{"v1.0.7", []string{"v1.0.7"}, "v1.0.7"},
+		{"v1.0.7", []string{}, ""},
 	}
 
 	for _, tc := range cases {
@@ -51,6 +52,7 @@ func TestGetLatestAcceptableTagOnEmptyConstraint(t *testing.T) {
 		{"", []string{"v0.0.1","v0.0.2","v0.0.3"}, "v0.0.3"},
 		{"", []string{"1.0.5","1.0.6","1.0.7","1.0.8","1.0.9","1.1.0","1.2.3"}, "1.2.3"},
 		{"", []string{"1.0.5","1.0.6","1.0.7","1.0.8","1.0.9","1.1.0","1.1.1","1.1.2","1.1.3","1.2.3","1.4.0","2.0.0","2.1.0"}, "2.1.0"},
+		{"", []string{}, ""},
 	}
 
 	for _, tc := range cases {
@@ -76,7 +78,7 @@ func TestGetLatestAcceptableTagOnMalformedConstraint(t *testing.T) {
 	}
 
 	for _, tc := range cases {
-		_, err := getLatestAcceptableTag(tc.tagConstraint, []string{})
+		_, err := getLatestAcceptableTag(tc.tagConstraint, []string{"v0.0.1"})
 		if err == nil {
 			t.Fatalf("Expected malformed constraint error, but received nothing.")
 		}

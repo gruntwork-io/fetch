@@ -130,8 +130,10 @@ func runFetch (c *cli.Context) error {
 		fmt.Printf("Downloading git commit \"%s\" of %s ...\n", gitHubCommit.CommitSha, repoUrl)
 	} else if gitHubCommit.BranchName != "" {
 		fmt.Printf("Downloading latest commit from branch \"%s\" of %s ...\n", gitHubCommit.BranchName, repoUrl)
-	} else {
+	} else if gitHubCommit.GitTag != "" {
 		fmt.Printf("Downloading tag \"%s\" of %s ...\n", latestTag, repoUrl)
+	} else {
+		return fmt.Errorf("The commit sha, tag, and branch name are all empty.")
 	}
 
 	localZipFilePath, err := downloadGithubZipFile(gitHubCommit, githubToken)
