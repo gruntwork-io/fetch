@@ -25,6 +25,11 @@ dependencies:
         cd ${REPO}
         ~/glide/linux-amd64/glide install
 
+    # Install gox to build binaries
+    - |
+        cd ${REPO}
+        go get github.com/mitchellh/gox
+
   cache_directories:
     - ~/glide
 
