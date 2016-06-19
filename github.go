@@ -6,11 +6,15 @@ import (
 	"bytes"
 	"encoding/json"
 	"regexp"
+	"os"
+	"io"
 )
 
 type GitHubRepo struct {
+	Url   string // The URL of the GitHub repo
 	Owner string // The GitHub account name under which the repo exists
 	Name  string // The GitHub repo name
+	Token string // The personal access token to access this repo (if it's a private repo)
 }
 
 // Represents a specific git commit.
@@ -40,35 +44,37 @@ type GitHubTagsCommitApiResponse struct {
 	Url string // The URL at which additional API information can be found for the given commit
 }
 
+// Modeled directly after the api.github.com response (but only includes the fields we care about). For more info, see:
+// https://developer.github.com/v3/repos/releases/#get-a-release-by-tag-name
+type GitHubReleaseApiResponse struct {
+	Id      int
+	Url     string
+	Name    string
+	Assets  []GitHubReleaseAsset
+}
+
+// The "assets" portion of the GitHubReleaseApiResponse. Modeled directly after the api.github.com response (but only
+// includes the fields we care about). For more info, see:
+// https://developer.github.com/v3/repos/releases/#get-a-release-by-tag-name
+type GitHubReleaseAsset struct {
+	Id   int
+	Url  string
+	Name string
+}
+
 // Fetch all tags from the given GitHub repo
 func FetchTags(githubRepoUrl string, githubToken string) ([]string, *FetchError) {
 	var tagsString []string
 
-	repo, err := ParseUrlIntoGitHubRepo(githubRepoUrl)
+	repo, err := ParseUrlIntoGitHubRepo(githubRepoUrl, githubToken)
 	if err != nil {
 		return tagsString, wrapError(err)
 	}
 
-	// Make an HTTP request, possibly with the gitHubOAuthToken in the header
-	httpClient := &http.Client{}
-
-	req, err := MakeGitHubTagsRequest(repo, githubToken)
+	url := createGitHubRepoUrlForPath(repo, "tags")
+	resp, err := callGitHubApi(repo, url, map[string]string{})
 	if err != nil {
-		return tagsString, wrapError(err)
-	}
-
-	resp, err := httpClient.Do(req)
-	if err != nil {
-		return tagsString, wrapError(err)
-	}
-	if resp.StatusCode != 200 {
-		// Convert the resp.Body to a string
-		buf := new(bytes.Buffer)
-		buf.ReadFrom(resp.Body)
-		respBody := buf.String()
-
-		// We leverage the HTTP Response Code as our ErrorCode here.
-		return tagsString, newError(resp.StatusCode, fmt.Sprintf("Received HTTP Response %d while fetching releases for GitHub URL %s. Full HTTP response: %s", resp.StatusCode, githubRepoUrl, respBody))
+		return tagsString, err
 	}
 
 	// Convert the response body to a byte array
@@ -78,8 +84,7 @@ func FetchTags(githubRepoUrl string, githubToken string) ([]string, *FetchError)
 
 	// Extract the JSON into our array of gitHubTagsCommitApiResponse's
 	var tags []GitHubTagsApiResponse
-	err = json.Unmarshal(jsonResp, &tags)
-	if err != nil {
+	if err := json.Unmarshal(jsonResp, &tags); err != nil {
 		return tagsString, wrapError(err)
 	}
 
@@ -91,7 +96,7 @@ func FetchTags(githubRepoUrl string, githubToken string) ([]string, *FetchError)
 }
 
 // Convert a URL into a GitHubRepo struct
-func ParseUrlIntoGitHubRepo(url string) (GitHubRepo, error) {
+func ParseUrlIntoGitHubRepo(url string, token string) (GitHubRepo, *FetchError) {
 	var gitHubRepo GitHubRepo
 
 	regex, regexErr := regexp.Compile("https?://(?:www\\.)?github.com/(.+?)/(.+?)(?:$|\\?|#|/)")
@@ -105,26 +110,97 @@ func ParseUrlIntoGitHubRepo(url string) (GitHubRepo, error) {
 	}
 
 	gitHubRepo = GitHubRepo{
+		Url: url,
 		Owner: matches[1],
 		Name: matches[2],
+		Token: token,
 	}
 
 	return gitHubRepo, nil
 }
 
-
-// Return an HTTP request that will fetch the given GitHub repo's tags, possibly with the gitHubOAuthToken in the header
-func MakeGitHubTagsRequest(repo GitHubRepo, gitHubToken string) (*http.Request, error) {
-	var request *http.Request
-
-	request, err := http.NewRequest("GET", fmt.Sprintf("https://api.github.com/repos/%s/%s/tags", repo.Owner, repo.Name), nil)
+// Download the release asset with the given id and return its body
+func DownloadReleaseAsset(repo GitHubRepo, assetId int, destPath string) *FetchError {
+	url := createGitHubRepoUrlForPath(repo, fmt.Sprintf("releases/assets/%d", assetId))
+	resp, err := callGitHubApi(repo, url, map[string]string{"Accept": "application/octet-stream"})
 	if err != nil {
-		return request, wrapError(err)
+		return err
 	}
 
-	if gitHubToken != "" {
-		request.Header.Set("Authorization", fmt.Sprintf("token %s", gitHubToken))
+	return writeResonseToDisk(resp, destPath)
+}
+
+// Get information about the GitHub release with the given tag
+func GetGitHubReleaseInfo(repo GitHubRepo, tag string) (GitHubReleaseApiResponse, *FetchError) {
+	release := GitHubReleaseApiResponse{}
+
+	url := createGitHubRepoUrlForPath(repo, fmt.Sprintf("releases/tags/%s", tag))
+	resp, err := callGitHubApi(repo, url, map[string]string{})
+	if err != nil {
+		return release, err
 	}
 
-	return request, nil
+	// Convert the response body to a byte array
+	buf := new(bytes.Buffer)
+	buf.ReadFrom(resp.Body)
+	jsonResp := buf.Bytes()
+
+	if err := json.Unmarshal(jsonResp, &release); err != nil {
+		return release, wrapError(err)
+	}
+
+	return release, nil
+}
+
+// Craft a URL for the GitHub repos API of the form repos/:owner/:repo/:path
+func createGitHubRepoUrlForPath(repo GitHubRepo, path string) string {
+	return fmt.Sprintf("repos/%s/%s/%s", repo.Owner, repo.Name, path)
+}
+
+// Call the GitHub API at the given path and return the HTTP response
+func callGitHubApi(repo GitHubRepo, path string, customHeaders map[string]string) (*http.Response, *FetchError) {
+	httpClient := &http.Client{}
+
+	request, err := http.NewRequest("GET", fmt.Sprintf("https://api.github.com/%s", path), nil)
+	if err != nil {
+		return nil, wrapError(err)
+	}
+
+	if repo.Token != "" {
+		request.Header.Set("Authorization", fmt.Sprintf("token %s", repo.Token))
+	}
+
+	for headerName, headerValue := range customHeaders {
+		request.Header.Set(headerName, headerValue)
+	}
+
+	resp, err := httpClient.Do(request)
+	if err != nil {
+		return nil, wrapError(err)
+	}
+	if resp.StatusCode != 200 {
+		// Convert the resp.Body to a string
+		buf := new(bytes.Buffer)
+		buf.ReadFrom(resp.Body)
+		respBody := buf.String()
+
+		// We leverage the HTTP Response Code as our ErrorCode here.
+		return nil, newError(resp.StatusCode, fmt.Sprintf("Received HTTP Response %d while fetching releases for GitHub URL %s. Full HTTP response: %s", resp.StatusCode, repo.Url, respBody))
+	}
+
+	return resp, nil
+}
+
+// Write the body of the given HTTP response to disk at the given path
+func writeResonseToDisk(resp *http.Response, destPath string) *FetchError {
+	out, err := os.Create(destPath)
+	if err != nil  {
+		return wrapError(err)
+	}
+
+	defer out.Close()
+	defer resp.Body.Close()
+
+	_, err = io.Copy(out, resp.Body)
+	return wrapError(err)
 }
