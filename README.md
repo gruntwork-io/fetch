@@ -52,9 +52,11 @@ The supported options are:
 - `--release-asset` (**Optional**): The name of a release asset--that is, a binary uploaded to a [GitHub
   Release](https://help.github.com/articles/creating-releases/)--to download. This option can be specified more than
   once. It only works with the `--tag` option.
-- `--github-oauth-token` (**Optiona**): A [GitHub Personal Access
+- `--github-oauth-token` (**Optional**): A [GitHub Personal Access
   Token](https://help.github.com/articles/creating-an-access-token-for-command-line-use/). Required if you're
-  downloading from private GitHub repos.
+  downloading from private GitHub repos. **NOTE:** fetch will also look for this token using the `GITHUB_OAUTH_TOKEN`
+  environment variable, which we recommend using instead of the command line option to ensure the token doesn't get
+  saved in bash history.
 
 The supported arguments are:
 
@@ -92,10 +94,11 @@ fetch \
 Download all files from a private GitHub repo using the GitHUb oAuth Token `123`. Get the release whose tag is exactly `0.1.5`, and save the files to `/tmp`:
 
 ```
+GITHUB_OAUTH_TOKEN=123
+
 fetch \
 --repo="https://github.com/gruntwork-io/script-modules" \
 --tag="0.1.5" \
---github-oauth-token="123" \
 /tmp
 
 ```
