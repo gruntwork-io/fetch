@@ -1,17 +1,17 @@
 # fetch
 
-fetch downloads all or a subset of files or folders from a specific git commit, branch, tag, or release of a GitHub
-repo.
+fetch makes it easy to download files, folders, and release assets from a specific git commit, branch, or tag of
+public and private GitHub repos.
 
 #### Features
 
 - Download from a specific git commit SHA.
 - Download from a specific git tag.
 - Download from a specific git branch.
+- Download a single source file, a subset of source files, or all source files from the repo.
 - Download a binary asset from a specific release.
 - Download from public repos.
 - Download from private repos by specifying a [GitHub Personal Access Token](https://help.github.com/articles/creating-an-access-token-for-command-line-use/).
-- Download a single file, a subset of files, or all files from the repo.
 - When specifying a git tag, you can can specify either exactly the tag you want, or a [Tag Constraint Expression](#tag-constraint-expressions) to do things like  "get the latest non-breaking version" of this repo. Note that fetch assumes git tags are specified according to [Semantic Versioning](http://semver.org/) principles.
 
 ## Motivation
@@ -137,7 +137,7 @@ fetch \
 --tag="0.1.5" \
 --release-asset="foo.exe" \
 /tmp
-
+```
 
 #### Tag Constraint Expressions
 

@@ -32,7 +32,7 @@ const ENV_VAR_GITHUB_TOKEN = "GITHUB_OAUTH_TOKEN"
 func main() {
 	app := cli.NewApp()
 	app.Name = "fetch"
-	app.Usage = "download a file, folder, or release asset from a specific release of a public or private GitHub repo subject to the Semantic Versioning constraints you impose"
+	app.Usage = "fetch makes it easy to download files, folders, and release assets from a specific git commit, branch, or tag of public and private GitHub repos."
 	app.UsageText = "fetch [global options] <local-download-path>\n   (See https://github.com/gruntwork-io/fetch for examples, argument definitions, and additional docs.)"
 	app.Version = getVersion(Version, VersionPrerelease)
 
