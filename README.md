@@ -3,17 +3,6 @@
 fetch makes it easy to download files, folders, and release assets from a specific git commit, branch, or tag of
 public and private GitHub repos.
 
-#### Features
-
-- Download from a specific git commit SHA.
-- Download from a specific git tag.
-- Download from a specific git branch.
-- Download a single source file, a subset of source files, or all source files from the repo.
-- Download a binary asset from a specific release.
-- Download from public repos.
-- Download from private repos by specifying a [GitHub Personal Access Token](https://help.github.com/articles/creating-an-access-token-for-command-line-use/).
-- When specifying a git tag, you can can specify either exactly the tag you want, or a [Tag Constraint Expression](#tag-constraint-expressions) to do things like  "get the latest non-breaking version" of this repo. Note that fetch assumes git tags are specified according to [Semantic Versioning](http://semver.org/) principles.
-
 #### Quick examples
 
 Download folder `/baz` from tag `0.1.3` of a GitHub repo and save it to `/tmp/baz`:
@@ -29,6 +18,17 @@ fetch --repo="https://github.com/foo/bar" --tag="0.1.5" --release-asset="foo.exe
 ```
 
 See more examples in the [Examples section](#examples).
+
+#### Features
+
+- Download from a specific git commit SHA.
+- Download from a specific git tag.
+- Download from a specific git branch.
+- Download a single source file, a subset of source files, or all source files from the repo.
+- Download a binary asset from a specific release.
+- Download from public repos.
+- Download from private repos by specifying a [GitHub Personal Access Token](https://help.github.com/articles/creating-an-access-token-for-command-line-use/).
+- When specifying a git tag, you can can specify either exactly the tag you want, or a [Tag Constraint Expression](#tag-constraint-expressions) to do things like  "get the latest non-breaking version" of this repo. Note that fetch assumes git tags are specified according to [Semantic Versioning](http://semver.org/) principles.
 
 #### Motivation
 
@@ -82,6 +82,24 @@ The supported arguments are:
 
 Run `fetch --help` to see more information about the flags.
 
+#### Tag Constraint Expressions
+
+The value of `--tag` can be expressed using any operators defined in [hashicorp/go-version](https://github.com/hashicorp/go-version).
+
+Specifically, this includes:
+
+| Tag Constraint Pattern | Meaning                                  |
+| -------------------------- | ---------------------------------------- |
+| `1.0.7`                    | Exactly version `1.0.7`                  |
+| `=1.0.7`                   | Exactly version `1.0.7`                  |
+| `!=1.0.7`                  | The latest version as long as that version is not `1.0.7` |
+| `>1.0.7`                   | The latest version greater than `1.0.7`  |
+| `<1.0.7`                   | The latest version that's less than `1.0.7` |
+| `>=1.0.7`                  | The latest version greater than or equal to `1.0.7` |
+| `<=1.0.7`                  | The latest version that's less than or equal to `1.0.7` |
+| `~>1.0.7`                  | The latest version that is greater than `1.0.7` and less than `1.1.0` |
+| `~>1.0`                    | The latest version that is greater than `1.0` and less than `2.0` |
+
 ## Examples
 
 #### Usage Example 1
@@ -133,24 +151,6 @@ Download the release asset `foo.exe` from a GitHub release where the tag is exac
 ```
 fetch --repo="https://github.com/foo/bar" --tag="0.1.5" --release-asset="foo.exe" /tmp
 ```
-
-#### Tag Constraint Expressions
-
-The value of `--tag` can be expressed using any operators defined in [hashicorp/go-version](https://github.com/hashicorp/go-version).
-
-Specifically, this includes:
-
-| Tag Constraint Pattern | Meaning                                  |
-| -------------------------- | ---------------------------------------- |
-| `1.0.7`                    | Exactly version `1.0.7`                  |
-| `=1.0.7`                   | Exactly version `1.0.7`                  |
-| `!=1.0.7`                  | The latest version as long as that version is not `1.0.7` |
-| `>1.0.7`                   | The latest version greater than `1.0.7`  |
-| `<1.0.7`                   | The latest version that's less than `1.0.7` |
-| `>=1.0.7`                  | The latest version greater than or equal to `1.0.7` |
-| `<=1.0.7`                  | The latest version that's less than or equal to `1.0.7` |
-| `~>1.0.7`                  | The latest version that is greater than `1.0.7` and less than `1.1.0` |
-| `~>1.0`                    | The latest version that is greater than `1.0` and less than `2.0` |
 
 ## TODO
 
