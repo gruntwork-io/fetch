@@ -3,6 +3,8 @@ package main
 import (
 	"testing"
 	"os"
+	"reflect"
+	"io/ioutil"
 )
 
 func TestGetListOfReleasesFromGitHubRepo(t *testing.T) {
@@ -52,19 +54,20 @@ func TestParseUrlIntoGitHubRepo(t *testing.T) {
 		repoUrl string
 		owner   string
 		name    string
+		token   string
 	}{
-		{"https://github.com/brikis98/ping-play", "brikis98", "ping-play"},
-		{"http://github.com/brikis98/ping-play", "brikis98", "ping-play"},
-		{"https://github.com/gruntwork-io/script-modules", "gruntwork-io", "script-modules"},
-		{"http://github.com/gruntwork-io/script-modules", "gruntwork-io", "script-modules"},
-		{"http://www.github.com/gruntwork-io/script-modules", "gruntwork-io", "script-modules"},
-		{"http://www.github.com/gruntwork-io/script-modules/", "gruntwork-io", "script-modules"},
-		{"http://www.github.com/gruntwork-io/script-modules?foo=bar", "gruntwork-io", "script-modules"},
-		{"http://www.github.com/gruntwork-io/script-modules?foo=bar&foo=baz", "gruntwork-io", "script-modules"},
+		{"https://github.com/brikis98/ping-play", "brikis98", "ping-play", ""},
+		{"http://github.com/brikis98/ping-play", "brikis98", "ping-play", ""},
+		{"https://github.com/gruntwork-io/script-modules", "gruntwork-io", "script-modules", ""},
+		{"http://github.com/gruntwork-io/script-modules", "gruntwork-io", "script-modules", ""},
+		{"http://www.github.com/gruntwork-io/script-modules", "gruntwork-io", "script-modules", ""},
+		{"http://www.github.com/gruntwork-io/script-modules/", "gruntwork-io", "script-modules", ""},
+		{"http://www.github.com/gruntwork-io/script-modules?foo=bar", "gruntwork-io", "script-modules", "token"},
+		{"http://www.github.com/gruntwork-io/script-modules?foo=bar&foo=baz", "gruntwork-io", "script-modules", "token"},
 	}
 
 	for _, tc := range cases {
-		repo, err := ParseUrlIntoGitHubRepo(tc.repoUrl)
+		repo, err := ParseUrlIntoGitHubRepo(tc.repoUrl, tc.token)
 		if err != nil {
 			t.Fatalf("error extracting url %s into a GitHubRepo struct: %s", tc.repoUrl, err)
 		}
@@ -75,6 +78,14 @@ func TestParseUrlIntoGitHubRepo(t *testing.T) {
 
 		if repo.Name != tc.name {
 			t.Fatalf("while extracting %s, expected name %s, received %s", tc.repoUrl, tc.name, repo.Name)
+		}
+
+		if repo.Url != tc.repoUrl {
+			t.Fatalf("while extracting %s, expected url %s, received %s", tc.repoUrl, tc.repoUrl, repo.Url)
+		}
+
+		if repo.Token != tc.token {
+			t.Fatalf("while extracting %s, expected token %s, received %s", tc.repoUrl, tc.token, repo.Token)
 		}
 	}
 }
@@ -91,9 +102,104 @@ func TestParseUrlThrowsErrorOnMalformedUrl(t *testing.T) {
 	}
 
 	for _, tc := range cases {
-		_, err := ParseUrlIntoGitHubRepo(tc.repoUrl)
+		_, err := ParseUrlIntoGitHubRepo(tc.repoUrl, "")
 		if err == nil {
 			t.Fatalf("Expected error on malformed url %s, but no error was received.", tc.repoUrl)
 		}
 	}
+}
+
+func TestGetGitHubReleaseInfo(t *testing.T) {
+	t.Parallel()
+
+	token := os.Getenv("GITHUB_OAUTH_TOKEN")
+
+	expectedFetchTestPrivateRelease := GitHubReleaseApiResponse{
+		Id: 3064041,
+		Url: "https://api.github.com/repos/gruntwork-io/fetch-test-private/releases/3064041",
+		Name: "v0.0.2",
+		Assets: []GitHubReleaseAsset{
+			{
+				Id: 1872521,
+				Url: "https://api.github.com/repos/gruntwork-io/fetch-test-private/releases/assets/1872521",
+				Name: "test-asset.png",
+			},
+		},
+	}
+
+	expectedFetchTestPublicRelease := GitHubReleaseApiResponse{
+		Id: 3065803,
+		Url: "https://api.github.com/repos/gruntwork-io/fetch-test-public/releases/3065803",
+		Name: "v0.0.3",
+		Assets: []GitHubReleaseAsset{},
+	}
+
+	cases := []struct {
+		repoUrl   string
+		repoToken string
+		tag       string
+		expected  GitHubReleaseApiResponse
+	}{
+		{"https://github.com/gruntwork-io/fetch-test-private", token, "v0.0.2", expectedFetchTestPrivateRelease},
+		{"https://github.com/gruntwork-io/fetch-test-public", "", "v0.0.3", expectedFetchTestPublicRelease},
+	}
+
+	for _, tc := range cases {
+		repo, err := ParseUrlIntoGitHubRepo(tc.repoUrl, tc.repoToken)
+		if err != nil {
+			t.Fatalf("Failed to parse %s into GitHub URL due to error: %s", tc.repoUrl, err.Error())
+		}
+
+		resp, err := GetGitHubReleaseInfo(repo, tc.tag)
+		if err != nil {
+			t.Fatalf("Failed to fetch GitHub release info for repo %s due to error: %s", tc.repoToken, err.Error())
+		}
+
+		if !reflect.DeepEqual(tc.expected, resp) {
+			t.Fatalf("Expected GitHub release %s but got GitHub release %s", tc.expected, resp)
+		}
+	}
+}
+
+func TestDownloadReleaseAsset(t *testing.T) {
+	t.Parallel()
+
+	token := os.Getenv("GITHUB_OAUTH_TOKEN")
+
+	cases := []struct {
+		repoUrl   string
+		repoToken string
+		tag       string
+		assetId   int
+	}{
+		{"https://github.com/gruntwork-io/fetch-test-private", token, "v0.0.2", 1872521},
+		{"https://github.com/gruntwork-io/fetch-test-public", "", "v0.0.2", 1872641},
+	}
+
+	for _, tc := range cases {
+		repo, err := ParseUrlIntoGitHubRepo(tc.repoUrl, tc.repoToken)
+		if err != nil {
+			t.Fatalf("Failed to parse %s into GitHub URL due to error: %s", tc.repoUrl, err.Error())
+		}
+
+		tmpFile, tmpErr := ioutil.TempFile("", "test-download-release-asset")
+		if tmpErr != nil {
+			t.Fatalf("Failed to create temp file due to error: %s", tmpErr.Error())
+		}
+
+		if err := DownloadReleaseAsset(repo, tc.assetId, tmpFile.Name()); err != nil {
+			t.Fatalf("Failed to download asset %s to %s from GitHub URL %s due to error: %s", tc.assetId, tmpFile.Name(), tc.repoUrl, err.Error())
+		}
+
+		defer os.Remove(tmpFile.Name())
+
+		if !fileExists(tmpFile.Name()) {
+			t.Fatalf("Got no errors downloading asset %s to %s from GitHub URL %s, but %s does not exist!", tc.assetId, tmpFile.Name(), tc.repoUrl, tmpFile.Name())
+		}
+	}
+}
+
+func fileExists(path string) bool {
+	_, err := os.Stat(path)
+	return err == nil
 }

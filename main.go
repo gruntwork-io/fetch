@@ -5,35 +5,66 @@ import (
 	"github.com/codegangsta/cli"
 	"fmt"
 	"errors"
+	"path"
 )
+
+type FetchOptions struct {
+	RepoUrl string
+	CommitSha string
+	BranchName string
+	TagConstraint string
+	GithubToken string
+	SourcePaths []string
+	ReleaseAssets []string
+	LocalDownloadPath string
+}
+
+const OPTION_REPO = "repo"
+const OPTION_COMMIT = "commit"
+const OPTION_BRANCH = "branch"
+const OPTION_TAG = "tag"
+const OPTION_GITHUB_TOKEN = "github-oauth-token"
+const OPTION_SOURCE_PATH = "source-path"
+const OPTION_RELEASE_ASSET = "release-asset"
+
+const ENV_VAR_GITHUB_TOKEN = "GITHUB_OAUTH_TOKEN"
 
 func main() {
 	app := cli.NewApp()
 	app.Name = "fetch"
-	app.Usage = "download a file or folder from a specific release of a public or private GitHub repo subject to the Semantic Versioning constraints you impose"
-	app.UsageText = "fetch [global options] [<repo-download-filter>] <local-download-path>\n   (See https://github.com/gruntwork-io/fetch for examples, argument definitions, and additional docs.)"
+	app.Usage = "download a file, folder, or release asset from a specific release of a public or private GitHub repo subject to the Semantic Versioning constraints you impose"
+	app.UsageText = "fetch [global options] <local-download-path>\n   (See https://github.com/gruntwork-io/fetch for examples, argument definitions, and additional docs.)"
 	app.Version = getVersion(Version, VersionPrerelease)
 
 	app.Flags = []cli.Flag{
 		cli.StringFlag{
-			Name: "repo",
+			Name: OPTION_REPO,
 			Usage: "Required. Fully qualified URL of the GitHub repo.",
 		},
 		cli.StringFlag{
-			Name: "commit",
+			Name: OPTION_COMMIT,
 			Usage: "The specific git commit SHA to download. If specified, will override --branch and --tag.",
 		},
 		cli.StringFlag{
-			Name: "branch",
+			Name: OPTION_BRANCH,
 			Usage: "The git branch from which to download the commit; the latest commit in th branch will be used. If specified, will override --tag.",
 		},
 		cli.StringFlag{
-			Name: "tag",
+			Name: OPTION_TAG,
 			Usage: "The specific git tag to download, expressed with Version Constraint Operators.\n\tIf left blank, fetch will download the latest git tag.\n\tSee https://github.com/gruntwork-io/fetch#version-constraint-operators for examples.",
 		},
 		cli.StringFlag{
-			Name: "github-oauth-token",
-			Usage: "Required for private repos. A GitHub Personal Access Token (https://help.github.com/articles/creating-an-access-token-for-command-line-use/).",
+			Name: OPTION_GITHUB_TOKEN,
+			Usage: "A GitHub Personal Access Token, which is required for downloading from private repos.",
+			EnvVar: ENV_VAR_GITHUB_TOKEN,
+		},
+		cli.StringSliceFlag{
+			Name: OPTION_SOURCE_PATH,
+			Usage: "The source path to download from the repo. If this or --release-asset aren't specified, all files are downloaded. Can be specified more than once.",
+		},
+		cli.StringSliceFlag{
+			Name: OPTION_RELEASE_ASSET,
+			Usage: "The name of a release asset--that is, a binary uploaded to a GitHub Release--to download. Only works with --tag. Can be specified more than once.",
 		},
 	}
 
@@ -54,40 +85,13 @@ func runFetchWrapper (c *cli.Context) {
 
 // Run the fetch program
 func runFetch (c *cli.Context) error {
-
-	// Validate required flags
-	if c.String("repo") == "" {
-		return fmt.Errorf("The --repo flag is required. Run \"fetch --help\" for full usage info.")
-	}
-
-	repoUrl := c.String("repo")
-	commitSha := c.String("commit")
-	branchName := c.String("branch")
-	tagConstraint := c.String("tag")
-	githubToken := c.String("github-oauth-token")
-
-	// Validate args
-	if len(c.Args()) == 0 || len(c.Args()) > 2 {
-		return fmt.Errorf("Missing required arguments. Run \"fetch --help\" for full usage info.")
-	}
-
-	var repoDownloadFilter string
-	var localFileDst string
-
-	// Assume the <repo-download-filter> arg is missing, so set a default
-	if len(c.Args()) == 1 {
-		repoDownloadFilter = "/"
-		localFileDst = c.Args()[0]
-	}
-
-	// We have two args so load both
-	if len(c.Args()) == 2 {
-		repoDownloadFilter = c.Args()[0]
-		localFileDst = c.Args()[1]
+	options := parseOptions(c)
+	if err := validateOptions(options); err != nil {
+		return err
 	}
 
 	// Get the tags for the given repo
-	tags, err := FetchTags(repoUrl, githubToken)
+	tags, err := FetchTags(options.RepoUrl, options.GithubToken)
 	if err != nil {
 		if err.errorCode == INVALID_GITHUB_TOKEN_OR_ACCESS_DENIED {
 			return errors.New(getErrorMessage(INVALID_GITHUB_TOKEN_OR_ACCESS_DENIED, err.details))
@@ -99,7 +103,7 @@ func runFetch (c *cli.Context) error {
 	}
 
 	// Find the specific release that matches the latest version constraint
-	latestTag, err := getLatestAcceptableTag(tagConstraint, tags)
+	latestTag, err := getLatestAcceptableTag(options.TagConstraint, tags)
 	if err != nil {
 		if err.errorCode == INVALID_TAG_CONSTRAINT_EXPRESSION {
 			return errors.New(getErrorMessage(INVALID_TAG_CONSTRAINT_EXPRESSION, err.details))
@@ -109,9 +113,67 @@ func runFetch (c *cli.Context) error {
 	}
 
 	// Prepare the vars we'll need to download
-	repo, goErr := ParseUrlIntoGitHubRepo(repoUrl)
-	if goErr != nil {
+	repo, err := ParseUrlIntoGitHubRepo(options.RepoUrl, options.GithubToken)
+	if err != nil {
 		return fmt.Errorf("Error occurred while parsing GitHub URL: %s", err)
+	}
+
+	// If no release assets and no source paths are specified, then by default, download all the source files from
+	// the repo
+	if len(options.SourcePaths) == 0 && len(options.ReleaseAssets) == 0 {
+		options.SourcePaths = []string{"/"}
+	}
+
+	// Download any requested source files
+	if err := downloadSourcePaths(options.SourcePaths, options.LocalDownloadPath, repo, latestTag, options.BranchName, options.CommitSha); err != nil {
+		return err
+	}
+
+	// Download any requested release assets
+	if err := downloadReleaseAssets(options.ReleaseAssets, options.LocalDownloadPath, repo, latestTag); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func parseOptions(c *cli.Context) FetchOptions {
+	return FetchOptions{
+		RepoUrl: c.String(OPTION_REPO),
+		CommitSha: c.String(OPTION_COMMIT),
+		BranchName: c.String(OPTION_BRANCH),
+		TagConstraint: c.String(OPTION_TAG),
+		GithubToken: c.String(OPTION_GITHUB_TOKEN),
+		SourcePaths: c.StringSlice(OPTION_SOURCE_PATH),
+		ReleaseAssets: c.StringSlice(OPTION_RELEASE_ASSET),
+		LocalDownloadPath: c.Args().First(),
+	}
+}
+
+func validateOptions(options FetchOptions) error {
+	if options.RepoUrl == "" {
+		return fmt.Errorf("The --%s flag is required. Run \"fetch --help\" for full usage info.", OPTION_REPO)
+	}
+
+	if options.LocalDownloadPath == "" {
+		return fmt.Errorf("Missing required arguments specifying the local download path. Run \"fetch --help\" for full usage info.")
+	}
+
+	if options.TagConstraint == "" && options.CommitSha == "" && options.BranchName == "" {
+		return fmt.Errorf("You must specify exactly one of --%s, --%s, or --%s. Run \"fetch --help\" for full usage info.", OPTION_TAG, OPTION_COMMIT, OPTION_BRANCH)
+	}
+
+	if len(options.ReleaseAssets) > 0 && options.TagConstraint == "" {
+		return fmt.Errorf("The --%s flag can only be used with --%s. Run \"fetch --help\" for full usage info.", OPTION_RELEASE_ASSET, OPTION_TAG)
+	}
+
+	return nil
+}
+
+// Download the specified source files from the given repo
+func downloadSourcePaths(sourcePaths []string, destPath string, githubRepo GitHubRepo, latestTag string, branchName string, commitSha string) error {
+	if len(sourcePaths) == 0 {
+		return  nil
 	}
 
 	// We want to respect the GitHubCommit Hierarchy of "CommitSha > GitTag > BranchName"
@@ -119,7 +181,7 @@ func runFetch (c *cli.Context) error {
 	// If the user specified no value for GitTag, our call to getLatestAcceptableTag() above still gave us some value
 	// So we can guarantee (at least logically) that this struct instance is in a valid state right now.
 	gitHubCommit := GitHubCommit{
-		Repo: repo,
+		Repo: githubRepo,
 		GitTag: latestTag,
 		BranchName: branchName,
 		CommitSha: commitSha,
@@ -127,28 +189,68 @@ func runFetch (c *cli.Context) error {
 
 	// Download that release as a .zip file
 	if gitHubCommit.CommitSha != "" {
-		fmt.Printf("Downloading git commit \"%s\" of %s ...\n", gitHubCommit.CommitSha, repoUrl)
+		fmt.Printf("Downloading git commit \"%s\" of %s ...\n", gitHubCommit.CommitSha, githubRepo.Url)
 	} else if gitHubCommit.BranchName != "" {
-		fmt.Printf("Downloading latest commit from branch \"%s\" of %s ...\n", gitHubCommit.BranchName, repoUrl)
+		fmt.Printf("Downloading latest commit from branch \"%s\" of %s ...\n", gitHubCommit.BranchName, githubRepo.Url)
 	} else if gitHubCommit.GitTag != "" {
-		fmt.Printf("Downloading tag \"%s\" of %s ...\n", latestTag, repoUrl)
+		fmt.Printf("Downloading tag \"%s\" of %s ...\n", latestTag, githubRepo.Url)
 	} else {
 		return fmt.Errorf("The commit sha, tag, and branch name are all empty.")
 	}
 
-	localZipFilePath, err := downloadGithubZipFile(gitHubCommit, githubToken)
+	localZipFilePath, err := downloadGithubZipFile(gitHubCommit, githubRepo.Token)
 	if err != nil {
 		return fmt.Errorf("Error occurred while downloading zip file from GitHub repo: %s", err)
 	}
 	defer cleanupZipFile(localZipFilePath)
 
 	// Unzip and move the files we need to our destination
-	fmt.Printf("Extracting files from <repo>%s to %s ...\n", repoDownloadFilter, localFileDst)
-	if goErr = extractFiles(localZipFilePath, repoDownloadFilter, localFileDst); goErr != nil {
-		return fmt.Errorf("Error occurred while extracting files from GitHub zip file: %s", goErr)
+	for _, sourcePath := range sourcePaths {
+		fmt.Printf("Extracting files from <repo>%s to %s ...\n", sourcePath, destPath)
+		if err := extractFiles(localZipFilePath, sourcePath, destPath); err != nil {
+			return fmt.Errorf("Error occurred while extracting files from GitHub zip file: %s", err.Error())
+		}
 	}
 
 	fmt.Println("Download and file extraction complete.")
+	return nil
+}
+
+// Download the specified binary files that were uploaded as release assets to the specified GitHub release
+func downloadReleaseAssets(releaseAssets []string, destPath string, githubRepo GitHubRepo, latestTag string) error {
+	if len(releaseAssets) == 0 {
+		return nil
+	}
+
+	release, err := GetGitHubReleaseInfo(githubRepo, latestTag)
+	if err != nil {
+		return err
+	}
+
+	for _, assetName := range releaseAssets {
+		asset := findAssetInRelease(assetName, release)
+		if asset == nil {
+			return fmt.Errorf("Could not find asset %s in release %s", assetName, latestTag)
+		}
+
+		assetPath := path.Join(destPath, asset.Name)
+		fmt.Printf("Downloading release asset %s to %s\n", asset.Name, assetPath)
+		if err := DownloadReleaseAsset(githubRepo, asset.Id, assetPath); err != nil {
+			return err
+		}
+	}
+
+	fmt.Println("Download of release assets complete.")
+	return nil
+}
+
+func findAssetInRelease(assetName string, release GitHubReleaseApiResponse) *GitHubReleaseAsset {
+	for _, asset := range release.Assets {
+		if asset.Name == assetName {
+			return &asset
+		}
+	}
+
 	return nil
 }
 

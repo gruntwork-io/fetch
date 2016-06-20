@@ -23,6 +23,9 @@ func newError(errorCode int, details string) *FetchError {
 }
 
 func wrapError(err error) *FetchError {
+	if err == nil {
+		return nil
+	}
 	return &FetchError{
 		errorCode: -1,
 		details: err.Error(),
