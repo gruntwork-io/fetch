@@ -8,6 +8,10 @@ import (
 	"path"
 )
 
+// This variable is set at build time using -ldflags parameters. For more info, see:
+// http://stackoverflow.com/a/11355611/483528
+var VERSION string
+
 type FetchOptions struct {
 	RepoUrl string
 	CommitSha string
@@ -34,7 +38,7 @@ func main() {
 	app.Name = "fetch"
 	app.Usage = "fetch makes it easy to download files, folders, and release assets from a specific git commit, branch, or tag of public and private GitHub repos."
 	app.UsageText = "fetch [global options] <local-download-path>\n   (See https://github.com/gruntwork-io/fetch for examples, argument definitions, and additional docs.)"
-	app.Version = getVersion(Version, VersionPrerelease)
+	app.Version = VERSION
 
 	app.Flags = []cli.Flag{
 		cli.StringFlag{
@@ -273,15 +277,6 @@ func cleanupZipFile(localZipFilePath string) error {
 	}
 
 	return nil
-}
-
-// getVersion returns a properly formatted version string
-func getVersion(version string, versionPreRelease string) string {
-	if versionPreRelease != "" {
-		return version
-	} else {
-		return fmt.Sprintf("%s-%s", version, versionPreRelease)
-	}
 }
 
 func getErrorMessage(errorCode int, errorDetails string) string {
