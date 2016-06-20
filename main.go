@@ -138,15 +138,26 @@ func runFetch (c *cli.Context) error {
 }
 
 func parseOptions(c *cli.Context) FetchOptions {
+	localDownloadPath := c.Args().First()
+	sourcePaths := c.StringSlice(OPTION_SOURCE_PATH)
+
+	// Maintain backwards compatibility with older versions of fetch that passed source paths as an optional first
+	// command-line arg
+	if c.NArg() == 2 {
+		fmt.Printf("DEPRECATION WARNING: passing source paths via command-line args is deprecated. Please use the --%s option instead!\n", OPTION_SOURCE_PATH)
+		sourcePaths = []string{c.Args().First()}
+		localDownloadPath = c.Args().Get(1)
+	}
+
 	return FetchOptions{
 		RepoUrl: c.String(OPTION_REPO),
 		CommitSha: c.String(OPTION_COMMIT),
 		BranchName: c.String(OPTION_BRANCH),
 		TagConstraint: c.String(OPTION_TAG),
 		GithubToken: c.String(OPTION_GITHUB_TOKEN),
-		SourcePaths: c.StringSlice(OPTION_SOURCE_PATH),
+		SourcePaths: sourcePaths,
 		ReleaseAssets: c.StringSlice(OPTION_RELEASE_ASSET),
-		LocalDownloadPath: c.Args().First(),
+		LocalDownloadPath: localDownloadPath,
 	}
 }
 
