@@ -1,54 +1,25 @@
 machine:
   environment:
-    IMPORT_PATH: "github.com/gruntwork-io/${CIRCLE_PROJECT_REPONAME}"
-    REPO: "$HOME/.go_workspace/src/${IMPORT_PATH}"
-    GOOS: linux
-    GO15VENDOREXPERIMENT: 1
+    PATH: $PATH:$HOME/glide/linux-amd64
 
 dependencies:
   override:
-    # Get our repo into the CircleCI GOPATH.
-    - |
-        mkdir -p "${REPO}"
-        rm -rf "${REPO}"
-        ln -s "${HOME}/${CIRCLE_PROJECT_REPONAME}" "${REPO}"
-
-    # Install glide to fetch Go dependencies
-    - |
-        if [[ ! -d ~/glide ]]; then
-          wget https://github.com/Masterminds/glide/releases/download/0.10.2/glide-0.10.2-linux-amd64.zip
-          unzip glide-0.10.2-linux-amd64.zip -d ~/glide
-        fi
-
-    # Run glide
-    - |
-        cd ${REPO}
-        ~/glide/linux-amd64/glide install
-
-    # Install gox to build binaries
-    - |
-        cd ${REPO}
-        go get github.com/mitchellh/gox
+    # Install the gruntwork-module-circleci-helpers and use it to configure the build environment and run tests.
+    - curl -Ls https://raw.githubusercontent.com/gruntwork-io/gruntwork-installer/master/bootstrap-gruntwork-installer.sh | bash /dev/stdin --version 0.0.9
+    - gruntwork-install --module-name "gruntwork-module-circleci-helpers" --repo "https://github.com/gruntwork-io/module-ci" --tag "v0.0.10"
+    - configure-environment-for-gruntwork-module --go-src-path . --terraform-version NONE --packer-version NONE
 
   cache_directories:
     - ~/glide
 
 test:
   override:
-    - |
-        sudo chmod 0755 "${REPO}/_ci/run-tests.sh"
-        ${REPO}/_ci/run-tests.sh
+    - run-go-tests
 
 deployment:
   release:
     tag: /v.*/
     commands:
       # If a new release is tagged in GitHub, build the binaries and upload them to GitHub.
-      - |
-         ${REPO}/_ci/build-and-push-release-assets.sh \
-             --local-src-path "$REPO" \
-             --local-bin-output-path "$HOME/bin/$CIRCLE_PROJECT_REPONAME" \
-             --github-repo-owner "$CIRCLE_PROJECT_USERNAME" \
-             --github-repo-name "$CIRCLE_PROJECT_REPONAME" \
-             --git-tag "$CIRCLE_TAG" \
-             --app-name "$CIRCLE_PROJECT_REPONAME"
+      - build-go-binaries --app-name fetch --dest-path bin --ld-flags "-X main.VERSION=$CIRCLE_TAG"
+      - upload-github-release-assets bin/*
