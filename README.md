@@ -14,23 +14,41 @@ public and private GitHub repos.
 - Download from private repos by specifying a [GitHub Personal Access Token](https://help.github.com/articles/creating-an-access-token-for-command-line-use/).
 - When specifying a git tag, you can can specify either exactly the tag you want, or a [Tag Constraint Expression](#tag-constraint-expressions) to do things like  "get the latest non-breaking version" of this repo. Note that fetch assumes git tags are specified according to [Semantic Versioning](http://semver.org/) principles.
 
-## Motivation
+#### Quick examples
 
-[Gruntwork](http://gruntwork.io) helps software teams get up and running on AWS with DevOps best practices and world-class 
-infrastructure in about 2 weeks. Sometimes we publish scripts and binaries that clients use in their infrastructure,
-and we want clients to auto-download the latest non-breaking version of that script or binary when we publish updates.
-In addition, for security reasons, we wish to verify the integrity of the git commit being downloaded.
+Download folder `/baz` from tag `0.1.3` of a GitHub repo and save it to `/tmp/baz`:
+
+```
+fetch --repo="https://github.com/foo/bar" --tag="0.1.3" --source-path="/baz" /tmp/baz
+```
+
+Download the release asset `foo.exe` from release `0.1.5` and save it to `/tmp`:
+
+```
+fetch --repo="https://github.com/foo/bar" --tag="0.1.5" --release-asset="foo.exe" /tmp
+```
+
+See more examples in the [Examples section](#examples).
+
+#### Motivation
+
+[Gruntwork](http://gruntwork.io) helps software teams get up and running on AWS with DevOps best practices and
+world-class infrastructure in about 2 weeks. Sometimes we publish scripts and binaries that clients use in their
+infrastructure, and we want an easy way to install a specific version of one of those scripts and binaries. While this
+is fairly straightforward to do with public GitHub repos, as you can usually `curl` or `wget` a public URL, it's much
+trickier to do with private GitHub repos, as you have to make multiple API calls, parse JSON responses, and handle
+authentication. Fetch makes it possible to handle all of these cases with a one-liner.
 
 ## Installation
 
 Download the fetch binary from the [GitHub Releases](https://github.com/gruntwork-io/fetch/releases) tab.
 
-## Assumptions
+## Usage
+
+#### Assumptions
 
 fetch assumes that a repo's tags are in the format `vX.Y.Z` or `X.Y.Z` to support Semantic Versioning parsing. Repos
 that use git tags not in this format cannot currently be used with fetch.
-
-## Usage
 
 #### General Usage
 
@@ -64,16 +82,14 @@ The supported arguments are:
 
 Run `fetch --help` to see more information about the flags.
 
+## Examples
+
 #### Usage Example 1
 
 Download `/modules/foo/bar.sh` from a GitHub release where the tag is the latest version of `0.1.x` but at least `0.1.5`, and save it to `/tmp/bar`:
 
 ```
-fetch \
---repo="https://github.com/gruntwork-io/script-modules" \
---tag="~>0.1.5" \
---source-path="/modules/foo/bar.sh" \
-/tmp/bar
+fetch --repo="https://github.com/foo/bar" --tag="~>0.1.5" --source-path="/modules/foo/bar.sh" /tmp/bar
 ```
 
 #### Usage Example 2
@@ -81,12 +97,7 @@ fetch \
 Download all files in `/modules/foo` from a GitHub release where the tag is exactly `0.1.5`, and save them to `/tmp`:
 
 ```
-fetch \
---repo="https://github.com/gruntwork-io/script-modules" \
---tag="0.1.5" \
---source-path="/modules/foo" \
-/tmp
-
+fetch --repo="https://github.com/foo/bar" --tag="0.1.5" --source-path="/modules/foo" /tmp
 ```
 
 #### Usage Example 3
@@ -96,11 +107,7 @@ Download all files from a private GitHub repo using the GitHUb oAuth Token `123`
 ```
 GITHUB_OAUTH_TOKEN=123
 
-fetch \
---repo="https://github.com/gruntwork-io/script-modules" \
---tag="0.1.5" \
-/tmp
-
+fetch --repo="https://github.com/foo/bar" --tag="0.1.5" /tmp
 ```
 
 #### Usage Example 4
@@ -108,11 +115,7 @@ fetch \
 Download all files from the latest commit on the `sample-branch` branch, and save them to `/tmp`:
 
 ```
-fetch \
---repo="https://github.com/gruntwork-io/fetch-test-public" \
---branch="sample-branch" \
-/tmp/josh1
-
+fetch --repo="https://github.com/foo/bar" --branch="sample-branch" /tmp/josh1
 ```
 
 #### Usage Example 5
@@ -120,11 +123,7 @@ fetch \
 Download all files from the git commit `f32a08313e30f116a1f5617b8b68c11f1c1dbb61`, and save them to `/tmp`:
 
 ```
-fetch \
---repo="https://github.com/gruntwork-io/fetch-test-public" \
---commit="f32a08313e30f116a1f5617b8b68c11f1c1dbb61" \
-/tmp/josh1
-
+fetch --repo="https://github.com/foo/bar" --commit="f32a08313e30f116a1f5617b8b68c11f1c1dbb61" /tmp/josh1
 ```
 
 #### Usage Example 6
@@ -132,11 +131,7 @@ fetch \
 Download the release asset `foo.exe` from a GitHub release where the tag is exactly `0.1.5`, and save it to `/tmp`:
 
 ```
-fetch \
---repo="https://github.com/gruntwork-io/script-modules" \
---tag="0.1.5" \
---release-asset="foo.exe" \
-/tmp
+fetch --repo="https://github.com/foo/bar" --tag="0.1.5" --release-asset="foo.exe" /tmp
 ```
 
 #### Tag Constraint Expressions
