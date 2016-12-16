@@ -12,7 +12,7 @@ func isTagConstraintSpecificTag(tagConstraint string) (bool, string) {
 		switch tagConstraint[0] {
 		// Check for a tagConstraint '='
 		case '=':
-			return true, tagConstraint[1:]
+			return true, strings.TrimSpace(tagConstraint[1:])
 
 		// Check for a tagConstraint without constraint specifier
 		// Neither of '!=', '>', '>=', '<', '<=', '~>' is prefixed before tag
@@ -20,7 +20,7 @@ func isTagConstraintSpecificTag(tagConstraint string) (bool, string) {
 			return false, tagConstraint
 
 		default:
-			return true, tagConstraint
+			return true, strings.TrimSpace(tagConstraint)
 		}
 	}
 	return false, tagConstraint
