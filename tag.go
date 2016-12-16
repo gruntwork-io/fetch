@@ -7,6 +7,22 @@ import (
 	"github.com/hashicorp/go-version"
 )
 
+func isTagConstraintSpecificTag(tagConstraint string) (bool, string) {
+	if len(tagConstraint) > 0 {
+		switch tagConstraint[0] {
+		// Check for a tagConstraint '='
+		case '=':
+			return true, tagConstraint[1:]
+
+		// Check for a tagConstraint without constraint specifier
+		// Neither of '!=', '>', '>=', '<', '<=', '~>' is prefixed before tag
+		case '>', '<', '!', '~':
+			return true, tagConstraint
+		}
+	}
+	return false, tagConstraint
+}
+
 func getLatestAcceptableTag(tagConstraint string, tags []string) (string, *FetchError) {
 	var latestTag string
 

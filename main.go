@@ -106,14 +106,18 @@ func runFetch (c *cli.Context) error {
 		}
 	}
 
-	// Find the specific release that matches the latest version constraint
-	latestTag, err := getLatestAcceptableTag(options.TagConstraint, tags)
-	if err != nil {
-		if err.errorCode == INVALID_TAG_CONSTRAINT_EXPRESSION {
-			return errors.New(getErrorMessage(INVALID_TAG_CONSTRAINT_EXPRESSION, err.details))
-		} else {
-			return fmt.Errorf("Error occurred while computing latest tag that satisfies version contraint expression: %s", err)
+	specific, desiredTag := isTagConstraintSpecificTag(options.TagConstraint)
+	if !specific {
+		// Find the specific release that matches the latest version constraint
+		latestTag, err := getLatestAcceptableTag(options.TagConstraint, tags)
+		if err != nil {
+			if err.errorCode == INVALID_TAG_CONSTRAINT_EXPRESSION {
+				return errors.New(getErrorMessage(INVALID_TAG_CONSTRAINT_EXPRESSION, err.details))
+			} else {
+				return fmt.Errorf("Error occurred while computing latest tag that satisfies version contraint expression: %s", err)
+			}
 		}
+		desiredTag = latestTag
 	}
 
 	// Prepare the vars we'll need to download
@@ -129,12 +133,12 @@ func runFetch (c *cli.Context) error {
 	}
 
 	// Download any requested source files
-	if err := downloadSourcePaths(options.SourcePaths, options.LocalDownloadPath, repo, latestTag, options.BranchName, options.CommitSha); err != nil {
+	if err := downloadSourcePaths(options.SourcePaths, options.LocalDownloadPath, repo, desiredTag, options.BranchName, options.CommitSha); err != nil {
 		return err
 	}
 
 	// Download any requested release assets
-	if err := downloadReleaseAssets(options.ReleaseAssets, options.LocalDownloadPath, repo, latestTag); err != nil {
+	if err := downloadReleaseAssets(options.ReleaseAssets, options.LocalDownloadPath, repo, desiredTag); err != nil {
 		return err
 	}
 
