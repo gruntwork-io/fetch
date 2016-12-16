@@ -41,6 +41,42 @@ func TestGetLatestAcceptableTag(t *testing.T) {
 	}
 }
 
+func TestIsTagConstraintSpecificTag(t *testing.T) {
+	t.Parallel()
+
+	cases := []struct {
+		tagConstraint string
+		desiredTag    string
+		specific      bool
+	}{
+		{"1.0.7", "1.0.7", true},
+		{" 1.0.7	 ", "1.0.7", true},
+		{"=1.0.7", "1.0.7", true},
+		{"= 1.0.7", "1.0.7", true},
+
+		{"~> 1.0.0", "~> 1.0.0", false},
+		{"> 1.3", "> 1.3", false},
+		{">= 1.3", ">= 1.3", false},
+		{"<= 1.3", "<= 1.3", false},
+		{"< 1.3", "< 1.3", false},
+
+		{"v1.0.7", "v1.0.7", true},
+		{" v1.0.7	 ", "v1.0.7", true},
+		{"=v1.0.7", "v1.0.7", true},
+		{"= v1.0.7", "v1.0.7", true},
+	}
+
+	for _, tc := range cases {
+		specific, desiredTag := isTagConstraintSpecificTag(tc.tagConstraint)
+		if specific != tc.specific {
+			t.Fatalf("Given constraint: \"%s\", expected %t, but received %t", tc.tagConstraint, tc.specific, specific)
+		}
+		if desiredTag != tc.desiredTag {
+			t.Fatalf("Given constraint: \"%s\", expected result tag: \"%s\", but received \"%s\"", tc.tagConstraint, tc.desiredTag, desiredTag)
+		}
+	}
+}
+
 func TestGetLatestAcceptableTagOnEmptyConstraint(t *testing.T) {
 	t.Parallel()
 
