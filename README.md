@@ -44,8 +44,7 @@ Download the fetch binary from the [GitHub Releases](https://github.com/gruntwor
 
 #### Assumptions
 
-fetch assumes that a repo's tags are in the format `vX.Y.Z` or `X.Y.Z` to support Semantic Versioning parsing. Repos
-that use git tags not in this format cannot currently be used with fetch.
+fetch assumes that a repo's tags are in the format `vX.Y.Z` or `X.Y.Z` to support Semantic Versioning parsing. This allows you to specify a [Tag Constraint Expression](#tag-constraint-expressions) to do things like "get the latest non-breaking version" of this repo. Note that fetch also allows downloading a specific tag not in SemVer format.
 
 #### General Usage
 
