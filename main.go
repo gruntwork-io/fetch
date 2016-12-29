@@ -51,7 +51,7 @@ func main() {
 		},
 		cli.StringFlag{
 			Name: OPTION_BRANCH,
-			Usage: "The git branch from which to download the commit; the latest commit in th branch will be used. If specified, will override --tag.",
+			Usage: "The git branch from which to download the commit; the latest commit in the branch will be used. If specified, will override --tag.",
 		},
 		cli.StringFlag{
 			Name: OPTION_TAG,
