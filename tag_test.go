@@ -31,7 +31,7 @@ func TestGetLatestAcceptableTag(t *testing.T) {
 
 	for _, tc := range cases {
 		tag, err := getLatestAcceptableTag(tc.tagConstraint, tc.tags)
-		if err != nil && err.details != "Tag does not exist" {
+		if err != nil {
 			t.Fatalf("Failed on call to getLatestAcceptableTag: %s", err.details)
 		}
 
