@@ -69,7 +69,7 @@ func getLatestAcceptableTag(tagConstraint string, tags []string) (string, *Fetch
     		}
   	}
 
-    // check contstraint against only the latest acceptable version
+		// check contstraint against only the latest acceptable version
   	if !constraints.Check(latestAcceptableVersion) {
       	return latestTag, wrapError(errors.New("Tag does not exist"))
   	}
