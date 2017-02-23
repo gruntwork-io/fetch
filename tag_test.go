@@ -120,3 +120,21 @@ func TestGetLatestAcceptableTagOnMalformedConstraint(t *testing.T) {
 		}
 	}
 }
+
+func TestGetLatestAcceptableTagNoSuchTag (t *testing.T) {
+    t.Parallel()
+
+    cases := []struct {
+        tagConstraint string
+        tags []string
+    }{
+        {"~> 0.0.4", []string{"0.0.1", "0.0.2", "0.0.3"} },
+    }
+
+    for _, tc := range cases{
+        _, err := getLatestAcceptableTag(tc.tagConstraint, tc.tags)
+        if err == nil {
+            t.Fatalf("Expected Tag does not exist error, but received nothing")
+        }
+    }
+}
