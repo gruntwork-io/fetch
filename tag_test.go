@@ -31,7 +31,7 @@ func TestGetLatestAcceptableTag(t *testing.T) {
 
 	for _, tc := range cases {
 		tag, err := getLatestAcceptableTag(tc.tagConstraint, tc.tags)
-		if err != nil {
+		if err != nil && err.details != "Tag does not exist" {
 			t.Fatalf("Failed on call to getLatestAcceptableTag: %s", err.details)
 		}
 
@@ -119,4 +119,22 @@ func TestGetLatestAcceptableTagOnMalformedConstraint(t *testing.T) {
 			t.Fatalf("Expected malformed constraint error, but received nothing.")
 		}
 	}
+}
+
+func TestGetLatestAcceptableTagNoSuchTag (t *testing.T) {
+    t.Parallel()
+
+    cases := []struct {
+        tagConstraint string
+        tags []string
+    }{
+        {"~> 0.0.4", []string{"0.0.1", "0.0.2", "0.0.3"} },
+    }
+
+    for _, tc := range cases{
+        _, err := getLatestAcceptableTag(tc.tagConstraint, tc.tags)
+        if err == nil {
+            t.Fatalf("Expected Tag does not exist error, but received nothing")
+        }
+    }
 }
