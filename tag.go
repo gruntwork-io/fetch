@@ -3,7 +3,7 @@ package main
 import (
 	"sort"
 	"strings"
-
+	"errors"
 	"github.com/hashicorp/go-version"
 )
 
@@ -67,6 +67,11 @@ func getLatestAcceptableTag(tagConstraint string, tags []string) (string, *Fetch
 		if constraints.Check(version) && version.GreaterThan(latestAcceptableVersion) {
 			latestAcceptableVersion = version
 		}
+	}
+
+	// check constraint against latest acceptable version
+	if !constraints.Check(latestAcceptableVersion) {
+		return latestTag, wrapError(errors.New("Tag does not exist"))
 	}
 
 	// The tag name may have started with a "v". If so, re-apply that string now
