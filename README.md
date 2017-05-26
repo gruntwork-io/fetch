@@ -1,6 +1,6 @@
 # fetch
 
-fetch makes it easy to download files, folders, or release assets from a specific git commit, branch, or tag of
+fetch makes it easy to download files, folders, or release assets from a specific commit, branch, or tag of
 a public or private GitHub repo.
 
 #### Quick examples
