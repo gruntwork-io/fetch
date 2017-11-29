@@ -10,7 +10,7 @@ dependencies:
     - configure-environment-for-gruntwork-module --go-src-path . --terraform-version NONE --packer-version NONE
 
   cache_directories:
-    - ~/glide
+    - ~/dep
 
 test:
   override:
