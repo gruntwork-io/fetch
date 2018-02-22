@@ -2,6 +2,9 @@
 # Reference: https://intellij-support.jetbrains.com/hc/en-us/articles/206544839
 .idea
 
+# Covers Visual Studio Code
+.vscode
+
 # If the binary gets built during dev, don't commit it.
 fetch
 fetch.exe

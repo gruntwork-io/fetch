@@ -20,6 +20,8 @@ type FetchOptions struct {
 	GithubToken string
 	SourcePaths []string
 	ReleaseAssets []string
+	ReleaseAssetChecksums []string
+	ReleaseAssetChecksumAlgos []string
 	LocalDownloadPath string
 }
 
@@ -30,6 +32,8 @@ const OPTION_TAG = "tag"
 const OPTION_GITHUB_TOKEN = "github-oauth-token"
 const OPTION_SOURCE_PATH = "source-path"
 const OPTION_RELEASE_ASSET = "release-asset"
+const OPTION_RELEASE_ASSET_CHECKSUM = "release-asset-checksum"
+const OPTION_RELEASE_ASSET_CHECKSUM_ALGO = "release-asset-checksum-algo"
 
 const ENV_VAR_GITHUB_TOKEN = "GITHUB_OAUTH_TOKEN"
 
@@ -70,6 +74,14 @@ func main() {
 			Name: OPTION_RELEASE_ASSET,
 			Usage: "The name of a release asset--that is, a binary uploaded to a GitHub Release--to download. Only works with --tag. Can be specified more than once.",
 		},
+		cli.StringSliceFlag{
+			Name: OPTION_RELEASE_ASSET_CHECKSUM,
+			Usage: "The checksum that a release asset should have. Fetch will fail if this value does not match the checksum computed by Fetch. Include this once for each --release-asset listed.",
+		},
+		cli.StringSliceFlag{
+			Name: OPTION_RELEASE_ASSET_CHECKSUM_ALGO,
+			Usage: "The algorithm fetch will use to compute a checksum of the release asset. Acceptable values are \"sha256\" and \"sha512\". Include this once for each --release-asset listed.",
+		},
 	}
 
 	app.Action = runFetchWrapper
@@ -95,14 +107,14 @@ func runFetch (c *cli.Context) error {
 	}
 
 	// Get the tags for the given repo
-	tags, err := FetchTags(options.RepoUrl, options.GithubToken)
-	if err != nil {
-		if err.errorCode == INVALID_GITHUB_TOKEN_OR_ACCESS_DENIED {
-			return errors.New(getErrorMessage(INVALID_GITHUB_TOKEN_OR_ACCESS_DENIED, err.details))
-		} else if err.errorCode == REPO_DOES_NOT_EXIST_OR_ACCESS_DENIED {
-			return errors.New(getErrorMessage(REPO_DOES_NOT_EXIST_OR_ACCESS_DENIED, err.details))
+	tags, fetchErr := FetchTags(options.RepoUrl, options.GithubToken)
+	if fetchErr != nil {
+		if fetchErr.errorCode == INVALID_GITHUB_TOKEN_OR_ACCESS_DENIED {
+			return errors.New(getErrorMessage(INVALID_GITHUB_TOKEN_OR_ACCESS_DENIED, fetchErr.details))
+		} else if fetchErr.errorCode == REPO_DOES_NOT_EXIST_OR_ACCESS_DENIED {
+			return errors.New(getErrorMessage(REPO_DOES_NOT_EXIST_OR_ACCESS_DENIED, fetchErr.details))
 		} else {
-			return fmt.Errorf("Error occurred while getting tags from GitHub repo: %s", err)
+			return fmt.Errorf("Error occurred while getting tags from GitHub repo: %s", fetchErr)
 		}
 	}
 
@@ -121,9 +133,9 @@ func runFetch (c *cli.Context) error {
 	}
 
 	// Prepare the vars we'll need to download
-	repo, err := ParseUrlIntoGitHubRepo(options.RepoUrl, options.GithubToken)
-	if err != nil {
-		return fmt.Errorf("Error occurred while parsing GitHub URL: %s", err)
+	repo, fetchErr := ParseUrlIntoGitHubRepo(options.RepoUrl, options.GithubToken)
+	if fetchErr != nil {
+		return fmt.Errorf("Error occurred while parsing GitHub URL: %s", fetchErr)
 	}
 
 	// If no release assets and no source paths are specified, then by default, download all the source files from
@@ -138,8 +150,15 @@ func runFetch (c *cli.Context) error {
 	}
 
 	// Download any requested release assets
-	if err := downloadReleaseAssets(options.ReleaseAssets, options.LocalDownloadPath, repo, desiredTag); err != nil {
+	assetPaths, err := downloadReleaseAssets(options.ReleaseAssets, options.LocalDownloadPath, repo, desiredTag)
+	if err != nil {
 		return err
+	}
+
+	// If applicable, verify release assets
+	fetchErr = verifyChecksumOnReleaseAssets(assetPaths, options.ReleaseAssetChecksums, options.ReleaseAssetChecksumAlgos)
+	if fetchErr != nil {
+		return fetchErr
 	}
 
 	return nil
@@ -235,32 +254,36 @@ func downloadSourcePaths(sourcePaths []string, destPath string, githubRepo GitHu
 	return nil
 }
 
-// Download the specified binary files that were uploaded as release assets to the specified GitHub release
-func downloadReleaseAssets(releaseAssets []string, destPath string, githubRepo GitHubRepo, latestTag string) error {
+// Download the specified binary files that were uploaded as release assets to the specified GitHub release.
+// Returns the list of paths where release assets were downloaded.
+func downloadReleaseAssets(releaseAssets []string, destPath string, githubRepo GitHubRepo, tag string) ([]string, error) {
+	var assetPaths []string
+
 	if len(releaseAssets) == 0 {
-		return nil
+		return assetPaths, nil
 	}
 
-	release, err := GetGitHubReleaseInfo(githubRepo, latestTag)
+	release, err := GetGitHubReleaseInfo(githubRepo, tag)
 	if err != nil {
-		return err
+		return assetPaths, err
 	}
 
 	for _, assetName := range releaseAssets {
 		asset := findAssetInRelease(assetName, release)
 		if asset == nil {
-			return fmt.Errorf("Could not find asset %s in release %s", assetName, latestTag)
+			return assetPaths, fmt.Errorf("Could not find asset %s in release %s", assetName, tag)
 		}
 
 		assetPath := path.Join(destPath, asset.Name)
+		assetPaths = append(assetPaths, assetPath)
 		fmt.Printf("Downloading release asset %s to %s\n", asset.Name, assetPath)
 		if err := DownloadReleaseAsset(githubRepo, asset.Id, assetPath); err != nil {
-			return err
+			return assetPaths, err
 		}
 	}
 
 	fmt.Println("Download of release assets complete.")
-	return nil
+	return assetPaths, nil
 }
 
 func findAssetInRelease(assetName string, release GitHubReleaseApiResponse) *GitHubReleaseAsset {
