@@ -13,14 +13,16 @@ import (
 var VERSION string
 
 type FetchOptions struct {
-	RepoUrl string
-	CommitSha string
-	BranchName string
-	TagConstraint string
-	GithubToken string
-	SourcePaths []string
-	ReleaseAssets []string
-	LocalDownloadPath string
+	RepoUrl                  string
+	CommitSha                string
+	BranchName               string
+	TagConstraint            string
+	GithubToken              string
+	SourcePaths              []string
+	ReleaseAsset             string
+	ReleaseAssetChecksum     string
+	ReleaseAssetChecksumAlgo string
+	LocalDownloadPath        string
 }
 
 const OPTION_REPO = "repo"
@@ -30,6 +32,8 @@ const OPTION_TAG = "tag"
 const OPTION_GITHUB_TOKEN = "github-oauth-token"
 const OPTION_SOURCE_PATH = "source-path"
 const OPTION_RELEASE_ASSET = "release-asset"
+const OPTION_RELEASE_ASSET_CHECKSUM = "release-asset-checksum"
+const OPTION_RELEASE_ASSET_CHECKSUM_ALGO = "release-asset-checksum-algo"
 
 const ENV_VAR_GITHUB_TOKEN = "GITHUB_OAUTH_TOKEN"
 
@@ -42,33 +46,41 @@ func main() {
 
 	app.Flags = []cli.Flag{
 		cli.StringFlag{
-			Name: OPTION_REPO,
+			Name:  OPTION_REPO,
 			Usage: "Required. Fully qualified URL of the GitHub repo.",
 		},
 		cli.StringFlag{
-			Name: OPTION_COMMIT,
+			Name:  OPTION_COMMIT,
 			Usage: "The specific git commit SHA to download. If specified, will override --branch and --tag.",
 		},
 		cli.StringFlag{
-			Name: OPTION_BRANCH,
-			Usage: "The git branch from which to download the commit; the latest commit in the branch will be used. If specified, will override --tag.",
+			Name:  OPTION_BRANCH,
+			Usage: "The git branch from which to download the commit; the latest commit in the branch\n\twill be used.\n\tIf specified, will override --tag.",
 		},
 		cli.StringFlag{
-			Name: OPTION_TAG,
+			Name:  OPTION_TAG,
 			Usage: "The specific git tag to download, expressed with Version Constraint Operators.\n\tIf left blank, fetch will download the latest git tag.\n\tSee https://github.com/gruntwork-io/fetch#version-constraint-operators for examples.",
 		},
 		cli.StringFlag{
-			Name: OPTION_GITHUB_TOKEN,
-			Usage: "A GitHub Personal Access Token, which is required for downloading from private repos.",
+			Name:   OPTION_GITHUB_TOKEN,
+			Usage:  "A GitHub Personal Access Token, which is required for downloading from private\n\trepos. Populate by setting env var",
 			EnvVar: ENV_VAR_GITHUB_TOKEN,
 		},
 		cli.StringSliceFlag{
-			Name: OPTION_SOURCE_PATH,
-			Usage: "The source path to download from the repo. If this or --release-asset aren't specified, all files are downloaded. Can be specified more than once.",
+			Name:  OPTION_SOURCE_PATH,
+			Usage: "The source path to download from the repo. If this or --release-asset aren't specified,\n\tall files are downloaded. Can be specified more than once.",
 		},
-		cli.StringSliceFlag{
-			Name: OPTION_RELEASE_ASSET,
-			Usage: "The name of a release asset--that is, a binary uploaded to a GitHub Release--to download. Only works with --tag. Can be specified more than once.",
+		cli.StringFlag{
+			Name:  OPTION_RELEASE_ASSET,
+			Usage: "The name of a release asset--that is, a binary uploaded to a GitHub Release--to download.\n\tOnly works with --tag.",
+		},
+		cli.StringFlag{
+			Name:  OPTION_RELEASE_ASSET_CHECKSUM,
+			Usage: "The checksum that a release asset should have. Fetch will fail if this value is non-empty\n\tand does not match the checksum computed by Fetch.",
+		},
+		cli.StringFlag{
+			Name:  OPTION_RELEASE_ASSET_CHECKSUM_ALGO,
+			Usage: "The algorithm Fetch will use to compute a checksum of the release asset. Acceptable values\n\tare \"sha256\" and \"sha512\".",
 		},
 	}
 
@@ -79,7 +91,7 @@ func main() {
 }
 
 // We just want to call runFetch(), but app.Action won't permit us to return an error, so call a wrapper function instead.
-func runFetchWrapper (c *cli.Context) {
+func runFetchWrapper(c *cli.Context) {
 	err := runFetch(c)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "ERROR: %s\n", err)
@@ -88,21 +100,21 @@ func runFetchWrapper (c *cli.Context) {
 }
 
 // Run the fetch program
-func runFetch (c *cli.Context) error {
+func runFetch(c *cli.Context) error {
 	options := parseOptions(c)
 	if err := validateOptions(options); err != nil {
 		return err
 	}
 
 	// Get the tags for the given repo
-	tags, err := FetchTags(options.RepoUrl, options.GithubToken)
-	if err != nil {
-		if err.errorCode == INVALID_GITHUB_TOKEN_OR_ACCESS_DENIED {
-			return errors.New(getErrorMessage(INVALID_GITHUB_TOKEN_OR_ACCESS_DENIED, err.details))
-		} else if err.errorCode == REPO_DOES_NOT_EXIST_OR_ACCESS_DENIED {
-			return errors.New(getErrorMessage(REPO_DOES_NOT_EXIST_OR_ACCESS_DENIED, err.details))
+	tags, fetchErr := FetchTags(options.RepoUrl, options.GithubToken)
+	if fetchErr != nil {
+		if fetchErr.errorCode == INVALID_GITHUB_TOKEN_OR_ACCESS_DENIED {
+			return errors.New(getErrorMessage(INVALID_GITHUB_TOKEN_OR_ACCESS_DENIED, fetchErr.details))
+		} else if fetchErr.errorCode == REPO_DOES_NOT_EXIST_OR_ACCESS_DENIED {
+			return errors.New(getErrorMessage(REPO_DOES_NOT_EXIST_OR_ACCESS_DENIED, fetchErr.details))
 		} else {
-			return fmt.Errorf("Error occurred while getting tags from GitHub repo: %s", err)
+			return fmt.Errorf("Error occurred while getting tags from GitHub repo: %s", fetchErr)
 		}
 	}
 
@@ -121,14 +133,13 @@ func runFetch (c *cli.Context) error {
 	}
 
 	// Prepare the vars we'll need to download
-	repo, err := ParseUrlIntoGitHubRepo(options.RepoUrl, options.GithubToken)
-	if err != nil {
-		return fmt.Errorf("Error occurred while parsing GitHub URL: %s", err)
+	repo, fetchErr := ParseUrlIntoGitHubRepo(options.RepoUrl, options.GithubToken)
+	if fetchErr != nil {
+		return fmt.Errorf("Error occurred while parsing GitHub URL: %s", fetchErr)
 	}
 
-	// If no release assets and no source paths are specified, then by default, download all the source files from
-	// the repo
-	if len(options.SourcePaths) == 0 && len(options.ReleaseAssets) == 0 {
+	// If no release asset and no source paths are specified, then by default, download all the source files from the repo
+	if len(options.SourcePaths) == 0 && options.ReleaseAsset == "" {
 		options.SourcePaths = []string{"/"}
 	}
 
@@ -137,9 +148,18 @@ func runFetch (c *cli.Context) error {
 		return err
 	}
 
-	// Download any requested release assets
-	if err := downloadReleaseAssets(options.ReleaseAssets, options.LocalDownloadPath, repo, desiredTag); err != nil {
+	// Download the requested release asset
+	assetPath, err := downloadReleaseAsset(options.ReleaseAsset, options.LocalDownloadPath, repo, desiredTag)
+	if err != nil {
 		return err
+	}
+
+	// If applicable, verify the release asset
+	if options.ReleaseAssetChecksum != "" {
+		fetchErr = verifyChecksumOfReleaseAsset(assetPath, options.ReleaseAssetChecksum, options.ReleaseAssetChecksumAlgo)
+		if fetchErr != nil {
+			return fetchErr
+		}
 	}
 
 	return nil
@@ -158,14 +178,16 @@ func parseOptions(c *cli.Context) FetchOptions {
 	}
 
 	return FetchOptions{
-		RepoUrl: c.String(OPTION_REPO),
-		CommitSha: c.String(OPTION_COMMIT),
-		BranchName: c.String(OPTION_BRANCH),
-		TagConstraint: c.String(OPTION_TAG),
-		GithubToken: c.String(OPTION_GITHUB_TOKEN),
-		SourcePaths: sourcePaths,
-		ReleaseAssets: c.StringSlice(OPTION_RELEASE_ASSET),
-		LocalDownloadPath: localDownloadPath,
+		RepoUrl:                  c.String(OPTION_REPO),
+		CommitSha:                c.String(OPTION_COMMIT),
+		BranchName:               c.String(OPTION_BRANCH),
+		TagConstraint:            c.String(OPTION_TAG),
+		GithubToken:              c.String(OPTION_GITHUB_TOKEN),
+		SourcePaths:              sourcePaths,
+		ReleaseAsset:             c.String(OPTION_RELEASE_ASSET),
+		ReleaseAssetChecksum:     c.String(OPTION_RELEASE_ASSET_CHECKSUM),
+		ReleaseAssetChecksumAlgo: c.String(OPTION_RELEASE_ASSET_CHECKSUM_ALGO),
+		LocalDownloadPath:        localDownloadPath,
 	}
 }
 
@@ -182,8 +204,12 @@ func validateOptions(options FetchOptions) error {
 		return fmt.Errorf("You must specify exactly one of --%s, --%s, or --%s. Run \"fetch --help\" for full usage info.", OPTION_TAG, OPTION_COMMIT, OPTION_BRANCH)
 	}
 
-	if len(options.ReleaseAssets) > 0 && options.TagConstraint == "" {
+	if options.ReleaseAsset != "" && options.TagConstraint == "" {
 		return fmt.Errorf("The --%s flag can only be used with --%s. Run \"fetch --help\" for full usage info.", OPTION_RELEASE_ASSET, OPTION_TAG)
+	}
+
+	if options.ReleaseAssetChecksum != "" && options.ReleaseAssetChecksumAlgo == "" {
+		return fmt.Errorf("If the %s flag is set, you must also enter a value for the %s flag.", OPTION_RELEASE_ASSET_CHECKSUM, OPTION_RELEASE_ASSET_CHECKSUM_ALGO)
 	}
 
 	return nil
@@ -192,7 +218,7 @@ func validateOptions(options FetchOptions) error {
 // Download the specified source files from the given repo
 func downloadSourcePaths(sourcePaths []string, destPath string, githubRepo GitHubRepo, latestTag string, branchName string, commitSha string) error {
 	if len(sourcePaths) == 0 {
-		return  nil
+		return nil
 	}
 
 	// We want to respect the GitHubCommit Hierarchy of "CommitSha > GitTag > BranchName"
@@ -200,10 +226,10 @@ func downloadSourcePaths(sourcePaths []string, destPath string, githubRepo GitHu
 	// If the user specified no value for GitTag, our call to getLatestAcceptableTag() above still gave us some value
 	// So we can guarantee (at least logically) that this struct instance is in a valid state right now.
 	gitHubCommit := GitHubCommit{
-		Repo: githubRepo,
-		GitTag: latestTag,
+		Repo:       githubRepo,
+		GitTag:     latestTag,
 		BranchName: branchName,
-		CommitSha: commitSha,
+		CommitSha:  commitSha,
 	}
 
 	// Download that release as a .zip file
@@ -235,32 +261,33 @@ func downloadSourcePaths(sourcePaths []string, destPath string, githubRepo GitHu
 	return nil
 }
 
-// Download the specified binary files that were uploaded as release assets to the specified GitHub release
-func downloadReleaseAssets(releaseAssets []string, destPath string, githubRepo GitHubRepo, latestTag string) error {
-	if len(releaseAssets) == 0 {
-		return nil
+// Download the specified binary file that was uploaded as a release asset to the specified GitHub release.
+// Returns the path where the release asset was downloaded.
+func downloadReleaseAsset(assetName string, destPath string, githubRepo GitHubRepo, tag string) (string, error) {
+	var assetPath string
+
+	if assetName == "" {
+		return assetPath, nil
 	}
 
-	release, err := GetGitHubReleaseInfo(githubRepo, latestTag)
+	release, err := GetGitHubReleaseInfo(githubRepo, tag)
 	if err != nil {
-		return err
+		return assetPath, err
 	}
 
-	for _, assetName := range releaseAssets {
-		asset := findAssetInRelease(assetName, release)
-		if asset == nil {
-			return fmt.Errorf("Could not find asset %s in release %s", assetName, latestTag)
-		}
+	asset := findAssetInRelease(assetName, release)
+	if asset == nil {
+		return assetPath, fmt.Errorf("Could not find asset %s in release %s", assetName, tag)
+	}
 
-		assetPath := path.Join(destPath, asset.Name)
-		fmt.Printf("Downloading release asset %s to %s\n", asset.Name, assetPath)
-		if err := DownloadReleaseAsset(githubRepo, asset.Id, assetPath); err != nil {
-			return err
-		}
+	assetPath = path.Join(destPath, asset.Name)
+	fmt.Printf("Downloading release asset %s to %s\n", asset.Name, assetPath)
+	if err := DownloadReleaseAsset(githubRepo, asset.Id, assetPath); err != nil {
+		return assetPath, err
 	}
 
 	fmt.Println("Download of release assets complete.")
-	return nil
+	return assetPath, nil
 }
 
 func findAssetInRelease(assetName string, release GitHubReleaseApiResponse) *GitHubReleaseAsset {
