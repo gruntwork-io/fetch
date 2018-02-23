@@ -10,7 +10,7 @@ import (
 	"encoding/hex"
 )
 
-func verifyChecksumOnReleaseAsset(assetPath, checksum, algorithm string) *FetchError {
+func verifyChecksumOfReleaseAsset(assetPath, checksum, algorithm string) *FetchError {
 	computedChecksum, err := computeChecksum(assetPath, algorithm)
 	if err != nil {
 		return newError(ERROR_WHILE_COMPUTING_CHECKSUM, err.Error())

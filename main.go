@@ -139,7 +139,7 @@ func runFetch(c *cli.Context) error {
 	}
 
 	// If no release asset and no source paths are specified, then by default, download all the source files from the repo
-	if len(options.SourcePaths) == 0 && len(options.ReleaseAsset) == 0 {
+	if len(options.SourcePaths) == 0 && options.ReleaseAsset == "" {
 		options.SourcePaths = []string{"/"}
 	}
 
@@ -148,15 +148,15 @@ func runFetch(c *cli.Context) error {
 		return err
 	}
 
-	// Download the requested release assets
-	assetPaths, err := downloadReleaseAsset(options.ReleaseAsset, options.LocalDownloadPath, repo, desiredTag)
+	// Download the requested release asset
+	assetPath, err := downloadReleaseAsset(options.ReleaseAsset, options.LocalDownloadPath, repo, desiredTag)
 	if err != nil {
 		return err
 	}
 
-	// If applicable, verify release assets
+	// If applicable, verify the release asset
 	if options.ReleaseAssetChecksum != "" {
-		fetchErr = verifyChecksumOnReleaseAsset(assetPaths, options.ReleaseAssetChecksum, options.ReleaseAssetChecksumAlgo)
+		fetchErr = verifyChecksumOfReleaseAsset(assetPath, options.ReleaseAssetChecksum, options.ReleaseAssetChecksumAlgo)
 		if fetchErr != nil {
 			return fetchErr
 		}
@@ -204,7 +204,7 @@ func validateOptions(options FetchOptions) error {
 		return fmt.Errorf("You must specify exactly one of --%s, --%s, or --%s. Run \"fetch --help\" for full usage info.", OPTION_TAG, OPTION_COMMIT, OPTION_BRANCH)
 	}
 
-	if len(options.ReleaseAsset) > 0 && options.TagConstraint == "" {
+	if options.ReleaseAsset != "" && options.TagConstraint == "" {
 		return fmt.Errorf("The --%s flag can only be used with --%s. Run \"fetch --help\" for full usage info.", OPTION_RELEASE_ASSET, OPTION_TAG)
 	}
 
@@ -261,7 +261,7 @@ func downloadSourcePaths(sourcePaths []string, destPath string, githubRepo GitHu
 	return nil
 }
 
-// Download the specified binary file that was uploaded as release assets to the specified GitHub release.
+// Download the specified binary file that was uploaded as a release asset to the specified GitHub release.
 // Returns the path where the release asset was downloaded.
 func downloadReleaseAsset(assetName string, destPath string, githubRepo GitHubRepo, tag string) (string, error) {
 	var assetPath string

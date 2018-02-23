@@ -17,6 +17,7 @@ authentication. Fetch makes it possible to handle all of these cases with a one-
 - Download from a specific git tag, branch, or commit SHA.
 - Download a single file, a subset of files, or all files from the repo.
 - Download a binary asset from a specific release.
+- Verify the SHA256 or SHA512 checksum of a binary asset.
 - Download from public repos, or from private repos by specifying a [GitHub Personal Access Token](https://help.github.com/articles/creating-an-access-token-for-command-line-use/).
 - When specifying a git tag, you can can specify either exactly the tag you want, or a [Tag Constraint Expression](#tag-constraint-expressions) to do things like "get the latest non-breaking version" of this repo. Note that fetch assumes git tags are specified according to [Semantic Versioning](http://semver.org/) principles.
 
@@ -64,12 +65,11 @@ The supported options are:
   the `/folder` path and all files below it). By default, all files are downloaded from the repo unless `--source-path`
   or `--release-asset` is specified. This option can be specified more than once.
 - `--release-asset` (**Optional**): The name of a release asset--that is, a binary uploaded to a [GitHub
-  Release](https://help.github.com/articles/creating-releases/)--to download. This option can be specified more than
-  once. It only works with the `--tag` option.
-- `--release-asset-checksum` (**Optional**): The checksum that a release asset should have. Fetch will fail if this value does
-  not match the checksum computed by Fetch. Include this once for each `--release-asset` listed.
+  Release](https://help.github.com/articles/creating-releases/)--to download. It only works with the `--tag` option.
+- `--release-asset-checksum` (**Optional**): The checksum that a release asset should have. Fetch will fail if this value
+  is non-empty and does not match the checksum computed by Fetch.
 - `--release-asset-checksum-algo` (**Optional**): The algorithm fetch will use to compute a checksum of the release asset.
-  Acceptable values are `sha256` and `sha512`. Include this once for each `--release-asset` listed.
+  Supported values are `sha256` and `sha512`.
 - `--github-oauth-token` (**Optional**): A [GitHub Personal Access
   Token](https://help.github.com/articles/creating-an-access-token-for-command-line-use/). Required if you're
   downloading from private GitHub repos. **NOTE:** fetch will also look for this token using the `GITHUB_OAUTH_TOKEN`
