@@ -25,39 +25,40 @@ func verifyChecksumOfReleaseAsset(assetPath, checksum, algorithm string) *FetchE
 }
 
 func computeChecksum(filePath string, algorithm string) (string, error) {
-	var checksum string
+	fmt.Printf("Computing checksum of release asset\n")
 
 	file, err := os.Open(filePath)
 	if err != nil {
-		return checksum, err
+		return "", err
 	}
 	defer file.Close()
 
-	switch algorithm {
-	case "sha256":
-		fmt.Printf("Computing checksum of release asset using SHA256\n")
-		hasher := sha256.New()
-		if _, err := io.Copy(hasher, file); err != nil {
-			return checksum, err
-		}
-
-		checksum = hasherToString(hasher)
-	case "sha512":
-		fmt.Printf("Computing checksum of release asset using SHA512\n")
-		hasher := sha512.New()
-		if _, err := io.Copy(hasher, file); err != nil {
-			return checksum, err
-		}
-
-		checksum = hasherToString(hasher)
-	default:
-		return checksum, fmt.Errorf("The checksum algorithm \"%s\" is not supported", algorithm)
+	hasher, err := getHasher(algorithm)
+	if err != nil {
+		return "", err
 	}
 
-	return checksum, nil
+	_, err = io.Copy(hasher, file)
+	if err != nil {
+		return "", err
+	}
+
+	return hasherToString(hasher), nil
 }
 
-// Convert a hasher instance (the common interface used by all Golang hashing functions) to the string value of that hasher
+// Return a hasher instance, the common interface used by all Golang hashing functions
+func getHasher(algorithm string) (hash.Hash, error) {
+	switch algorithm {
+	case "sha256":
+		return sha256.New(), nil
+	case "sha512":
+		return sha512.New(), nil
+	default:
+		return nil, fmt.Errorf("The checksum algorithm \"%s\" is not supported", algorithm)
+	}
+}
+
+// Convert a hasher instance to the string value of that hasher
 func hasherToString(hasher hash.Hash) string {
 	return hex.EncodeToString(hasher.Sum(nil))
 }
