@@ -27,22 +27,23 @@ func isTagConstraintSpecificTag(tagConstraint string) (bool, string) {
 }
 
 func getLatestAcceptableTag(tagConstraint string, tags []string) (string, *FetchError) {
-	var latestTag string
-
 	if len(tags) == 0 {
-		return latestTag, nil
+		return "", nil
 	}
 
 	// Sort all tags
 	// Our use of the library go-version means that each tag will each be represented as a *version.Version
+	// go-version normalizes the versions so store off a mapping from the normalized version back to the original tag.
 	versions := make([]*version.Version, len(tags))
+	verToTag := make(map[*version.Version]string)
 	for i, tag := range tags {
 		v, err := version.NewVersion(tag)
 		if err != nil {
-			return latestTag, wrapError(err)
+			return "", wrapError(err)
 		}
 
 		versions[i] = v
+		verToTag[v] = tag
 	}
 	sort.Sort(version.Collection(versions))
 
@@ -56,9 +57,9 @@ func getLatestAcceptableTag(tagConstraint string, tags []string) (string, *Fetch
 	if err != nil {
 		// Explicitly check for a malformed tag value so we can return a nice error to the user
 		if strings.Contains(err.Error(), "Malformed constraint") {
-			return latestTag, newError(INVALID_TAG_CONSTRAINT_EXPRESSION, err.Error())
+			return "", newError(INVALID_TAG_CONSTRAINT_EXPRESSION, err.Error())
 		} else {
-			return latestTag, wrapError(err)
+			return "", wrapError(err)
 		}
 	}
 
@@ -71,15 +72,8 @@ func getLatestAcceptableTag(tagConstraint string, tags []string) (string, *Fetch
 
 	// check constraint against latest acceptable version
 	if !constraints.Check(latestAcceptableVersion) {
-		return latestTag, wrapError(errors.New("Tag does not exist"))
+		return "", wrapError(errors.New("Tag does not exist"))
 	}
 
-	// The tag name may have started with a "v". If so, re-apply that string now
-	for _, originalTagName := range tags {
-		if strings.Contains(originalTagName, latestAcceptableVersion.String()) {
-			latestTag = originalTagName
-		}
-	}
-
-	return latestTag, nil
+	return verToTag[latestAcceptableVersion], nil
 }
