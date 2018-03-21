@@ -75,6 +75,8 @@ The supported options are:
   downloading from private GitHub repos. **NOTE:** fetch will also look for this token using the `GITHUB_OAUTH_TOKEN`
   environment variable, which we recommend using instead of the command line option to ensure the token doesn't get
   saved in bash history.
+- `--resolve-symlinks`: If set to true, Fetch will attempt to resolve any symlinks in the repo by replacing the symlinks
+  with the contents of the targets they point to.
 
 The supported arguments are:
 
@@ -158,6 +160,5 @@ This code is released under the MIT License. See [LICENSE.txt](/LICENSE.txt).
 
 ## TODO
 
-- Introduce code verification using something like GPG signatures or published checksums
 - Explicitly test for exotic repo and org names
 - Apply stricter parsing for repo-filter command-line arg
