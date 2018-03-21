@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"fmt"
 	"strings"
+	"github.com/stretchr/testify/assert"
 )
 
 // Although other tests besides those in this file require this env var, this init() func will cover all tests.
@@ -213,6 +214,46 @@ func TestDownloadZipFileWithBadRepoValues(t *testing.T) {
 	}
 }
 
+func TestDownloadSymlink(t *testing.T) {
+	repoOwner := "gruntwork-io"
+	repoName := "fetch-test-public"
+	commitSha := "7549f0d4fb54782697beed421647dfa9f7c90d7f"
+
+	tmpDir := mkTmpDir(t)
+	gitHubCommit := newGitHubCommit(repoOwner, repoName, commitSha)
+
+	zipFilePath := downloadZipFile(t, gitHubCommit, "")
+	defer os.RemoveAll(zipFilePath)
+
+	fetchOptions := &FetchOptions{
+		ResolveSymlinks: true,
+	}
+
+	extractZipFile(t, zipFilePath, "/", tmpDir, fetchOptions)
+
+	expectedFile1Path := filepath.Join(tmpDir, "file3.txt")
+	assert.True(t, fileExists(expectedFile1Path), "Expected file to exist at %s", expectedFile1Path)
+
+	expectedFile1Contents := readFileContents(t, expectedFile1Path)
+	assert.Equal(t, "hello, world!\n", expectedFile1Contents, "Expected file contents to match.")
+
+	expectedFile2Path := filepath.Join(tmpDir, "symlinked-folder", "file1.txt")
+	expectedFile3Path := filepath.Join(tmpDir, "symlinked-folder", "file2.txt")
+	expectedFile4Path := filepath.Join(tmpDir, "symlinked-folder", "file3.txt")
+
+	assert.True(t, fileExists(expectedFile2Path), "Expected file to exist at %s", expectedFile2Path)
+	assert.True(t, fileExists(expectedFile3Path), "Expected file to exist at %s", expectedFile3Path)
+	assert.True(t, fileExists(expectedFile4Path), "Expected file to exist at %s", expectedFile4Path)
+
+	expectedFile2Contents := readFileContents(t, expectedFile2Path)
+	expectedFile3Contents := readFileContents(t, expectedFile3Path)
+	expectedFile4Contents := readFileContents(t, expectedFile4Path)
+
+	assert.Equal(t, "", expectedFile2Contents, "Expected file contents to match.")
+	assert.Equal(t, "", expectedFile3Contents, "Expected file contents to match.")
+	assert.Equal(t, "hello, world!\n", expectedFile4Contents, "Expected file contents to match.")
+}
+
 func TestExtractFiles(t *testing.T) {
 	t.Parallel()
 
@@ -236,7 +277,7 @@ func TestExtractFiles(t *testing.T) {
 		}
 		defer os.RemoveAll(tempDir)
 
-		err = extractFiles(tc.localFilePath, tc.filePathToExtract, tempDir)
+		err = extractFiles(tc.localFilePath, tc.filePathToExtract, tempDir, nil)
 		if err != nil {
 			t.Fatalf("Failed to extract files: %s", err)
 		}
@@ -267,6 +308,54 @@ func TestExtractFiles(t *testing.T) {
 		})
 
 	}
+}
+
+func mkTmpDir(t *testing.T) string {
+	tmpDir, err := ioutil.TempDir("", "")
+	if err != nil {
+		t.Fatalf("Failed to create temp directory: %s", err)
+	}
+	defer os.RemoveAll(tmpDir)
+
+	return tmpDir
+}
+
+func newGitHubCommit(repoOwner, repoName, commitSha string) *GitHubCommit {
+	gitHubCommit := &GitHubCommit{
+		Repo: GitHubRepo{
+			Owner: repoOwner,
+			Name: repoName,
+		},
+		CommitSha: commitSha,
+	}
+
+	return gitHubCommit
+}
+
+// Reminder: Make sure to call "defer os.RemoveAll(zipFilePath)" after calling this function
+func downloadZipFile(t *testing.T, gitHubCommit *GitHubCommit, gitHubToken string) string {
+	zipFilePath, err := downloadGithubZipFile(*gitHubCommit, "")
+	if err != nil {
+		t.Fatalf("Failed to download repo %s/%s at commmit sha \"%s\": %s", gitHubCommit.Repo.Owner, gitHubCommit.Repo.Name, gitHubCommit.CommitSha, err)
+	}
+
+	return zipFilePath
+}
+
+func extractZipFile(t *testing.T, zipFilePath string, filesToExtractFromZipPath string, localPath string, fetchOptions *FetchOptions) {
+	err := extractFiles(zipFilePath, filesToExtractFromZipPath, localPath, fetchOptions)
+	if err != nil {
+		t.Fatalf("Failed to extract files: %s", err)
+	}
+}
+
+func readFileContents(t *testing.T, path string) string {
+	bytes, err := ioutil.ReadFile(path)
+	if err != nil {
+		t.Fatalf("Failed to read file contents")
+	}
+
+	return string(bytes)
 }
 
 // Return ture if the given slice contains the given string

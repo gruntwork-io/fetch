@@ -156,7 +156,7 @@ func TestGetGitHubReleaseInfo(t *testing.T) {
 		}
 
 		if !reflect.DeepEqual(tc.expected, resp) {
-			t.Fatalf("Expected GitHub release %s but got GitHub release %s", tc.expected, resp)
+			t.Fatalf("Expected GitHub release %+v but got GitHub release %+v", tc.expected, resp)
 		}
 	}
 }
@@ -188,13 +188,13 @@ func TestDownloadReleaseAsset(t *testing.T) {
 		}
 
 		if err := DownloadReleaseAsset(repo, tc.assetId, tmpFile.Name()); err != nil {
-			t.Fatalf("Failed to download asset %s to %s from GitHub URL %s due to error: %s", tc.assetId, tmpFile.Name(), tc.repoUrl, err.Error())
+			t.Fatalf("Failed to download asset %d to %s from GitHub URL %s due to error: %s", tc.assetId, tmpFile.Name(), tc.repoUrl, err.Error())
 		}
 
 		defer os.Remove(tmpFile.Name())
 
 		if !fileExists(tmpFile.Name()) {
-			t.Fatalf("Got no errors downloading asset %s to %s from GitHub URL %s, but %s does not exist!", tc.assetId, tmpFile.Name(), tc.repoUrl, tmpFile.Name())
+			t.Fatalf("Got no errors downloading asset %d to %s from GitHub URL %s, but %s does not exist!", tc.assetId, tmpFile.Name(), tc.repoUrl, tmpFile.Name())
 		}
 	}
 }
