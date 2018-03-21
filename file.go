@@ -78,32 +78,37 @@ func extractFiles(zipFilePath, filesToExtractFromZipPath, localPath string) erro
 	// Add the path from which we will extract files to the path prefix so we can exclude the appropriate files
 	pathPrefix = filepath.Join(pathPrefix, filesToExtractFromZipPath)
 
-	// Iterate through the files in the archive,
-	// printing some of their contents.
+	// Iterate through the files in the archive.
 	for _, f := range r.File {
 
 		// If the given file is in the filesToExtractFromZipPath, proceed
 		if strings.Index(f.Name, pathPrefix) == 0 {
 
+			path := filepath.Join(localPath, strings.TrimPrefix(f.Name, pathPrefix))
+
 			if f.FileInfo().IsDir() {
-				// Create a directory
-				os.MkdirAll(filepath.Join(localPath, strings.TrimPrefix(f.Name, pathPrefix)), 0777)
+				os.MkdirAll(path, 0777)
 			} else {
-				// Read the file into a byte array
-				readCloser, err := f.Open()
+				err = writeFileFromZip(f, path)
 				if err != nil {
-					return fmt.Errorf("Failed to open file %s: %s", f.Name, err)
+					return err
 				}
+			}
+		}
+	}
 
-				byteArray, err := ioutil.ReadAll(readCloser)
-				if err != nil {
-					return fmt.Errorf("Failed to read file %s: %s", f.Name, err)
-				}
+	// Sym links may refer to files within the repo, in which case we first need to copy all files, and then process symlinks
+	for _, f := range r.File {
 
-				// Write the file
-				err = ioutil.WriteFile(filepath.Join(localPath, strings.TrimPrefix(f.Name, pathPrefix)), byteArray, 0644)
+		// If the given file is in the filesToExtractFromZipPath, proceed
+		if strings.Index(f.Name, pathPrefix) == 0 {
+
+			path := filepath.Join(localPath, strings.TrimPrefix(f.Name, pathPrefix))
+
+			if IsSymLink(f) {
+				err := evalSymLinkAndCopyFiles(f, path)
 				if err != nil {
-					return fmt.Errorf("Failed to write file: %s", err)
+					return err
 				}
 			}
 		}
@@ -112,8 +117,98 @@ func extractFiles(zipFilePath, filesToExtractFromZipPath, localPath string) erro
 	return nil
 }
 
+// Returns true if the given file is a symlink to a file or dir
+func IsSymLink(f *zip.File) bool {
+	return f.FileInfo().Mode() & os.ModeSymlink == os.ModeSymlink
+}
+
+// Read the contents of a ZIP archive file as a byte array
+func readFileFromZip(f *zip.File) ([]byte, error) {
+	readCloser, err := f.Open()
+	if err != nil {
+		return nil, fmt.Errorf("Failed to open file %s: %s", f.Name, err)
+	}
+
+	byteArray, err := ioutil.ReadAll(readCloser)
+	if err != nil {
+		return nil, fmt.Errorf("Failed to read file %s: %s", f.Name, err)
+	}
+
+	return byteArray, nil
+}
+
+// Given a *zip.File (a file located in a ZIP archive), write the the file to the given path
+func writeFileFromZip(f *zip.File, path string) error {
+	if IsSymLink(f) {
+		return writeFileAsSymLink(f, path)
+	}
+
+	bytes, err := readFileFromZip(f)
+	if err != nil {
+		return fmt.Errorf("Failed to read contents of file: %s", err)
+	}
+
+	// When we download a ZIP file, permissions are lost from what committed to git, so we assign a sane set of default permissions.
+	err = ioutil.WriteFile(path, bytes, 0644)
+	if err != nil {
+		return fmt.Errorf("Failed to write file: %s", err)
+	}
+
+	return nil
+}
+
+func writeFileAsSymLink(f *zip.File, path string) error {
+	bytes, err := readFileFromZip(f)
+	if err != nil {
+		return fmt.Errorf("Failed to read contents of file: %s", err)
+	}
+
+	target := filepath.Join(filepath.Dir(path), string(bytes))
+
+	err = os.Symlink(target, path)
+	if err != nil {
+		return fmt.Errorf("Failed to create symlink: %s", err)
+	}
+
+	return nil
+}
+
+// Resolve the given symlink to its target file or directory, and replace the symlink with the contents of its target
+func evalSymLinkAndCopyFiles(f *zip.File, path string) error {
+	targetPath, err := filepath.EvalSymlinks(path)
+	if err != nil {
+		return fmt.Errorf("Failed to resolve symlink: %s", err)
+	}
+
+	symlinkPath := filepath.Join(filepath.Dir(path), f.FileInfo().Name())
+
+	fileInfo, err := os.Lstat(targetPath)
+	if err != nil {
+		return fmt.Errorf("Failed to lstat file: %s", err)
+	}
+
+	if fileInfo.IsDir() {
+		err = replaceSymLinkWithDir(symlinkPath)
+		if err != nil {
+			return err
+		}
+
+		err = copyFolderContents(targetPath, symlinkPath)
+		if err != nil {
+			return err
+		}
+	} else {
+		err = replaceSymLinkWithFile(symlinkPath, targetPath)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 // Return an HTTP request that will fetch the given GitHub repo's zip file for the given tag, possibly with the gitHubOAuthToken in the header
-// Respects the GitHubCommit hierachy as defined in the code comments for GitHubCommit (e.g. GitTag > CommitSha)
+// Respects the GitHubCommit hierarchy as defined in the code comments for GitHubCommit (e.g. GitTag > CommitSha)
 func MakeGitHubZipFileRequest(gitHubCommit GitHubCommit, gitHubToken string) (*http.Request, error) {
 	var request *http.Request
 
@@ -141,4 +236,80 @@ func MakeGitHubZipFileRequest(gitHubCommit GitHubCommit, gitHubToken string) (*h
 	}
 
 	return request, nil
+}
+
+// Replace the symlink file with an empty directory using the same permissions as the original symlink
+func replaceSymLinkWithDir(path string) error {
+	fileInfo, err := os.Lstat(path)
+	if err != nil {
+		return err
+	}
+
+	err = os.RemoveAll(path)
+	if err != nil {
+		return fmt.Errorf("Failed to replace delete symlink at %s: %s", path, err)
+	}
+
+	err = os.MkdirAll(path, fileInfo.Mode())
+	if err != nil {
+		return fmt.Errorf("Failed to create new directory at %s: %s", path, err)
+	}
+
+	return nil
+}
+
+// Replace the symlink file with the file it resolves to.
+func replaceSymLinkWithFile(symlinkPath string, targetPath string) error {
+	err := os.Remove(symlinkPath)
+	if err != nil {
+		return fmt.Errorf("Failed to replace delete symlink at %s: %s", symlinkPath, err)
+	}
+
+	err = copyFile(targetPath, symlinkPath)
+	if err != nil {
+		return fmt.Errorf("Failed to copy file: %s", err)
+	}
+
+	return nil
+}
+
+// Copy the files and folders within the source folder into the destination folder.
+// This function adapted from https://github.com/gruntwork-io/terragrunt/blob/0786b0b1882917a540e5ccef3f797d3b4c3e2bad/util/file.go#L134-L184
+func copyFolderContents(source string, destination string) error {
+	files, err := ioutil.ReadDir(source)
+	if err != nil {
+		return err
+	}
+
+	for _, file := range files {
+		src := filepath.Join(source, file.Name())
+		dest := filepath.Join(destination, file.Name())
+
+		if file.IsDir() {
+			if err := os.MkdirAll(dest, file.Mode()); err != nil {
+				return err
+			}
+
+			if err := copyFolderContents(src, dest); err != nil {
+				return err
+			}
+		} else {
+			if err := copyFile(src, dest); err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
+}
+
+// Copy a file from source to destination
+func copyFile(source string, destination string) error {
+	contents, err := ioutil.ReadFile(source)
+	if err != nil {
+		return err
+	}
+
+	// When we download a ZIP file, permissions are lost from what committed to git, so we assign sane default permissions..
+	return ioutil.WriteFile(destination, contents, 0644)
 }
