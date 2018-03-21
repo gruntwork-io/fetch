@@ -217,9 +217,10 @@ func TestDownloadZipFileWithBadRepoValues(t *testing.T) {
 func TestDownloadSymlink(t *testing.T) {
 	repoOwner := "gruntwork-io"
 	repoName := "fetch-test-public"
-	commitSha := "0a43e1c"
+	commitSha := "7549f0d4fb54782697beed421647dfa9f7c90d7f"
 
 	tmpDir := mkTmpDir(t)
+	fmt.Printf("tmpDir = %s\n", tmpDir)
 	gitHubCommit := newGitHubCommit(repoOwner, repoName, commitSha)
 
 	zipFilePath := downloadZipFile(t, gitHubCommit, "")

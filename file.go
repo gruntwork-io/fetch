@@ -177,7 +177,8 @@ func writeFileAsSymLink(f *zip.File, path string) error {
 func evalSymLinkAndCopyFiles(f *zip.File, path string) error {
 	targetPath, err := filepath.EvalSymlinks(path)
 	if err != nil {
-		return fmt.Errorf("Failed to resolve symlink: %s", err)
+		fmt.Printf("[WARN] Symlink %s points to a target that is outside the repo. Leaving existing symlink in place.\n", path)
+		return nil
 	}
 
 	symlinkPath := filepath.Join(filepath.Dir(path), f.FileInfo().Name())
