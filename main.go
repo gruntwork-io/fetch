@@ -22,6 +22,7 @@ type FetchOptions struct {
 	ReleaseAsset             string
 	ReleaseAssetChecksum     string
 	ReleaseAssetChecksumAlgo string
+	ResolveSymlinks          bool
 	LocalDownloadPath        string
 }
 
@@ -34,6 +35,7 @@ const OPTION_SOURCE_PATH = "source-path"
 const OPTION_RELEASE_ASSET = "release-asset"
 const OPTION_RELEASE_ASSET_CHECKSUM = "release-asset-checksum"
 const OPTION_RELEASE_ASSET_CHECKSUM_ALGO = "release-asset-checksum-algo"
+const OPTION_RESOLVE_SYMLINKS = "resolve-symlinks"
 
 const ENV_VAR_GITHUB_TOKEN = "GITHUB_OAUTH_TOKEN"
 
@@ -81,6 +83,10 @@ func main() {
 		cli.StringFlag{
 			Name:  OPTION_RELEASE_ASSET_CHECKSUM_ALGO,
 			Usage: "The algorithm Fetch will use to compute a checksum of the release asset. Acceptable values\n\tare \"sha256\" and \"sha512\".",
+		},
+		cli.BoolFlag{
+			Name:  OPTION_RESOLVE_SYMLINKS,
+			Usage: "If set to true, Fetch will attempt to resolve any symlinks in the repo by replacing\nthe symlinks with the contents of the targets they point to.",
 		},
 	}
 
@@ -144,7 +150,7 @@ func runFetch(c *cli.Context) error {
 	}
 
 	// Download any requested source files
-	if err := downloadSourcePaths(options.SourcePaths, options.LocalDownloadPath, repo, desiredTag, options.BranchName, options.CommitSha); err != nil {
+	if err := downloadSourcePaths(repo, desiredTag, options); err != nil {
 		return err
 	}
 
@@ -165,7 +171,7 @@ func runFetch(c *cli.Context) error {
 	return nil
 }
 
-func parseOptions(c *cli.Context) FetchOptions {
+func parseOptions(c *cli.Context) *FetchOptions {
 	localDownloadPath := c.Args().First()
 	sourcePaths := c.StringSlice(OPTION_SOURCE_PATH)
 
@@ -177,7 +183,7 @@ func parseOptions(c *cli.Context) FetchOptions {
 		localDownloadPath = c.Args().Get(1)
 	}
 
-	return FetchOptions{
+	return &FetchOptions{
 		RepoUrl:                  c.String(OPTION_REPO),
 		CommitSha:                c.String(OPTION_COMMIT),
 		BranchName:               c.String(OPTION_BRANCH),
@@ -187,11 +193,12 @@ func parseOptions(c *cli.Context) FetchOptions {
 		ReleaseAsset:             c.String(OPTION_RELEASE_ASSET),
 		ReleaseAssetChecksum:     c.String(OPTION_RELEASE_ASSET_CHECKSUM),
 		ReleaseAssetChecksumAlgo: c.String(OPTION_RELEASE_ASSET_CHECKSUM_ALGO),
+		ResolveSymlinks:          c.Bool(OPTION_RESOLVE_SYMLINKS),
 		LocalDownloadPath:        localDownloadPath,
 	}
 }
 
-func validateOptions(options FetchOptions) error {
+func validateOptions(options *FetchOptions) error {
 	if options.RepoUrl == "" {
 		return fmt.Errorf("The --%s flag is required. Run \"fetch --help\" for full usage info.", OPTION_REPO)
 	}
@@ -216,8 +223,8 @@ func validateOptions(options FetchOptions) error {
 }
 
 // Download the specified source files from the given repo
-func downloadSourcePaths(sourcePaths []string, destPath string, githubRepo GitHubRepo, latestTag string, branchName string, commitSha string) error {
-	if len(sourcePaths) == 0 {
+func downloadSourcePaths(githubRepo GitHubRepo, latestTag string, options *FetchOptions) error {
+	if len(options.SourcePaths) == 0 {
 		return nil
 	}
 
@@ -228,8 +235,8 @@ func downloadSourcePaths(sourcePaths []string, destPath string, githubRepo GitHu
 	gitHubCommit := GitHubCommit{
 		Repo:       githubRepo,
 		GitTag:     latestTag,
-		BranchName: branchName,
-		CommitSha:  commitSha,
+		BranchName: options.BranchName,
+		CommitSha:  options.CommitSha,
 	}
 
 	// Download that release as a .zip file
@@ -250,9 +257,9 @@ func downloadSourcePaths(sourcePaths []string, destPath string, githubRepo GitHu
 	defer cleanupZipFile(localZipFilePath)
 
 	// Unzip and move the files we need to our destination
-	for _, sourcePath := range sourcePaths {
-		fmt.Printf("Extracting files from <repo>%s to %s ...\n", sourcePath, destPath)
-		if err := extractFiles(localZipFilePath, sourcePath, destPath); err != nil {
+	for _, sourcePath := range options.SourcePaths {
+		fmt.Printf("Extracting files from <repo>%s to %s ...\n", sourcePath, options.LocalDownloadPath)
+		if err := extractFiles(localZipFilePath, sourcePath, options.LocalDownloadPath, options); err != nil {
 			return fmt.Errorf("Error occurred while extracting files from GitHub zip file: %s", err.Error())
 		}
 	}

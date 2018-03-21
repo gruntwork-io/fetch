@@ -58,7 +58,7 @@ func downloadGithubZipFile(gitHubCommit GitHubCommit, gitHubToken string) (strin
 }
 
 // Decompress the file at zipFileAbsPath and move only those files under filesToExtractFromZipPath to localPath
-func extractFiles(zipFilePath, filesToExtractFromZipPath, localPath string) error {
+func extractFiles(zipFilePath, filesToExtractFromZipPath, localPath string, fetchOptions *FetchOptions) error {
 
 	// Open the zip file for reading.
 	r, err := zip.OpenReader(zipFilePath)
@@ -98,17 +98,21 @@ func extractFiles(zipFilePath, filesToExtractFromZipPath, localPath string) erro
 	}
 
 	// Sym links may refer to files within the repo, in which case we first need to copy all files, and then process symlinks
-	for _, f := range r.File {
+	if fetchOptions != nil && fetchOptions.ResolveSymlinks {
+		fmt.Println("--resolve-symlinks is set to true, so replacing symlinks with the contents of their targets")
 
-		// If the given file is in the filesToExtractFromZipPath, proceed
-		if strings.Index(f.Name, pathPrefix) == 0 {
+		for _, f := range r.File {
 
-			path := filepath.Join(localPath, strings.TrimPrefix(f.Name, pathPrefix))
+			// If the given file is in the filesToExtractFromZipPath, proceed
+			if strings.Index(f.Name, pathPrefix) == 0 {
 
-			if IsSymLink(f) {
-				err := evalSymLinkAndCopyFiles(f, path)
-				if err != nil {
-					return err
+				path := filepath.Join(localPath, strings.TrimPrefix(f.Name, pathPrefix))
+
+				if IsSymLink(f) {
+					err := evalSymLinkAndCopyFiles(f, path)
+					if err != nil {
+						return err
+					}
 				}
 			}
 		}
@@ -177,7 +181,7 @@ func writeFileAsSymLink(f *zip.File, path string) error {
 func evalSymLinkAndCopyFiles(f *zip.File, path string) error {
 	targetPath, err := filepath.EvalSymlinks(path)
 	if err != nil {
-		fmt.Printf("[WARN] Symlink %s points to a target that is outside the repo. Leaving existing symlink in place.\n", path)
+		fmt.Printf("[WARN] Symlink \"%s\" points to a target that is outside the repo. Leaving in place as symlink.\n", f.FileInfo().Name())
 		return nil
 	}
 

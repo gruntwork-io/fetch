@@ -220,13 +220,16 @@ func TestDownloadSymlink(t *testing.T) {
 	commitSha := "7549f0d4fb54782697beed421647dfa9f7c90d7f"
 
 	tmpDir := mkTmpDir(t)
-	fmt.Printf("tmpDir = %s\n", tmpDir)
 	gitHubCommit := newGitHubCommit(repoOwner, repoName, commitSha)
 
 	zipFilePath := downloadZipFile(t, gitHubCommit, "")
 	defer os.RemoveAll(zipFilePath)
 
-	extractZipFile(t, zipFilePath, "/", tmpDir)
+	fetchOptions := &FetchOptions{
+		ResolveSymlinks: true,
+	}
+
+	extractZipFile(t, zipFilePath, "/", tmpDir, fetchOptions)
 
 	expectedFile1Path := filepath.Join(tmpDir, "file3.txt")
 	assert.True(t, fileExists(expectedFile1Path), "Expected file to exist at %s", expectedFile1Path)
@@ -274,7 +277,7 @@ func TestExtractFiles(t *testing.T) {
 		}
 		defer os.RemoveAll(tempDir)
 
-		err = extractFiles(tc.localFilePath, tc.filePathToExtract, tempDir)
+		err = extractFiles(tc.localFilePath, tc.filePathToExtract, tempDir, nil)
 		if err != nil {
 			t.Fatalf("Failed to extract files: %s", err)
 		}
@@ -339,8 +342,8 @@ func downloadZipFile(t *testing.T, gitHubCommit *GitHubCommit, gitHubToken strin
 	return zipFilePath
 }
 
-func extractZipFile(t *testing.T, zipFilePath string, filesToExtractFromZipPath string, localPath string) {
-	err := extractFiles(zipFilePath, filesToExtractFromZipPath, localPath)
+func extractZipFile(t *testing.T, zipFilePath string, filesToExtractFromZipPath string, localPath string, fetchOptions *FetchOptions) {
+	err := extractFiles(zipFilePath, filesToExtractFromZipPath, localPath, fetchOptions)
 	if err != nil {
 		t.Fatalf("Failed to extract files: %s", err)
 	}
