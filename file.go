@@ -79,17 +79,17 @@ func extractFiles(zipFilePath, filesToExtractFromZipPath, localPath string, fetc
 	pathPrefix = filepath.Join(pathPrefix, filesToExtractFromZipPath)
 
 	// Iterate through the files in the archive.
-	for _, f := range r.File {
+	for _, file := range r.File {
 
 		// If the given file is in the filesToExtractFromZipPath, proceed
-		if strings.Index(f.Name, pathPrefix) == 0 {
+		if strings.Index(file.Name, pathPrefix) == 0 {
 
-			path := filepath.Join(localPath, strings.TrimPrefix(f.Name, pathPrefix))
+			path := filepath.Join(localPath, strings.TrimPrefix(file.Name, pathPrefix))
 
-			if f.FileInfo().IsDir() {
+			if file.FileInfo().IsDir() {
 				os.MkdirAll(path, 0777)
 			} else {
-				err = writeFileFromZip(f, path)
+				err = writeFileFromZip(file, path)
 				if err != nil {
 					return err
 				}
@@ -98,18 +98,18 @@ func extractFiles(zipFilePath, filesToExtractFromZipPath, localPath string, fetc
 	}
 
 	// Sym links may refer to files within the repo, in which case we first need to copy all files, and then process symlinks
-	if fetchOptions != nil && fetchOptions.ResolveSymlinks {
+	if cliArgResolveSymlinksIsPresent(fetchOptions) {
 		fmt.Println("--resolve-symlinks is set to true, so replacing symlinks with the contents of their targets")
 
-		for _, f := range r.File {
+		for _, file := range r.File {
 
 			// If the given file is in the filesToExtractFromZipPath, proceed
-			if strings.Index(f.Name, pathPrefix) == 0 {
+			if strings.Index(file.Name, pathPrefix) == 0 {
 
-				path := filepath.Join(localPath, strings.TrimPrefix(f.Name, pathPrefix))
+				path := filepath.Join(localPath, strings.TrimPrefix(file.Name, pathPrefix))
 
-				if IsSymLink(f) {
-					err := evalSymLinkAndCopyFiles(f, path)
+				if IsSymLink(file) {
+					err := evalSymLinkAndCopyFiles(file, path)
 					if err != nil {
 						return err
 					}
@@ -119,6 +119,10 @@ func extractFiles(zipFilePath, filesToExtractFromZipPath, localPath string, fetc
 	}
 
 	return nil
+}
+
+func cliArgResolveSymlinksIsPresent (options *FetchOptions) bool {
+	return options != nil && options.ResolveSymlinks
 }
 
 // Returns true if the given file is a symlink to a file or dir
