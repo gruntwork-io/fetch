@@ -157,7 +157,7 @@ fetch --repo="https://github.com/foo/bar" --tag="0.1.5" --release-asset="foo.exe
 Download the release asset `foo.exe` from a GitHub release hosted on a GitHub Enterprise instance running at `ghe.mycompany.com` where the tag is exactly `0.1.5`, and save it to `/tmp`:
 
 ```
-fetch --repo="https://github.com/foo/bar" --tag="0.1.5" --release-asset="foo.exe" --github-base-url="ghe.mycompany.com" --github-api-url="ghe.mycompany.com/api/v3" /tmp
+fetch --repo="https://ghe.mycompany.com/foo/bar" --tag="0.1.5" --release-asset="foo.exe" --github-base-url="ghe.mycompany.com" --github-api-url="ghe.mycompany.com/api/v3" /tmp
 ```
 
 ## License
