@@ -152,6 +152,14 @@ Download the release asset `foo.exe` from a GitHub release where the tag is exac
 fetch --repo="https://github.com/foo/bar" --tag="0.1.5" --release-asset="foo.exe" /tmp
 ```
 
+#### Usage Example 7
+
+Download the release asset `foo.exe` from a GitHub release hosted on a GitHub Enterprise instance running at `ghe.mycompany.com` where the tag is exactly `0.1.5`, and save it to `/tmp`:
+
+```
+fetch --repo="https://github.com/foo/bar" --tag="0.1.5" --release-asset="foo.exe" --github-base-url="ghe.mycompany.com" --github-api-url="ghe.mycompany.com/api/v3" /tmp
+```
+
 ## License
 
 This code is released under the MIT License. See [LICENSE.txt](/LICENSE.txt).

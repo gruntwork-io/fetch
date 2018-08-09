@@ -23,6 +23,8 @@ type FetchOptions struct {
 	ReleaseAssetChecksum     string
 	ReleaseAssetChecksumAlgo string
 	LocalDownloadPath        string
+	GithubBaseUrl            string
+	GithubApiUrl             string
 }
 
 const OPTION_REPO = "repo"
@@ -34,6 +36,8 @@ const OPTION_SOURCE_PATH = "source-path"
 const OPTION_RELEASE_ASSET = "release-asset"
 const OPTION_RELEASE_ASSET_CHECKSUM = "release-asset-checksum"
 const OPTION_RELEASE_ASSET_CHECKSUM_ALGO = "release-asset-checksum-algo"
+const OPTION_GITHUB_BASE_URL = "github-base-url"
+const OPTION_GITHUB_API_URL = "github-api-url"
 
 const ENV_VAR_GITHUB_TOKEN = "GITHUB_OAUTH_TOKEN"
 
@@ -82,6 +86,14 @@ func main() {
 			Name:  OPTION_RELEASE_ASSET_CHECKSUM_ALGO,
 			Usage: "The algorithm Fetch will use to compute a checksum of the release asset. Acceptable values\n\tare \"sha256\" and \"sha512\".",
 		},
+		cli.StringFlag{
+			Name:  OPTION_GITHUB_BASE_URL,
+			Usage: "The base url of the GitHub instance. If left blank, github.com will be used.",
+		},
+		cli.StringFlag{
+			Name:  OPTION_GITHUB_API_URL,
+			Usage: "The api url of the GitHub instance. If left blank, api.github.com will be used.",
+		},
 	}
 
 	app.Action = runFetchWrapper
@@ -107,7 +119,7 @@ func runFetch(c *cli.Context) error {
 	}
 
 	// Get the tags for the given repo
-	tags, fetchErr := FetchTags(options.RepoUrl, options.GithubToken)
+	tags, fetchErr := FetchTags(options.RepoUrl, options.GithubBaseUrl, options.GithubApiUrl, options.GithubToken)
 	if fetchErr != nil {
 		if fetchErr.errorCode == INVALID_GITHUB_TOKEN_OR_ACCESS_DENIED {
 			return errors.New(getErrorMessage(INVALID_GITHUB_TOKEN_OR_ACCESS_DENIED, fetchErr.details))
@@ -133,7 +145,7 @@ func runFetch(c *cli.Context) error {
 	}
 
 	// Prepare the vars we'll need to download
-	repo, fetchErr := ParseUrlIntoGitHubRepo(options.RepoUrl, options.GithubToken)
+	repo, fetchErr := ParseUrlIntoGitHubRepo(options.RepoUrl, options.GithubBaseUrl, options.GithubApiUrl, options.GithubToken)
 	if fetchErr != nil {
 		return fmt.Errorf("Error occurred while parsing GitHub URL: %s", fetchErr)
 	}
@@ -188,6 +200,8 @@ func parseOptions(c *cli.Context) FetchOptions {
 		ReleaseAssetChecksum:     c.String(OPTION_RELEASE_ASSET_CHECKSUM),
 		ReleaseAssetChecksumAlgo: c.String(OPTION_RELEASE_ASSET_CHECKSUM_ALGO),
 		LocalDownloadPath:        localDownloadPath,
+		GithubBaseUrl:            c.String(OPTION_GITHUB_BASE_URL),
+		GithubApiUrl:             c.String(OPTION_GITHUB_API_URL),
 	}
 }
 

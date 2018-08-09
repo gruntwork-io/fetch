@@ -11,10 +11,12 @@ import (
 )
 
 type GitHubRepo struct {
-	Url   string // The URL of the GitHub repo
-	Owner string // The GitHub account name under which the repo exists
-	Name  string // The GitHub repo name
-	Token string // The personal access token to access this repo (if it's a private repo)
+	Url     string // The URL of the GitHub repo
+	BaseUrl string // The Base URL of the GitHub Instance
+	ApiUrl  string // The API Url of the GitHub Instance
+	Owner   string // The GitHub account name under which the repo exists
+	Name    string // The GitHub repo name
+	Token   string // The personal access token to access this repo (if it's a private repo)
 }
 
 // Represents a specific git commit.
@@ -63,10 +65,10 @@ type GitHubReleaseAsset struct {
 }
 
 // Fetch all tags from the given GitHub repo
-func FetchTags(githubRepoUrl string, githubToken string) ([]string, *FetchError) {
+func FetchTags(githubRepoUrl string, githubBaseUrl string, githubApiUrl string, githubToken string) ([]string, *FetchError) {
 	var tagsString []string
 
-	repo, err := ParseUrlIntoGitHubRepo(githubRepoUrl, githubToken)
+	repo, err := ParseUrlIntoGitHubRepo(githubRepoUrl, githubBaseUrl, githubApiUrl, githubToken)
 	if err != nil {
 		return tagsString, wrapError(err)
 	}
@@ -96,10 +98,10 @@ func FetchTags(githubRepoUrl string, githubToken string) ([]string, *FetchError)
 }
 
 // Convert a URL into a GitHubRepo struct
-func ParseUrlIntoGitHubRepo(url string, token string) (GitHubRepo, *FetchError) {
+func ParseUrlIntoGitHubRepo(url string, githubBaseUrl string, githubApiUrl string, token string) (GitHubRepo, *FetchError) {
 	var gitHubRepo GitHubRepo
 
-	regex, regexErr := regexp.Compile("https?://(?:www\\.)?github.com/(.+?)/(.+?)(?:$|\\?|#|/)")
+	regex, regexErr := regexp.Compile("https?://(?:www\\.)?" + githubBaseUrl + "/(.+?)/(.+?)(?:$|\\?|#|/)")
 	if regexErr != nil {
 		return gitHubRepo, newError(GITHUB_REPO_URL_MALFORMED_OR_NOT_PARSEABLE, fmt.Sprintf("GitHub Repo URL %s is malformed.", url))
 	}
@@ -110,10 +112,12 @@ func ParseUrlIntoGitHubRepo(url string, token string) (GitHubRepo, *FetchError) 
 	}
 
 	gitHubRepo = GitHubRepo{
-		Url: url,
-		Owner: matches[1],
-		Name: matches[2],
-		Token: token,
+		Url:     url,
+		BaseUrl: githubBaseUrl,
+		ApiUrl:  githubApiUrl,
+		Owner:   matches[1],
+		Name:    matches[2],
+		Token:   token,
 	}
 
 	return gitHubRepo, nil
@@ -161,7 +165,7 @@ func createGitHubRepoUrlForPath(repo GitHubRepo, path string) string {
 func callGitHubApi(repo GitHubRepo, path string, customHeaders map[string]string) (*http.Response, *FetchError) {
 	httpClient := &http.Client{}
 
-	request, err := http.NewRequest("GET", fmt.Sprintf("https://api.github.com/%s", path), nil)
+	request, err := http.NewRequest("GET", fmt.Sprintf("https://" + repo.ApiUrl + "/%s", path), nil)
 	if err != nil {
 		return nil, wrapError(err)
 	}
