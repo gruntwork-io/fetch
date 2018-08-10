@@ -118,8 +118,13 @@ func runFetch(c *cli.Context) error {
 		return err
 	}
 
+  instance, fetchErr := ParseUrlIntoGithubInstance(options.RepoUrl, options.GithubApiVersion)
+  if fetchErr != nil {
+    return fetchErr
+  }
+
 	// Get the tags for the given repo
-	tags, fetchErr := FetchTags(options.RepoUrl, options.GithubBaseUrl, options.GithubApiUrl, options.GithubToken)
+	tags, fetchErr := FetchTags(options.RepoUrl, options.GithubToken, instance)
 	if fetchErr != nil {
 		if fetchErr.errorCode == INVALID_GITHUB_TOKEN_OR_ACCESS_DENIED {
 			return errors.New(getErrorMessage(INVALID_GITHUB_TOKEN_OR_ACCESS_DENIED, fetchErr.details))
@@ -145,7 +150,7 @@ func runFetch(c *cli.Context) error {
 	}
 
 	// Prepare the vars we'll need to download
-	repo, fetchErr := ParseUrlIntoGitHubRepo(options.RepoUrl, options.GithubBaseUrl, options.GithubApiUrl, options.GithubToken)
+	repo, fetchErr := ParseUrlIntoGitHubRepo(options.RepoUrl, options.GithubToken, instance)
 	if fetchErr != nil {
 		return fmt.Errorf("Error occurred while parsing GitHub URL: %s", fetchErr)
 	}

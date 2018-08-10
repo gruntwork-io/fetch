@@ -98,10 +98,10 @@ func ParseUrlIntoGithubInstance(url string, apiv string) (GitHubInstance, *Fetch
 }
 
 // Fetch all tags from the given GitHub repo
-func FetchTags(githubRepoUrl string, githubBaseUrl string, githubApiUrl string, githubToken string) ([]string, *FetchError) {
+func FetchTags(githubRepoUrl string, githubToken string, instance GitHubInstance) ([]string, *FetchError) {
 	var tagsString []string
 
-	repo, err := ParseUrlIntoGitHubRepo(githubRepoUrl, githubBaseUrl, githubApiUrl, githubToken)
+	repo, err := ParseUrlIntoGitHubRepo(githubRepoUrl, githubToken, instance)
 	if err != nil {
 		return tagsString, wrapError(err)
 	}
@@ -131,10 +131,10 @@ func FetchTags(githubRepoUrl string, githubBaseUrl string, githubApiUrl string, 
 }
 
 // Convert a URL into a GitHubRepo struct
-func ParseUrlIntoGitHubRepo(url string, githubBaseUrl string, githubApiUrl string, token string) (GitHubRepo, *FetchError) {
+func ParseUrlIntoGitHubRepo(url string, token string, instance GitHubInstance) (GitHubRepo, *FetchError) {
 	var gitHubRepo GitHubRepo
 
-	regex, regexErr := regexp.Compile("https?://(?:www\\.)?" + githubBaseUrl + "/(.+?)/(.+?)(?:$|\\?|#|/)")
+	regex, regexErr := regexp.Compile("https?://(?:www\\.)?" + instance.BaseUrl + "/(.+?)/(.+?)(?:$|\\?|#|/)")
 	if regexErr != nil {
 		return gitHubRepo, newError(GITHUB_REPO_URL_MALFORMED_OR_NOT_PARSEABLE, fmt.Sprintf("GitHub Repo URL %s is malformed.", url))
 	}
@@ -146,8 +146,8 @@ func ParseUrlIntoGitHubRepo(url string, githubBaseUrl string, githubApiUrl strin
 
 	gitHubRepo = GitHubRepo{
 		Url:     url,
-		BaseUrl: githubBaseUrl,
-		ApiUrl:  githubApiUrl,
+		BaseUrl: instance.BaseUrl,
+		ApiUrl:  instance.ApiUrl,
 		Owner:   matches[1],
 		Name:    matches[2],
 		Token:   token,
