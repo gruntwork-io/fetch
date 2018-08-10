@@ -9,22 +9,27 @@ import (
 
 func TestGetListOfReleasesFromGitHubRepo(t *testing.T) {
 	t.Parallel()
+  testInst := GitHubInstance{
+    BaseUrl: "github.com",
+    ApiUrl: "api.github.com",
+  }
 
 	cases := []struct {
 		repoUrl          string
 		firstReleaseTag  string
 		lastReleaseTag   string
 		gitHubOAuthToken string
+    testInst         GitHubInstance
 	}{
 		// Test on a public repo whose sole purpose is to be a test fixture for this tool
-		{"https://github.com/gruntwork-io/fetch-test-public", "v0.0.1", "v0.0.3", ""},
+		{"https://github.com/gruntwork-io/fetch-test-public", "v0.0.1", "v0.0.3", "", testInst},
 
 		// Private repo equivalent
-		{"https://github.com/gruntwork-io/fetch-test-private", "v0.0.2", "v0.0.2", os.Getenv("GITHUB_OAUTH_TOKEN")},
+		{"https://github.com/gruntwork-io/fetch-test-private", "v0.0.2", "v0.0.2", os.Getenv("GITHUB_OAUTH_TOKEN"), testInst},
 	}
 
 	for _, tc := range cases {
-		releases, err := FetchTags(tc.repoUrl, tc.gitHubOAuthToken)
+		releases, err := FetchTags(tc.repoUrl, tc.gitHubOAuthToken, testInst)
 		if err != nil {
 			t.Fatalf("error fetching releases: %s", err)
 		}
@@ -97,25 +102,42 @@ func TestParseUrlIntoGithubInstance(t *testing.T) {
 
 func TestParseUrlIntoGitHubRepo(t *testing.T) {
 	t.Parallel()
+  ghTestInst := GitHubInstance{
+    BaseUrl: "github.com",
+    ApiUrl: "api.github.com",
+  }
+  gheTestInst := GitHubInstance{
+    BaseUrl: "ghe.mycompany.com",
+    ApiUrl: "ghe.mycompany.com/api/v3",
+  }
+  myCoTestInst := GitHubInstance{
+    BaseUrl: "mycogithub.com",
+    ApiUrl: "mycogithub.com/api/v3",
+  }
 
 	cases := []struct {
-		repoUrl string
-		owner   string
-		name    string
-		token   string
+		repoUrl  string
+		owner    string
+		name     string
+		token    string
+    testInst GitHubInstance
 	}{
-		{"https://github.com/brikis98/ping-play", "brikis98", "ping-play", ""},
-		{"http://github.com/brikis98/ping-play", "brikis98", "ping-play", ""},
-		{"https://github.com/gruntwork-io/script-modules", "gruntwork-io", "script-modules", ""},
-		{"http://github.com/gruntwork-io/script-modules", "gruntwork-io", "script-modules", ""},
-		{"http://www.github.com/gruntwork-io/script-modules", "gruntwork-io", "script-modules", ""},
-		{"http://www.github.com/gruntwork-io/script-modules/", "gruntwork-io", "script-modules", ""},
-		{"http://www.github.com/gruntwork-io/script-modules?foo=bar", "gruntwork-io", "script-modules", "token"},
-		{"http://www.github.com/gruntwork-io/script-modules?foo=bar&foo=baz", "gruntwork-io", "script-modules", "token"},
+		{"https://github.com/brikis98/ping-play", "brikis98", "ping-play", "", ghTestInst},
+		{"http://github.com/brikis98/ping-play", "brikis98", "ping-play", "", ghTestInst},
+		{"https://github.com/gruntwork-io/script-modules", "gruntwork-io", "script-modules", "", ghTestInst},
+		{"http://github.com/gruntwork-io/script-modules", "gruntwork-io", "script-modules", "", ghTestInst},
+		{"http://www.github.com/gruntwork-io/script-modules", "gruntwork-io", "script-modules", "", ghTestInst},
+		{"http://www.github.com/gruntwork-io/script-modules/", "gruntwork-io", "script-modules", "", ghTestInst},
+		{"http://www.github.com/gruntwork-io/script-modules?foo=bar", "gruntwork-io", "script-modules", "token", ghTestInst},
+		{"http://www.github.com/gruntwork-io/script-modules?foo=bar&foo=baz", "gruntwork-io", "script-modules", "token", ghTestInst},
+		{"http://www.ghe.mycompany.com/gruntwork-io/script-modules?foo=bar&foo=baz", "gruntwork-io", "script-modules", "token", gheTestInst},
+		{"https://www.ghe.mycompany.com/gruntwork-io/script-modules?foo=bar&foo=baz", "gruntwork-io", "script-modules", "token", gheTestInst},
+		{"http://ghe.mycompany.com/gruntwork-io/script-modules?foo=bar&foo=baz", "gruntwork-io", "script-modules", "token", gheTestInst},
+		{"http://mycogithub.com/gruntwork-io/script-modules?foo=bar&foo=baz", "gruntwork-io", "script-modules", "token", myCoTestInst},
 	}
 
 	for _, tc := range cases {
-		repo, err := ParseUrlIntoGitHubRepo(tc.repoUrl, tc.token)
+		repo, err := ParseUrlIntoGitHubRepo(tc.repoUrl, tc.token, tc.testInst)
 		if err != nil {
 			t.Fatalf("error extracting url %s into a GitHubRepo struct: %s", tc.repoUrl, err)
 		}
@@ -140,6 +162,7 @@ func TestParseUrlIntoGitHubRepo(t *testing.T) {
 
 func TestParseUrlThrowsErrorOnMalformedUrl(t *testing.T) {
 	t.Parallel()
+  testInst := GitHubInstance{}
 
 	cases := []struct {
 		repoUrl string
@@ -150,7 +173,7 @@ func TestParseUrlThrowsErrorOnMalformedUrl(t *testing.T) {
 	}
 
 	for _, tc := range cases {
-		_, err := ParseUrlIntoGitHubRepo(tc.repoUrl, "")
+		_, err := ParseUrlIntoGitHubRepo(tc.repoUrl, "", testInst)
 		if err == nil {
 			t.Fatalf("Expected error on malformed url %s, but no error was received.", tc.repoUrl)
 		}
@@ -182,6 +205,11 @@ func TestGetGitHubReleaseInfo(t *testing.T) {
 		Assets: []GitHubReleaseAsset{},
 	}
 
+  testInst := GitHubInstance{
+    BaseUrl: "github.com",
+    ApiUrl: "api.github.com",
+  }
+
 	cases := []struct {
 		repoUrl   string
 		repoToken string
@@ -193,7 +221,7 @@ func TestGetGitHubReleaseInfo(t *testing.T) {
 	}
 
 	for _, tc := range cases {
-		repo, err := ParseUrlIntoGitHubRepo(tc.repoUrl, tc.repoToken)
+		repo, err := ParseUrlIntoGitHubRepo(tc.repoUrl, tc.repoToken, testInst)
 		if err != nil {
 			t.Fatalf("Failed to parse %s into GitHub URL due to error: %s", tc.repoUrl, err.Error())
 		}
@@ -214,6 +242,11 @@ func TestDownloadReleaseAsset(t *testing.T) {
 
 	token := os.Getenv("GITHUB_OAUTH_TOKEN")
 
+  testInst := GitHubInstance{
+    BaseUrl: "github.com",
+    ApiUrl: "api.github.com",
+  }
+
 	cases := []struct {
 		repoUrl   string
 		repoToken string
@@ -225,7 +258,7 @@ func TestDownloadReleaseAsset(t *testing.T) {
 	}
 
 	for _, tc := range cases {
-		repo, err := ParseUrlIntoGitHubRepo(tc.repoUrl, tc.repoToken)
+		repo, err := ParseUrlIntoGitHubRepo(tc.repoUrl, tc.repoToken, testInst)
 		if err != nil {
 			t.Fatalf("Failed to parse %s into GitHub URL due to error: %s", tc.repoUrl, err.Error())
 		}
