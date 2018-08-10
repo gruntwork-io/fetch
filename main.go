@@ -23,8 +23,7 @@ type FetchOptions struct {
 	ReleaseAssetChecksum     string
 	ReleaseAssetChecksumAlgo string
 	LocalDownloadPath        string
-	GithubBaseUrl            string
-	GithubApiUrl             string
+	GithubApiVersion         string
 }
 
 const OPTION_REPO = "repo"
@@ -36,8 +35,7 @@ const OPTION_SOURCE_PATH = "source-path"
 const OPTION_RELEASE_ASSET = "release-asset"
 const OPTION_RELEASE_ASSET_CHECKSUM = "release-asset-checksum"
 const OPTION_RELEASE_ASSET_CHECKSUM_ALGO = "release-asset-checksum-algo"
-const OPTION_GITHUB_BASE_URL = "github-base-url"
-const OPTION_GITHUB_API_URL = "github-api-url"
+const OPTION_GITHUB_API_VERSION = "github-api-version"
 
 const ENV_VAR_GITHUB_TOKEN = "GITHUB_OAUTH_TOKEN"
 
@@ -87,12 +85,9 @@ func main() {
 			Usage: "The algorithm Fetch will use to compute a checksum of the release asset. Acceptable values\n\tare \"sha256\" and \"sha512\".",
 		},
 		cli.StringFlag{
-			Name:  OPTION_GITHUB_BASE_URL,
-			Usage: "The base url of the GitHub instance. If left blank, github.com will be used.",
-		},
-		cli.StringFlag{
-			Name:  OPTION_GITHUB_API_URL,
-			Usage: "The api url of the GitHub instance. If left blank, api.github.com will be used.",
+			Name:  OPTION_GITHUB_API_VERSION,
+      Value: "v3",
+			Usage: "The api version of the GitHub instance. If left blank, v3 will be used.\n\tThis will only be used if the repo url is not a github.com url.",
 		},
 	}
 
@@ -205,8 +200,7 @@ func parseOptions(c *cli.Context) FetchOptions {
 		ReleaseAssetChecksum:     c.String(OPTION_RELEASE_ASSET_CHECKSUM),
 		ReleaseAssetChecksumAlgo: c.String(OPTION_RELEASE_ASSET_CHECKSUM_ALGO),
 		LocalDownloadPath:        localDownloadPath,
-		GithubBaseUrl:            c.String(OPTION_GITHUB_BASE_URL),
-		GithubApiUrl:             c.String(OPTION_GITHUB_API_URL),
+		GithubApiVersion:         c.String(OPTION_GITHUB_API_VERSION),
 	}
 }
 
