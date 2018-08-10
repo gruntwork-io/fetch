@@ -19,6 +19,11 @@ type GitHubRepo struct {
 	Token   string // The personal access token to access this repo (if it's a private repo)
 }
 
+type GitHubInstance struct {
+  BaseUrl    string
+  ApiUrl     string
+}
+
 // Represents a specific git commit.
 // Note that code using GitHub Commit should respect the following hierarchy:
 // - CommitSha > BranchName > GitTag
