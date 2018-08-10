@@ -69,6 +69,34 @@ type GitHubReleaseAsset struct {
 	Name string
 }
 
+func ParseUrlIntoGithubInstance(url string, apiv string) (GitHubInstance, *FetchError) {
+  var instance GitHubInstance
+
+  regex, regexErr := regexp.Compile("https?://(?:www\\.)?(.+?\\.com).*")
+  if regexErr != nil {
+		return instance, newError(GITHUB_REPO_URL_MALFORMED_OR_NOT_PARSEABLE, fmt.Sprintf("GitHub Repo URL %s is malformed.", url))
+  }
+
+  matches := regex.FindStringSubmatch(url)
+  if len(matches) != 2 {
+		return instance, newError(GITHUB_REPO_URL_MALFORMED_OR_NOT_PARSEABLE, fmt.Sprintf("GitHub Repo URL %s could not be parsed correctly", url))
+  }
+
+  baseUrl := matches[1]
+  apiUrl := "api.github.com"
+  if baseUrl != "github.com" && baseUrl != "www.github.com" {
+    fmt.Printf("Assuming GitHub Enterprise since the provided url (%s) does not appear to be for GitHub.com\n", url)
+    apiUrl = baseUrl + "/api/" + apiv
+  }
+
+  instance = GitHubInstance{
+    BaseUrl: baseUrl,
+    ApiUrl: apiUrl,
+  }
+
+  return instance, nil
+}
+
 // Fetch all tags from the given GitHub repo
 func FetchTags(githubRepoUrl string, githubBaseUrl string, githubApiUrl string, githubToken string) ([]string, *FetchError) {
 	var tagsString []string

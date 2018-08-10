@@ -47,6 +47,54 @@ func TestGetListOfReleasesFromGitHubRepo(t *testing.T) {
 	}
 }
 
+func TestParseUrlIntoGithubInstance(t *testing.T) {
+  t.Parallel()
+
+  ghTestInst := GitHubInstance{
+    BaseUrl: "github.com",
+    ApiUrl: "api.github.com",
+  }
+  gheTestInst := GitHubInstance{
+    BaseUrl: "ghe.mycompany.com",
+    ApiUrl: "ghe.mycompany.com/api/v3",
+  }
+  myCoTestInst := GitHubInstance{
+    BaseUrl: "mycogithub.com",
+    ApiUrl: "mycogithub.com/api/v3",
+  }
+
+  cases := []struct {
+    repoUrl      string
+    apiv         string
+    expectedInst GitHubInstance
+  }{
+		{"http://www.github.com/gruntwork-io/script-modules/", "", ghTestInst},
+		{"https://www.github.com/gruntwork-io/script-modules/", "", ghTestInst},
+		{"http://github.com/gruntwork-io/script-modules/", "", ghTestInst},
+		{"http://www.ghe.mycompany.com/gruntwork-io/script-modules", "v3", gheTestInst},
+		{"https://www.ghe.mycompany.com/gruntwork-io/script-modules", "v3", gheTestInst},
+		{"http://ghe.mycompany.com/gruntwork-io/script-modules", "v3", gheTestInst},
+		{"http://www.mycogithub.com/gruntwork-io/script-modules", "v3", myCoTestInst},
+		{"https://www.mycogithub.com/gruntwork-io/script-modules", "v3", myCoTestInst},
+		{"http://mycogithub.com/gruntwork-io/script-modules", "v3", myCoTestInst},
+  }
+
+	for _, tc := range cases {
+		inst, err := ParseUrlIntoGithubInstance(tc.repoUrl, tc.apiv)
+		if err != nil {
+			t.Fatalf("error extracting url %s into a GitHubRepo struct: %s", tc.repoUrl, err)
+		}
+
+		if inst.BaseUrl != tc.expectedInst.BaseUrl {
+			t.Fatalf("while extracting %s, expected owner %s, received %s", tc.repoUrl, tc.expectedInst.BaseUrl, inst.BaseUrl)
+		}
+
+		if inst.ApiUrl != tc.expectedInst.ApiUrl {
+			t.Fatalf("while extracting %s, expected name %s, received %s", tc.repoUrl, tc.expectedInst.ApiUrl, inst.ApiUrl)
+		}
+  }
+}
+
 func TestParseUrlIntoGitHubRepo(t *testing.T) {
 	t.Parallel()
 
