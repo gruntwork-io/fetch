@@ -76,8 +76,8 @@ The supported options are:
   downloading from private GitHub repos. **NOTE:** fetch will also look for this token using the `GITHUB_OAUTH_TOKEN`
   environment variable, which we recommend using instead of the command line option to ensure the token doesn't get
   saved in bash history.
-- `--github-api-version` (**Optional**): The used when fetching an artifact from a GitHub Enterprise instance.
-  The default version is `v3`. This is ignored when fetching from GitHub.com.
+- `--github-api-version` (**Optional**): Used when fetching an artifact from a GitHub Enterprise instance.
+  Defaults to `v3`. This is ignored when fetching from GitHub.com.
 
 The supported arguments are:
 
