@@ -59,13 +59,33 @@ func TestParseUrlIntoGithubInstance(t *testing.T) {
 		BaseUrl: "github.com",
 		ApiUrl:  "api.github.com",
 	}
+	wwwGhTestInst := GitHubInstance{
+		BaseUrl: "www.github.com",
+		ApiUrl:  "api.github.com",
+	}
 	gheTestInst := GitHubInstance{
 		BaseUrl: "ghe.mycompany.com",
 		ApiUrl:  "ghe.mycompany.com/api/v3",
 	}
+	wwwGheTestInst := GitHubInstance{
+		BaseUrl: "www.ghe.mycompany.com",
+		ApiUrl:  "www.ghe.mycompany.com/api/v3",
+	}
 	myCoTestInst := GitHubInstance{
 		BaseUrl: "mycogithub.com",
 		ApiUrl:  "mycogithub.com/api/v3",
+	}
+	wwwMyCoTestInst := GitHubInstance{
+		BaseUrl: "www.mycogithub.com",
+		ApiUrl:  "www.mycogithub.com/api/v3",
+	}
+	localTestInst := GitHubInstance{
+		BaseUrl: "mycogithub.local",
+		ApiUrl:  "mycogithub.local/api/v3",
+	}
+	netTestInst := GitHubInstance{
+		BaseUrl: "mycogithub.net",
+		ApiUrl:  "mycogithub.net/api/v3",
 	}
 
 	cases := []struct {
@@ -73,15 +93,17 @@ func TestParseUrlIntoGithubInstance(t *testing.T) {
 		apiv         string
 		expectedInst GitHubInstance
 	}{
-		{"http://www.github.com/gruntwork-io/script-modules/", "", ghTestInst},
-		{"https://www.github.com/gruntwork-io/script-modules/", "", ghTestInst},
+		{"http://www.github.com/gruntwork-io/script-modules/", "", wwwGhTestInst},
+		{"https://www.github.com/gruntwork-io/script-modules/", "", wwwGhTestInst},
 		{"http://github.com/gruntwork-io/script-modules/", "", ghTestInst},
-		{"http://www.ghe.mycompany.com/gruntwork-io/script-modules", "v3", gheTestInst},
-		{"https://www.ghe.mycompany.com/gruntwork-io/script-modules", "v3", gheTestInst},
+		{"http://www.ghe.mycompany.com/gruntwork-io/script-modules", "v3", wwwGheTestInst},
+		{"https://www.ghe.mycompany.com/gruntwork-io/script-modules", "v3", wwwGheTestInst},
 		{"http://ghe.mycompany.com/gruntwork-io/script-modules", "v3", gheTestInst},
-		{"http://www.mycogithub.com/gruntwork-io/script-modules", "v3", myCoTestInst},
-		{"https://www.mycogithub.com/gruntwork-io/script-modules", "v3", myCoTestInst},
+		{"http://www.mycogithub.com/gruntwork-io/script-modules", "v3", wwwMyCoTestInst},
+		{"https://www.mycogithub.com/gruntwork-io/script-modules", "v3", wwwMyCoTestInst},
 		{"http://mycogithub.com/gruntwork-io/script-modules", "v3", myCoTestInst},
+		{"http://mycogithub.local/gruntwork-io/script-modules", "v3", localTestInst},
+		{"http://mycogithub.net/gruntwork-io/script-modules", "v3", netTestInst},
 	}
 
 	for _, tc := range cases {

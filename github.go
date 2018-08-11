@@ -1,13 +1,14 @@
 package main
 
 import (
-	"net/http"
-	"fmt"
 	"bytes"
 	"encoding/json"
-	"regexp"
-	"os"
+	"fmt"
 	"io"
+	"net/http"
+	"net/url"
+	"os"
+	"regexp"
 )
 
 type GitHubRepo struct {
@@ -69,23 +70,18 @@ type GitHubReleaseAsset struct {
 	Name string
 }
 
-func ParseUrlIntoGithubInstance(url string, apiv string) (GitHubInstance, *FetchError) {
+func ParseUrlIntoGithubInstance(repoUrl string, apiv string) (GitHubInstance, *FetchError) {
 	var instance GitHubInstance
 
-	regex, regexErr := regexp.Compile("https?://(?:www\\.)?(.+?\\.com).*")
-	if regexErr != nil {
-		return instance, newError(GITHUB_REPO_URL_MALFORMED_OR_NOT_PARSEABLE, fmt.Sprintf("GitHub Repo URL %s is malformed.", url))
+	u, err := url.Parse(repoUrl)
+	if err != nil {
+		return instance, newError(GITHUB_REPO_URL_MALFORMED_OR_NOT_PARSEABLE, fmt.Sprintf("GitHub Repo URL %s is malformed.", repoUrl))
 	}
 
-	matches := regex.FindStringSubmatch(url)
-	if len(matches) != 2 {
-		return instance, newError(GITHUB_REPO_URL_MALFORMED_OR_NOT_PARSEABLE, fmt.Sprintf("GitHub Repo URL %s could not be parsed correctly", url))
-	}
-
-	baseUrl := matches[1]
+	baseUrl := u.Host
 	apiUrl := "api.github.com"
 	if baseUrl != "github.com" && baseUrl != "www.github.com" {
-		fmt.Printf("Assuming GitHub Enterprise since the provided url (%s) does not appear to be for GitHub.com\n", url)
+		fmt.Printf("Assuming GitHub Enterprise since the provided url (%s) does not appear to be for GitHub.com\n", repoUrl)
 		apiUrl = baseUrl + "/api/" + apiv
 	}
 
