@@ -19,6 +19,7 @@ authentication. Fetch makes it possible to handle all of these cases with a one-
 - Download a binary asset from a specific release.
 - Verify the SHA256 or SHA512 checksum of a binary asset.
 - Download from public repos, or from private repos by specifying a [GitHub Personal Access Token](https://help.github.com/articles/creating-an-access-token-for-command-line-use/).
+- Download from GitHub Enterprise.
 - When specifying a git tag, you can can specify either exactly the tag you want, or a [Tag Constraint Expression](#tag-constraint-expressions) to do things like "get the latest non-breaking version" of this repo. Note that fetch assumes git tags are specified according to [Semantic Versioning](http://semver.org/) principles.
 
 #### Quick examples
@@ -75,6 +76,8 @@ The supported options are:
   downloading from private GitHub repos. **NOTE:** fetch will also look for this token using the `GITHUB_OAUTH_TOKEN`
   environment variable, which we recommend using instead of the command line option to ensure the token doesn't get
   saved in bash history.
+- `--github-api-version` (**Optional**): Used when fetching an artifact from a GitHub Enterprise instance.
+  Defaults to `v3`. This is ignored when fetching from GitHub.com.
 
 The supported arguments are:
 
@@ -150,6 +153,14 @@ Download the release asset `foo.exe` from a GitHub release where the tag is exac
 
 ```
 fetch --repo="https://github.com/foo/bar" --tag="0.1.5" --release-asset="foo.exe" /tmp
+```
+
+#### Usage Example 7
+
+Download the release asset `foo.exe` from a GitHub release hosted on a GitHub Enterprise instance running at `ghe.mycompany.com` where the tag is exactly `0.1.5`, and save it to `/tmp`:
+
+```
+fetch --repo="https://ghe.mycompany.com/foo/bar" --tag="0.1.5" --release-asset="foo.exe" /tmp
 ```
 
 ## License
