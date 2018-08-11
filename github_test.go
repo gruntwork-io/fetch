@@ -1,25 +1,25 @@
 package main
 
 import (
-	"testing"
+	"io/ioutil"
 	"os"
 	"reflect"
-	"io/ioutil"
+	"testing"
 )
 
 func TestGetListOfReleasesFromGitHubRepo(t *testing.T) {
 	t.Parallel()
-  testInst := GitHubInstance{
-    BaseUrl: "github.com",
-    ApiUrl: "api.github.com",
-  }
+	testInst := GitHubInstance{
+		BaseUrl: "github.com",
+		ApiUrl:  "api.github.com",
+	}
 
 	cases := []struct {
 		repoUrl          string
 		firstReleaseTag  string
 		lastReleaseTag   string
 		gitHubOAuthToken string
-    testInst         GitHubInstance
+		testInst         GitHubInstance
 	}{
 		// Test on a public repo whose sole purpose is to be a test fixture for this tool
 		{"https://github.com/gruntwork-io/fetch-test-public", "v0.0.1", "v0.0.3", "", testInst},
@@ -53,26 +53,26 @@ func TestGetListOfReleasesFromGitHubRepo(t *testing.T) {
 }
 
 func TestParseUrlIntoGithubInstance(t *testing.T) {
-  t.Parallel()
+	t.Parallel()
 
-  ghTestInst := GitHubInstance{
-    BaseUrl: "github.com",
-    ApiUrl: "api.github.com",
-  }
-  gheTestInst := GitHubInstance{
-    BaseUrl: "ghe.mycompany.com",
-    ApiUrl: "ghe.mycompany.com/api/v3",
-  }
-  myCoTestInst := GitHubInstance{
-    BaseUrl: "mycogithub.com",
-    ApiUrl: "mycogithub.com/api/v3",
-  }
+	ghTestInst := GitHubInstance{
+		BaseUrl: "github.com",
+		ApiUrl:  "api.github.com",
+	}
+	gheTestInst := GitHubInstance{
+		BaseUrl: "ghe.mycompany.com",
+		ApiUrl:  "ghe.mycompany.com/api/v3",
+	}
+	myCoTestInst := GitHubInstance{
+		BaseUrl: "mycogithub.com",
+		ApiUrl:  "mycogithub.com/api/v3",
+	}
 
-  cases := []struct {
-    repoUrl      string
-    apiv         string
-    expectedInst GitHubInstance
-  }{
+	cases := []struct {
+		repoUrl      string
+		apiv         string
+		expectedInst GitHubInstance
+	}{
 		{"http://www.github.com/gruntwork-io/script-modules/", "", ghTestInst},
 		{"https://www.github.com/gruntwork-io/script-modules/", "", ghTestInst},
 		{"http://github.com/gruntwork-io/script-modules/", "", ghTestInst},
@@ -82,7 +82,7 @@ func TestParseUrlIntoGithubInstance(t *testing.T) {
 		{"http://www.mycogithub.com/gruntwork-io/script-modules", "v3", myCoTestInst},
 		{"https://www.mycogithub.com/gruntwork-io/script-modules", "v3", myCoTestInst},
 		{"http://mycogithub.com/gruntwork-io/script-modules", "v3", myCoTestInst},
-  }
+	}
 
 	for _, tc := range cases {
 		inst, err := ParseUrlIntoGithubInstance(tc.repoUrl, tc.apiv)
@@ -97,30 +97,30 @@ func TestParseUrlIntoGithubInstance(t *testing.T) {
 		if inst.ApiUrl != tc.expectedInst.ApiUrl {
 			t.Fatalf("while extracting %s, expected name %s, received %s", tc.repoUrl, tc.expectedInst.ApiUrl, inst.ApiUrl)
 		}
-  }
+	}
 }
 
 func TestParseUrlIntoGitHubRepo(t *testing.T) {
 	t.Parallel()
-  ghTestInst := GitHubInstance{
-    BaseUrl: "github.com",
-    ApiUrl: "api.github.com",
-  }
-  gheTestInst := GitHubInstance{
-    BaseUrl: "ghe.mycompany.com",
-    ApiUrl: "ghe.mycompany.com/api/v3",
-  }
-  myCoTestInst := GitHubInstance{
-    BaseUrl: "mycogithub.com",
-    ApiUrl: "mycogithub.com/api/v3",
-  }
+	ghTestInst := GitHubInstance{
+		BaseUrl: "github.com",
+		ApiUrl:  "api.github.com",
+	}
+	gheTestInst := GitHubInstance{
+		BaseUrl: "ghe.mycompany.com",
+		ApiUrl:  "ghe.mycompany.com/api/v3",
+	}
+	myCoTestInst := GitHubInstance{
+		BaseUrl: "mycogithub.com",
+		ApiUrl:  "mycogithub.com/api/v3",
+	}
 
 	cases := []struct {
 		repoUrl  string
 		owner    string
 		name     string
 		token    string
-    testInst GitHubInstance
+		testInst GitHubInstance
 	}{
 		{"https://github.com/brikis98/ping-play", "brikis98", "ping-play", "", ghTestInst},
 		{"http://github.com/brikis98/ping-play", "brikis98", "ping-play", "", ghTestInst},
@@ -162,7 +162,7 @@ func TestParseUrlIntoGitHubRepo(t *testing.T) {
 
 func TestParseUrlThrowsErrorOnMalformedUrl(t *testing.T) {
 	t.Parallel()
-  testInst := GitHubInstance{}
+	testInst := GitHubInstance{}
 
 	cases := []struct {
 		repoUrl string
@@ -205,10 +205,10 @@ func TestGetGitHubReleaseInfo(t *testing.T) {
 		Assets: []GitHubReleaseAsset{},
 	}
 
-  testInst := GitHubInstance{
-    BaseUrl: "github.com",
-    ApiUrl: "api.github.com",
-  }
+	testInst := GitHubInstance{
+		BaseUrl: "github.com",
+		ApiUrl:  "api.github.com",
+	}
 
 	cases := []struct {
 		repoUrl   string
@@ -242,10 +242,10 @@ func TestDownloadReleaseAsset(t *testing.T) {
 
 	token := os.Getenv("GITHUB_OAUTH_TOKEN")
 
-  testInst := GitHubInstance{
-    BaseUrl: "github.com",
-    ApiUrl: "api.github.com",
-  }
+	testInst := GitHubInstance{
+		BaseUrl: "github.com",
+		ApiUrl:  "api.github.com",
+	}
 
 	cases := []struct {
 		repoUrl   string

@@ -16,10 +16,10 @@ const SAMPLE_RELEASE_ASSET_CHECKSUM_SHA512="28d9e487c1001e3c28d915c9edd3ed37632f
 
 func TestVerifyReleaseAsset(t *testing.T) {
 	tmpDir := mkTempDir(t)
-  testInst := GitHubInstance{
-    BaseUrl: "github.com",
-    ApiUrl: "api.github.com",
-  }
+	testInst := GitHubInstance{
+		BaseUrl: "github.com",
+		ApiUrl:  "api.github.com",
+	}
 
 	githubRepo, err := ParseUrlIntoGitHubRepo(SAMPLE_RELEASE_ASSET_GITHUB_REPO_URL, "", testInst)
 	if err != nil {

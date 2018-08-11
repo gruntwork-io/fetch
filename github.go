@@ -20,8 +20,8 @@ type GitHubRepo struct {
 }
 
 type GitHubInstance struct {
-  BaseUrl    string
-  ApiUrl     string
+	BaseUrl string
+	ApiUrl  string
 }
 
 // Represents a specific git commit.
@@ -70,31 +70,31 @@ type GitHubReleaseAsset struct {
 }
 
 func ParseUrlIntoGithubInstance(url string, apiv string) (GitHubInstance, *FetchError) {
-  var instance GitHubInstance
+	var instance GitHubInstance
 
-  regex, regexErr := regexp.Compile("https?://(?:www\\.)?(.+?\\.com).*")
-  if regexErr != nil {
+	regex, regexErr := regexp.Compile("https?://(?:www\\.)?(.+?\\.com).*")
+	if regexErr != nil {
 		return instance, newError(GITHUB_REPO_URL_MALFORMED_OR_NOT_PARSEABLE, fmt.Sprintf("GitHub Repo URL %s is malformed.", url))
-  }
+	}
 
-  matches := regex.FindStringSubmatch(url)
-  if len(matches) != 2 {
+	matches := regex.FindStringSubmatch(url)
+	if len(matches) != 2 {
 		return instance, newError(GITHUB_REPO_URL_MALFORMED_OR_NOT_PARSEABLE, fmt.Sprintf("GitHub Repo URL %s could not be parsed correctly", url))
-  }
+	}
 
-  baseUrl := matches[1]
-  apiUrl := "api.github.com"
-  if baseUrl != "github.com" && baseUrl != "www.github.com" {
-    fmt.Printf("Assuming GitHub Enterprise since the provided url (%s) does not appear to be for GitHub.com\n", url)
-    apiUrl = baseUrl + "/api/" + apiv
-  }
+	baseUrl := matches[1]
+	apiUrl := "api.github.com"
+	if baseUrl != "github.com" && baseUrl != "www.github.com" {
+		fmt.Printf("Assuming GitHub Enterprise since the provided url (%s) does not appear to be for GitHub.com\n", url)
+		apiUrl = baseUrl + "/api/" + apiv
+	}
 
-  instance = GitHubInstance{
-    BaseUrl: baseUrl,
-    ApiUrl: apiUrl,
-  }
+	instance = GitHubInstance{
+		BaseUrl: baseUrl,
+		ApiUrl:  apiUrl,
+	}
 
-  return instance, nil
+	return instance, nil
 }
 
 // Fetch all tags from the given GitHub repo
@@ -198,7 +198,7 @@ func createGitHubRepoUrlForPath(repo GitHubRepo, path string) string {
 func callGitHubApi(repo GitHubRepo, path string, customHeaders map[string]string) (*http.Response, *FetchError) {
 	httpClient := &http.Client{}
 
-	request, err := http.NewRequest("GET", fmt.Sprintf("https://" + repo.ApiUrl + "/%s", path), nil)
+	request, err := http.NewRequest("GET", fmt.Sprintf("https://"+repo.ApiUrl+"/%s", path), nil)
 	if err != nil {
 		return nil, wrapError(err)
 	}

@@ -86,7 +86,7 @@ func main() {
 		},
 		cli.StringFlag{
 			Name:  OPTION_GITHUB_API_VERSION,
-      Value: "v3",
+			Value: "v3",
 			Usage: "The api version of the GitHub instance. If left blank, v3 will be used.\n\tThis will only be used if the repo url is not a github.com url.",
 		},
 	}
@@ -113,10 +113,10 @@ func runFetch(c *cli.Context) error {
 		return err
 	}
 
-  instance, fetchErr := ParseUrlIntoGithubInstance(options.RepoUrl, options.GithubApiVersion)
-  if fetchErr != nil {
-    return fetchErr
-  }
+	instance, fetchErr := ParseUrlIntoGithubInstance(options.RepoUrl, options.GithubApiVersion)
+	if fetchErr != nil {
+		return fetchErr
+	}
 
 	// Get the tags for the given repo
 	tags, fetchErr := FetchTags(options.RepoUrl, options.GithubToken, instance)
