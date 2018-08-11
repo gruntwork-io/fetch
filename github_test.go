@@ -113,11 +113,11 @@ func TestParseUrlIntoGithubInstance(t *testing.T) {
 		}
 
 		if inst.BaseUrl != tc.expectedInst.BaseUrl {
-			t.Fatalf("while extracting %s, expected owner %s, received %s", tc.repoUrl, tc.expectedInst.BaseUrl, inst.BaseUrl)
+			t.Fatalf("while parsing %s, expected base url %s, received %s", tc.repoUrl, tc.expectedInst.BaseUrl, inst.BaseUrl)
 		}
 
 		if inst.ApiUrl != tc.expectedInst.ApiUrl {
-			t.Fatalf("while extracting %s, expected name %s, received %s", tc.repoUrl, tc.expectedInst.ApiUrl, inst.ApiUrl)
+			t.Fatalf("while parsing %s, expected api url %s, received %s", tc.repoUrl, tc.expectedInst.ApiUrl, inst.ApiUrl)
 		}
 	}
 }
