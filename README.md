@@ -1,3 +1,4 @@
+[![Maintained by Gruntwork.io](https://img.shields.io/badge/maintained%20by-gruntwork.io-%235849a6.svg)](https://gruntwork.io/?ref=fetch_repo)
 # fetch
 
 fetch makes it easy to download files, folders, or release assets from a specific commit, branch, or tag of
