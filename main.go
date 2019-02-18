@@ -1,11 +1,15 @@
 package main
 
 import (
-	"os"
-	"gopkg.in/urfave/cli.v1"
-	"fmt"
 	"errors"
+	"fmt"
+	"os"
 	"path"
+	"regexp"
+	"strings"
+	"sync"
+
+	cli "gopkg.in/urfave/cli.v1"
 )
 
 // This variable is set at build time using -ldflags parameters. For more info, see:
@@ -160,15 +164,16 @@ func runFetch(c *cli.Context) error {
 		return err
 	}
 
-	// Download the requested release asset
-	assetPath, err := downloadReleaseAsset(options.ReleaseAsset, options.LocalDownloadPath, repo, desiredTag)
+	// Download the requested release assets
+	assetPaths, err := downloadReleaseAssets(options.ReleaseAsset, options.LocalDownloadPath, repo, desiredTag)
 	if err != nil {
 		return err
 	}
 
 	// If applicable, verify the release asset
-	if options.ReleaseAssetChecksum != "" {
-		fetchErr = verifyChecksumOfReleaseAsset(assetPath, options.ReleaseAssetChecksum, options.ReleaseAssetChecksumAlgo)
+	if options.ReleaseAssetChecksum != "" && len(assetPaths) > 0 {
+		// TODO: Check more than just the first checksum if multiple assets were downloaded
+		fetchErr = verifyChecksumOfReleaseAsset(assetPaths[0], options.ReleaseAssetChecksum, options.ReleaseAssetChecksumAlgo)
 		if fetchErr != nil {
 			return fetchErr
 		}
@@ -276,41 +281,66 @@ func downloadSourcePaths(sourcePaths []string, destPath string, githubRepo GitHu
 
 // Download the specified binary file that was uploaded as a release asset to the specified GitHub release.
 // Returns the path where the release asset was downloaded.
-func downloadReleaseAsset(assetName string, destPath string, githubRepo GitHubRepo, tag string) (string, error) {
-	var assetPath string
+func downloadReleaseAssets(assetRegex string, destPath string, githubRepo GitHubRepo, tag string) ([]string, error) {
+	var err error
+	var assetPaths []string
 
-	if assetName == "" {
-		return assetPath, nil
+	if assetRegex == "" {
+		return assetPaths, nil
 	}
 
-	release, err := GetGitHubReleaseInfo(githubRepo, tag)
-	if err != nil {
-		return assetPath, err
+	release, releaseInfoErr := GetGitHubReleaseInfo(githubRepo, tag)
+	if releaseInfoErr != nil {
+		return assetPaths, err
 	}
 
-	asset := findAssetInRelease(assetName, release)
-	if asset == nil {
-		return assetPath, fmt.Errorf("Could not find asset %s in release %s", assetName, tag)
+	assets, err := findAssetsInRelease(assetRegex, release)
+	if err != nil || assets == nil {
+		return assetPaths, fmt.Errorf("Could not find assets matching %s in release %s", assetRegex, tag)
 	}
 
-	assetPath = path.Join(destPath, asset.Name)
-	fmt.Printf("Downloading release asset %s to %s\n", asset.Name, assetPath)
-	if err := DownloadReleaseAsset(githubRepo, asset.Id, assetPath); err != nil {
-		return assetPath, err
+	var wg sync.WaitGroup
+	var errorStrs []string
+
+	for _, asset := range assets {
+		wg.Add(1)
+		go func(asset *GitHubReleaseAsset) {
+			assetPath := path.Join(destPath, asset.Name)
+			fmt.Printf("Downloading release asset %s to %s\n", asset.Name, assetPath)
+			if downloadErr := DownloadReleaseAsset(githubRepo, asset.Id, assetPath); downloadErr == nil {
+				assetPaths = append(assetPaths, assetPath)
+			} else {
+				errorStrs = append(errorStrs, downloadErr.Error())
+			}
+
+			wg.Done()
+		}(asset)
 	}
+
+	wg.Wait()
 
 	fmt.Println("Download of release assets complete.")
-	return assetPath, nil
+	if numErrors := len(errorStrs); numErrors > 0 {
+		err = fmt.Errorf("%d errors while downloading assets:\n%s", numErrors, strings.Join(errorStrs, "\n\tError: "))
+	}
+
+	return assetPaths, err
 }
 
-func findAssetInRelease(assetName string, release GitHubReleaseApiResponse) *GitHubReleaseAsset {
+func findAssetsInRelease(assetRegex string, release GitHubReleaseApiResponse) ([](*GitHubReleaseAsset), error) {
+	var matches [](*GitHubReleaseAsset)
+
+	pattern := regexp.MustCompile(assetRegex)
+
 	for _, asset := range release.Assets {
-		if asset.Name == assetName {
-			return &asset
+		matched := pattern.MatchString(asset.Name)
+		if matched {
+			fmt.Printf("Found asset: %s\n", asset.Name)
+			matches = append(matches, &asset)
 		}
 	}
 
-	return nil
+	return matches, nil
 }
 
 // Delete the given zip file.
