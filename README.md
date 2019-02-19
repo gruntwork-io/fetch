@@ -17,7 +17,7 @@ authentication. Fetch makes it possible to handle all of these cases with a one-
 
 - Download from a specific git tag, branch, or commit SHA.
 - Download a single file, a subset of files, or all files from the repo.
-- Download a binary asset from a specific release.
+- Download one or more binary assets from a specific release that match a regular expression.
 - Verify the SHA256 or SHA512 checksum of a binary asset.
 - Download from public repos, or from private repos by specifying a [GitHub Personal Access Token](https://help.github.com/articles/creating-an-access-token-for-command-line-use/).
 - Download from GitHub Enterprise.
@@ -31,10 +31,10 @@ Download folder `/baz` from tag `0.1.3` of a GitHub repo and save it to `/tmp/ba
 fetch --repo="https://github.com/foo/bar" --tag="0.1.3" --source-path="/baz" /tmp/baz
 ```
 
-Download the release asset `foo.exe` from release `0.1.5` and save it to `/tmp`:
+Download all release assets matching the regular expression, `foo_linux-.*` from release `0.1.5` and save them to `/tmp`:
 
 ```
-fetch --repo="https://github.com/foo/bar" --tag="0.1.5" --release-asset="foo.exe" /tmp
+fetch --repo="https://github.com/foo/bar" --tag="0.1.5" --release-asset="foo_linux-.*" /tmp
 ```
 
 See more examples in the [Examples section](#examples).
@@ -66,10 +66,11 @@ The supported options are:
 - `--source-path` (**Optional**): The source path to download from the repo (e.g. `--source-path=/folder` will download
   the `/folder` path and all files below it). By default, all files are downloaded from the repo unless `--source-path`
   or `--release-asset` is specified. This option can be specified more than once.
-- `--release-asset` (**Optional**): The name of a release asset--that is, a binary uploaded to a [GitHub
+- `--release-asset` (**Optional**): A regular expression matching release assets--these are binary files uploaded to a [GitHub
   Release](https://help.github.com/articles/creating-releases/)--to download. It only works with the `--tag` option.
 - `--release-asset-checksum` (**Optional**): The checksum that a release asset should have. Fetch will fail if this value
-  is non-empty and does not match the checksum computed by Fetch.
+  is non-empty and does not match the checksum computed by Fetch, or if more than 1 assets are matched by the release-asset
+  regular expression.
 - `--release-asset-checksum-algo` (**Optional**): The algorithm fetch will use to compute a checksum of the release asset.
   Supported values are `sha256` and `sha512`.
 - `--github-oauth-token` (**Optional**): A [GitHub Personal Access

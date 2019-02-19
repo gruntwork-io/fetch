@@ -30,6 +30,10 @@ type FetchOptions struct {
 	GithubApiVersion         string
 }
 
+type Pair struct {
+	a, b interface{}
+}
+
 const OPTION_REPO = "repo"
 const OPTION_COMMIT = "commit"
 const OPTION_BRANCH = "branch"
@@ -171,8 +175,12 @@ func runFetch(c *cli.Context) error {
 	}
 
 	// If applicable, verify the release asset
-	if options.ReleaseAssetChecksum != "" && len(assetPaths) > 0 {
-		// TODO: Check more than just the first checksum if multiple assets were downloaded
+	if options.ReleaseAssetChecksum != "" {
+		// If the release asset regex matches more than 1 file and a checksum was provided, return an error
+		if len(assetPaths) > 0 {
+			return fmt.Errorf("The option %s is not supported when the %s regular expression matches more than 1 asset", OPTION_RELEASE_ASSET_CHECKSUM, OPTION_RELEASE_ASSET)
+		}
+
 		fetchErr = verifyChecksumOfReleaseAsset(assetPaths[0], options.ReleaseAssetChecksum, options.ReleaseAssetChecksumAlgo)
 		if fetchErr != nil {
 			return fetchErr
@@ -279,8 +287,12 @@ func downloadSourcePaths(sourcePaths []string, destPath string, githubRepo GitHu
 	return nil
 }
 
-// Download the specified binary file that was uploaded as a release asset to the specified GitHub release.
-// Returns the path where the release asset was downloaded.
+// Download any matching files that were uploaded as release assets to the specified GitHub release.
+// Each file that matches the assetRegex will be downloaded in a separate go routine. If any of the
+// downloads fail, an error will be returned. It is possible that only some of the matching assets
+// were downloaded. For those that succeeded, the path they were downloaded to will be passed back
+// along with the error.
+// Returns the paths where the release assets were downloaded.
 func downloadReleaseAssets(assetRegex string, destPath string, githubRepo GitHubRepo, tag string) ([]string, error) {
 	var err error
 	var assetPaths []string
@@ -291,37 +303,54 @@ func downloadReleaseAssets(assetRegex string, destPath string, githubRepo GitHub
 
 	release, releaseInfoErr := GetGitHubReleaseInfo(githubRepo, tag)
 	if releaseInfoErr != nil {
-		return assetPaths, err
+		return nil, err
 	}
 
 	assets, err := findAssetsInRelease(assetRegex, release)
-	if err != nil || assets == nil {
-		return assetPaths, fmt.Errorf("Could not find assets matching %s in release %s", assetRegex, tag)
+	if err != nil {
+		return nil, err
+	}
+	if assets == nil {
+		return nil, fmt.Errorf("Could not find assets matching %s in release %s", assetRegex, tag)
 	}
 
 	var wg sync.WaitGroup
-	var errorStrs []string
+	results := make(chan Pair, len(assets))
 
 	for _, asset := range assets {
 		wg.Add(1)
-		go func(asset *GitHubReleaseAsset) {
+		go func(asset *GitHubReleaseAsset, results chan<- Pair) {
+			// Signal the WaitGroup once this go routine has finished
+			defer wg.Done()
+
 			assetPath := path.Join(destPath, asset.Name)
 			fmt.Printf("Downloading release asset %s to %s\n", asset.Name, assetPath)
 			if downloadErr := DownloadReleaseAsset(githubRepo, asset.Id, assetPath); downloadErr == nil {
-				assetPaths = append(assetPaths, assetPath)
+				fmt.Printf("Downloaded %s\n", assetPath)
+				results <- Pair{assetPath, nil}
 			} else {
-				errorStrs = append(errorStrs, downloadErr.Error())
+				msg := downloadErr.Error()
+				fmt.Printf("Download failed for %s: %s\n", asset.Name, msg)
+				results <- Pair{assetPath, msg}
 			}
-
-			wg.Done()
-		}(asset)
+		}(asset, results)
 	}
 
 	wg.Wait()
+	close(results)
+	fmt.Println("Download of release assets complete")
 
-	fmt.Println("Download of release assets complete.")
+	var errorStrs []string
+	for result := range results {
+		if result.b != nil {
+			errorStrs = append(errorStrs, fmt.Sprintf("%s: %s", result.a, result.b))
+		} else {
+			assetPaths = append(assetPaths, result.a.(string))
+		}
+	}
+
 	if numErrors := len(errorStrs); numErrors > 0 {
-		err = fmt.Errorf("%d errors while downloading assets:\n%s", numErrors, strings.Join(errorStrs, "\n\tError: "))
+		err = fmt.Errorf("%d errors while downloading assets:\n\t%s", numErrors, strings.Join(errorStrs, "\n\t"))
 	}
 
 	return assetPaths, err
@@ -330,7 +359,10 @@ func downloadReleaseAssets(assetRegex string, destPath string, githubRepo GitHub
 func findAssetsInRelease(assetRegex string, release GitHubReleaseApiResponse) ([](*GitHubReleaseAsset), error) {
 	var matches [](*GitHubReleaseAsset)
 
-	pattern := regexp.MustCompile(assetRegex)
+	pattern, err := regexp.Compile(assetRegex)
+	if err != nil {
+		return nil, fmt.Errorf("Could not parse provided release asset regex: %s", err.Error())
+	}
 
 	for _, asset := range release.Assets {
 		matched := pattern.MatchString(asset.Name)

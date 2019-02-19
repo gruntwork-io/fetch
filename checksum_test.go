@@ -33,7 +33,7 @@ func TestVerifyReleaseAsset(t *testing.T) {
 	}
 
 	if len(assetPaths) != 1 {
-		t.Fatalf("Incorrect number of release assets: %s", len(assetPaths))
+		t.Fatalf("Incorrect number of release assets: %d", len(assetPaths))
 	}
 
 	checksumSha256, fetchErr := computeChecksum(assetPaths[0], "sha256")
