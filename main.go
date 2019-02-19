@@ -335,8 +335,8 @@ func findAssetsInRelease(assetRegex string, release GitHubReleaseApiResponse) ([
 	for _, asset := range release.Assets {
 		matched := pattern.MatchString(asset.Name)
 		if matched {
-			fmt.Printf("Found asset: %s\n", asset.Name)
-			matches = append(matches, &asset)
+			assetRef := asset
+			matches = append(matches, &assetRef)
 		}
 	}
 
