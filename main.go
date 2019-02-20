@@ -1,11 +1,15 @@
 package main
 
 import (
-	"os"
-	"gopkg.in/urfave/cli.v1"
-	"fmt"
 	"errors"
+	"fmt"
+	"os"
 	"path"
+	"regexp"
+	"strings"
+	"sync"
+
+	cli "gopkg.in/urfave/cli.v1"
 )
 
 // This variable is set at build time using -ldflags parameters. For more info, see:
@@ -20,10 +24,15 @@ type FetchOptions struct {
 	GithubToken              string
 	SourcePaths              []string
 	ReleaseAsset             string
-	ReleaseAssetChecksum     string
+	ReleaseAssetChecksums    map[string]bool
 	ReleaseAssetChecksumAlgo string
 	LocalDownloadPath        string
 	GithubApiVersion         string
+}
+
+type AssetDownloadResult struct {
+	assetPath string
+	err       error
 }
 
 const OPTION_REPO = "repo"
@@ -76,9 +85,9 @@ func main() {
 			Name:  OPTION_RELEASE_ASSET,
 			Usage: "The name of a release asset--that is, a binary uploaded to a GitHub Release--to download.\n\tOnly works with --tag.",
 		},
-		cli.StringFlag{
+		cli.StringSliceFlag{
 			Name:  OPTION_RELEASE_ASSET_CHECKSUM,
-			Usage: "The checksum that a release asset should have. Fetch will fail if this value is non-empty\n\tand does not match the checksum computed by Fetch.",
+			Usage: "The checksum that a release asset should have. Fetch will fail if this value is non-empty\n\tand does not match any of the checksums computed by Fetch.\n\tCan be specified more than once. If more than one\n\trelease asset is downloaded and one or more checksums are provided,\n\tthe asset's checksum must match one.",
 		},
 		cli.StringFlag{
 			Name:  OPTION_RELEASE_ASSET_CHECKSUM_ALGO,
@@ -160,17 +169,19 @@ func runFetch(c *cli.Context) error {
 		return err
 	}
 
-	// Download the requested release asset
-	assetPath, err := downloadReleaseAsset(options.ReleaseAsset, options.LocalDownloadPath, repo, desiredTag)
+	// Download the requested release assets
+	assetPaths, err := downloadReleaseAssets(options.ReleaseAsset, options.LocalDownloadPath, repo, desiredTag)
 	if err != nil {
 		return err
 	}
 
 	// If applicable, verify the release asset
-	if options.ReleaseAssetChecksum != "" {
-		fetchErr = verifyChecksumOfReleaseAsset(assetPath, options.ReleaseAssetChecksum, options.ReleaseAssetChecksumAlgo)
-		if fetchErr != nil {
-			return fetchErr
+	if len(options.ReleaseAssetChecksums) > 0 {
+		for _, assetPath := range assetPaths {
+			fetchErr = verifyChecksumOfReleaseAsset(assetPath, options.ReleaseAssetChecksums, options.ReleaseAssetChecksumAlgo)
+			if fetchErr != nil {
+				return fetchErr
+			}
 		}
 	}
 
@@ -180,6 +191,8 @@ func runFetch(c *cli.Context) error {
 func parseOptions(c *cli.Context) FetchOptions {
 	localDownloadPath := c.Args().First()
 	sourcePaths := c.StringSlice(OPTION_SOURCE_PATH)
+	assetChecksums := c.StringSlice(OPTION_RELEASE_ASSET_CHECKSUM)
+	assetChecksumMap := make(map[string]bool, len(assetChecksums))
 
 	// Maintain backwards compatibility with older versions of fetch that passed source paths as an optional first
 	// command-line arg
@@ -187,6 +200,10 @@ func parseOptions(c *cli.Context) FetchOptions {
 		fmt.Printf("DEPRECATION WARNING: passing source paths via command-line args is deprecated. Please use the --%s option instead!\n", OPTION_SOURCE_PATH)
 		sourcePaths = []string{c.Args().First()}
 		localDownloadPath = c.Args().Get(1)
+	}
+
+	for _, assetChecksum := range assetChecksums {
+		assetChecksumMap[assetChecksum] = true
 	}
 
 	return FetchOptions{
@@ -197,7 +214,7 @@ func parseOptions(c *cli.Context) FetchOptions {
 		GithubToken:              c.String(OPTION_GITHUB_TOKEN),
 		SourcePaths:              sourcePaths,
 		ReleaseAsset:             c.String(OPTION_RELEASE_ASSET),
-		ReleaseAssetChecksum:     c.String(OPTION_RELEASE_ASSET_CHECKSUM),
+		ReleaseAssetChecksums:    assetChecksumMap,
 		ReleaseAssetChecksumAlgo: c.String(OPTION_RELEASE_ASSET_CHECKSUM_ALGO),
 		LocalDownloadPath:        localDownloadPath,
 		GithubApiVersion:         c.String(OPTION_GITHUB_API_VERSION),
@@ -221,7 +238,7 @@ func validateOptions(options FetchOptions) error {
 		return fmt.Errorf("The --%s flag can only be used with --%s. Run \"fetch --help\" for full usage info.", OPTION_RELEASE_ASSET, OPTION_TAG)
 	}
 
-	if options.ReleaseAssetChecksum != "" && options.ReleaseAssetChecksumAlgo == "" {
+	if len(options.ReleaseAssetChecksums) > 0 && options.ReleaseAssetChecksumAlgo == "" {
 		return fmt.Errorf("If the %s flag is set, you must also enter a value for the %s flag.", OPTION_RELEASE_ASSET_CHECKSUM, OPTION_RELEASE_ASSET_CHECKSUM_ALGO)
 	}
 
@@ -274,43 +291,91 @@ func downloadSourcePaths(sourcePaths []string, destPath string, githubRepo GitHu
 	return nil
 }
 
-// Download the specified binary file that was uploaded as a release asset to the specified GitHub release.
-// Returns the path where the release asset was downloaded.
-func downloadReleaseAsset(assetName string, destPath string, githubRepo GitHubRepo, tag string) (string, error) {
-	var assetPath string
+// Download any matching files that were uploaded as release assets to the specified GitHub release.
+// Each file that matches the assetRegex will be downloaded in a separate go routine. If any of the
+// downloads fail, an error will be returned. It is possible that only some of the matching assets
+// were downloaded. For those that succeeded, the path they were downloaded to will be passed back
+// along with the error.
+// Returns the paths where the release assets were downloaded.
+func downloadReleaseAssets(assetRegex string, destPath string, githubRepo GitHubRepo, tag string) ([]string, error) {
+	var err error
+	var assetPaths []string
 
-	if assetName == "" {
-		return assetPath, nil
+	if assetRegex == "" {
+		return assetPaths, nil
 	}
 
-	release, err := GetGitHubReleaseInfo(githubRepo, tag)
+	release, releaseInfoErr := GetGitHubReleaseInfo(githubRepo, tag)
+	if releaseInfoErr != nil {
+		return nil, err
+	}
+
+	assets, err := findAssetsInRelease(assetRegex, release)
 	if err != nil {
-		return assetPath, err
+		return nil, err
+	}
+	if assets == nil {
+		return nil, fmt.Errorf("Could not find assets matching %s in release %s", assetRegex, tag)
 	}
 
-	asset := findAssetInRelease(assetName, release)
-	if asset == nil {
-		return assetPath, fmt.Errorf("Could not find asset %s in release %s", assetName, tag)
+	var wg sync.WaitGroup
+	results := make(chan AssetDownloadResult, len(assets))
+
+	for _, asset := range assets {
+		wg.Add(1)
+		go func(asset *GitHubReleaseAsset, results chan<- AssetDownloadResult) {
+			// Signal the WaitGroup once this go routine has finished
+			defer wg.Done()
+
+			assetPath := path.Join(destPath, asset.Name)
+			fmt.Printf("Downloading release asset %s to %s\n", asset.Name, assetPath)
+			if downloadErr := DownloadReleaseAsset(githubRepo, asset.Id, assetPath); downloadErr == nil {
+				fmt.Printf("Downloaded %s\n", assetPath)
+				results <- AssetDownloadResult{assetPath, nil}
+			} else {
+				fmt.Printf("Download failed for %s: %s\n", asset.Name, downloadErr)
+				results <- AssetDownloadResult{assetPath, downloadErr}
+			}
+		}(asset, results)
 	}
 
-	assetPath = path.Join(destPath, asset.Name)
-	fmt.Printf("Downloading release asset %s to %s\n", asset.Name, assetPath)
-	if err := DownloadReleaseAsset(githubRepo, asset.Id, assetPath); err != nil {
-		return assetPath, err
-	}
+	wg.Wait()
+	close(results)
+	fmt.Println("Download of release assets complete")
 
-	fmt.Println("Download of release assets complete.")
-	return assetPath, nil
-}
-
-func findAssetInRelease(assetName string, release GitHubReleaseApiResponse) *GitHubReleaseAsset {
-	for _, asset := range release.Assets {
-		if asset.Name == assetName {
-			return &asset
+	var errorStrs []string
+	for result := range results {
+		if result.err != nil {
+			errorStrs = append(errorStrs, fmt.Sprintf("%s: %s", result.assetPath, result.err))
+		} else {
+			assetPaths = append(assetPaths, result.assetPath)
 		}
 	}
 
-	return nil
+	if numErrors := len(errorStrs); numErrors > 0 {
+		err = fmt.Errorf("%d errors while downloading assets:\n\t%s", numErrors, strings.Join(errorStrs, "\n\t"))
+	}
+
+	return assetPaths, err
+}
+
+func findAssetsInRelease(assetRegex string, release GitHubReleaseApiResponse) ([](*GitHubReleaseAsset), error) {
+	var matches [](*GitHubReleaseAsset)
+
+	pattern, err := regexp.Compile(assetRegex)
+	if err != nil {
+		return nil, fmt.Errorf("Could not parse provided release asset regex: %s", err.Error())
+	}
+
+	for _, asset := range release.Assets {
+		matched := pattern.MatchString(asset.Name)
+		if matched {
+			assetRef := asset
+			matches = append(matches, &assetRef)
+		}
+	}
+
+	return matches, nil
 }
 
 // Delete the given zip file.

@@ -1,32 +1,31 @@
 package main
 
 import (
-	"fmt"
 	"crypto/sha256"
 	"crypto/sha512"
-	"os"
-	"io"
-	"hash"
 	"encoding/hex"
+	"fmt"
+	"hash"
+	"io"
+	"os"
+	"reflect"
 )
 
-func verifyChecksumOfReleaseAsset(assetPath, checksum, algorithm string) *FetchError {
+func verifyChecksumOfReleaseAsset(assetPath string, checksumMap map[string]bool, algorithm string) *FetchError {
 	computedChecksum, err := computeChecksum(assetPath, algorithm)
 	if err != nil {
 		return newError(ERROR_WHILE_COMPUTING_CHECKSUM, err.Error())
 	}
-	if computedChecksum != checksum {
-		return newError(CHECKSUM_DOES_NOT_MATCH, fmt.Sprintf("Expected to receive checksum value %s, but instead got %s for Release Asset at %s. This means that either you are using the wrong checksum value in your call to fetch (e.g., did you update the version of the module you're installing but not the checksum?) or that someone has replaced the asset with a potentially dangerous one and you should be very careful about proceeding.", computedChecksum, checksum, assetPath))
+	if found, _ := checksumMap[computedChecksum]; !found {
+		keys := reflect.ValueOf(checksumMap).MapKeys()
+		return newError(CHECKSUM_DOES_NOT_MATCH, fmt.Sprintf("Expected to checksum value to be one of %s, but instead got %s for Release Asset at %s. This means that either you are using the wrong checksum value in your call to fetch, (e.g. did you update the version of the module you're installing but not the checksum?) or that someone has replaced the asset with a potentially dangerous one and you should be very careful about proceeding.", keys, computedChecksum, assetPath))
 	}
-
-	fmt.Printf("Checksum matches!")
+	fmt.Printf("Release asset checksum verified for %s\n", assetPath)
 
 	return nil
 }
 
 func computeChecksum(filePath string, algorithm string) (string, error) {
-	fmt.Printf("Computing checksum of release asset\n")
-
 	file, err := os.Open(filePath)
 	if err != nil {
 		return "", err

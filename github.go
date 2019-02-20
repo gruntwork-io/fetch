@@ -55,10 +55,10 @@ type GitHubTagsCommitApiResponse struct {
 // Modeled directly after the api.github.com response (but only includes the fields we care about). For more info, see:
 // https://developer.github.com/v3/repos/releases/#get-a-release-by-tag-name
 type GitHubReleaseApiResponse struct {
-	Id      int
-	Url     string
-	Name    string
-	Assets  []GitHubReleaseAsset
+	Id     int
+	Url    string
+	Name   string
+	Assets []GitHubReleaseAsset
 }
 
 // The "assets" portion of the GitHubReleaseApiResponse. Modeled directly after the api.github.com response (but only
@@ -227,7 +227,7 @@ func callGitHubApi(repo GitHubRepo, path string, customHeaders map[string]string
 // Write the body of the given HTTP response to disk at the given path
 func writeResonseToDisk(resp *http.Response, destPath string) *FetchError {
 	out, err := os.Create(destPath)
-	if err != nil  {
+	if err != nil {
 		return wrapError(err)
 	}
 
