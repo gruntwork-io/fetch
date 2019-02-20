@@ -31,6 +31,12 @@ Download folder `/baz` from tag `0.1.3` of a GitHub repo and save it to `/tmp/ba
 fetch --repo="https://github.com/foo/bar" --tag="0.1.3" --source-path="/baz" /tmp/baz
 ```
 
+Download a release asset matching named `foo.exe` from release `0.1.5` and save them to `/tmp`:
+
+```
+fetch --repo="https://github.com/foo/bar" --tag="0.1.5" --release-asset="foo.exe" /tmp
+```
+
 Download all release assets matching the regular expression, `foo_linux-.*` from release `0.1.5` and save them to `/tmp`:
 
 ```

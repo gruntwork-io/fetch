@@ -24,14 +24,15 @@ type FetchOptions struct {
 	GithubToken              string
 	SourcePaths              []string
 	ReleaseAsset             string
-	ReleaseAssetChecksum     string
+	ReleaseAssetChecksums    map[string]bool
 	ReleaseAssetChecksumAlgo string
 	LocalDownloadPath        string
 	GithubApiVersion         string
 }
 
-type Pair struct {
-	a, b interface{}
+type AssetDownloadResult struct {
+	assetPath string
+	err       error
 }
 
 const OPTION_REPO = "repo"
@@ -84,9 +85,9 @@ func main() {
 			Name:  OPTION_RELEASE_ASSET,
 			Usage: "The name of a release asset--that is, a binary uploaded to a GitHub Release--to download.\n\tOnly works with --tag.",
 		},
-		cli.StringFlag{
+		cli.StringSliceFlag{
 			Name:  OPTION_RELEASE_ASSET_CHECKSUM,
-			Usage: "The checksum that a release asset should have. Fetch will fail if this value is non-empty\n\tand does not match the checksum computed by Fetch.",
+			Usage: "The checksum that a release asset should have. Fetch will fail if this value is non-empty\n\tand does not match any of the checksums computed by Fetch.\n\tCan be specified more than once. If more than one\n\trelease asset is downloaded and one or more checksums are provided,\n\tthe asset's checksum must match one.",
 		},
 		cli.StringFlag{
 			Name:  OPTION_RELEASE_ASSET_CHECKSUM_ALGO,
@@ -175,15 +176,12 @@ func runFetch(c *cli.Context) error {
 	}
 
 	// If applicable, verify the release asset
-	if options.ReleaseAssetChecksum != "" {
-		// If the release asset regex matches more than 1 file and a checksum was provided, return an error
-		if len(assetPaths) > 0 {
-			return fmt.Errorf("The option %s is not supported when the %s regular expression matches more than 1 asset", OPTION_RELEASE_ASSET_CHECKSUM, OPTION_RELEASE_ASSET)
-		}
-
-		fetchErr = verifyChecksumOfReleaseAsset(assetPaths[0], options.ReleaseAssetChecksum, options.ReleaseAssetChecksumAlgo)
-		if fetchErr != nil {
-			return fetchErr
+	if len(options.ReleaseAssetChecksums) > 0 {
+		for _, assetPath := range assetPaths {
+			fetchErr = verifyChecksumOfReleaseAsset(assetPath, options.ReleaseAssetChecksums, options.ReleaseAssetChecksumAlgo)
+			if fetchErr != nil {
+				return fetchErr
+			}
 		}
 	}
 
@@ -193,6 +191,8 @@ func runFetch(c *cli.Context) error {
 func parseOptions(c *cli.Context) FetchOptions {
 	localDownloadPath := c.Args().First()
 	sourcePaths := c.StringSlice(OPTION_SOURCE_PATH)
+	assetChecksums := c.StringSlice(OPTION_RELEASE_ASSET_CHECKSUM)
+	assetChecksumMap := make(map[string]bool, len(assetChecksums))
 
 	// Maintain backwards compatibility with older versions of fetch that passed source paths as an optional first
 	// command-line arg
@@ -200,6 +200,10 @@ func parseOptions(c *cli.Context) FetchOptions {
 		fmt.Printf("DEPRECATION WARNING: passing source paths via command-line args is deprecated. Please use the --%s option instead!\n", OPTION_SOURCE_PATH)
 		sourcePaths = []string{c.Args().First()}
 		localDownloadPath = c.Args().Get(1)
+	}
+
+	for _, assetChecksum := range assetChecksums {
+		assetChecksumMap[assetChecksum] = true
 	}
 
 	return FetchOptions{
@@ -210,7 +214,7 @@ func parseOptions(c *cli.Context) FetchOptions {
 		GithubToken:              c.String(OPTION_GITHUB_TOKEN),
 		SourcePaths:              sourcePaths,
 		ReleaseAsset:             c.String(OPTION_RELEASE_ASSET),
-		ReleaseAssetChecksum:     c.String(OPTION_RELEASE_ASSET_CHECKSUM),
+		ReleaseAssetChecksums:    assetChecksumMap,
 		ReleaseAssetChecksumAlgo: c.String(OPTION_RELEASE_ASSET_CHECKSUM_ALGO),
 		LocalDownloadPath:        localDownloadPath,
 		GithubApiVersion:         c.String(OPTION_GITHUB_API_VERSION),
@@ -234,7 +238,7 @@ func validateOptions(options FetchOptions) error {
 		return fmt.Errorf("The --%s flag can only be used with --%s. Run \"fetch --help\" for full usage info.", OPTION_RELEASE_ASSET, OPTION_TAG)
 	}
 
-	if options.ReleaseAssetChecksum != "" && options.ReleaseAssetChecksumAlgo == "" {
+	if len(options.ReleaseAssetChecksums) > 0 && options.ReleaseAssetChecksumAlgo == "" {
 		return fmt.Errorf("If the %s flag is set, you must also enter a value for the %s flag.", OPTION_RELEASE_ASSET_CHECKSUM, OPTION_RELEASE_ASSET_CHECKSUM_ALGO)
 	}
 
@@ -315,11 +319,11 @@ func downloadReleaseAssets(assetRegex string, destPath string, githubRepo GitHub
 	}
 
 	var wg sync.WaitGroup
-	results := make(chan Pair, len(assets))
+	results := make(chan AssetDownloadResult, len(assets))
 
 	for _, asset := range assets {
 		wg.Add(1)
-		go func(asset *GitHubReleaseAsset, results chan<- Pair) {
+		go func(asset *GitHubReleaseAsset, results chan<- AssetDownloadResult) {
 			// Signal the WaitGroup once this go routine has finished
 			defer wg.Done()
 
@@ -327,11 +331,10 @@ func downloadReleaseAssets(assetRegex string, destPath string, githubRepo GitHub
 			fmt.Printf("Downloading release asset %s to %s\n", asset.Name, assetPath)
 			if downloadErr := DownloadReleaseAsset(githubRepo, asset.Id, assetPath); downloadErr == nil {
 				fmt.Printf("Downloaded %s\n", assetPath)
-				results <- Pair{assetPath, nil}
+				results <- AssetDownloadResult{assetPath, nil}
 			} else {
-				msg := downloadErr.Error()
-				fmt.Printf("Download failed for %s: %s\n", asset.Name, msg)
-				results <- Pair{assetPath, msg}
+				fmt.Printf("Download failed for %s: %s\n", asset.Name, downloadErr)
+				results <- AssetDownloadResult{assetPath, downloadErr}
 			}
 		}(asset, results)
 	}
@@ -342,10 +345,10 @@ func downloadReleaseAssets(assetRegex string, destPath string, githubRepo GitHub
 
 	var errorStrs []string
 	for result := range results {
-		if result.b != nil {
-			errorStrs = append(errorStrs, fmt.Sprintf("%s: %s", result.a, result.b))
+		if result.err != nil {
+			errorStrs = append(errorStrs, fmt.Sprintf("%s: %s", result.assetPath, result.err))
 		} else {
-			assetPaths = append(assetPaths, result.a.(string))
+			assetPaths = append(assetPaths, result.assetPath)
 		}
 	}
 

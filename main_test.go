@@ -1,6 +1,8 @@
 package main
 
 import (
+	"fmt"
+	"os"
 	"testing"
 )
 
@@ -28,6 +30,14 @@ func TestDownloadReleaseAssets(t *testing.T) {
 
 	if len(assetPaths) != 2 {
 		t.Fatalf("Expected to download 2 assets, not %d", len(assetPaths))
+	}
+
+	for _, assetPath := range assetPaths {
+		if _, err := os.Stat(assetPath); os.IsNotExist(err) {
+			t.Fatalf("Downloaded file should exist at %s", assetPath)
+		} else {
+			fmt.Printf("Verified the downloaded asset exists at %s\n", assetPath)
+		}
 	}
 }
 
