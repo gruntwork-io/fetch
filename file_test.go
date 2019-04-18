@@ -26,6 +26,11 @@ func TestDownloadGitTagZipFile(t *testing.T) {
 		ApiUrl:  "api.github.com",
 	}
 
+	enterpriseGitHubExample := GitHubInstance{
+		BaseUrl: "github.acme.com",
+		ApiUrl: "github.acme.com/api/v3",
+	}
+
 	cases := []struct {
 		instance 	GitHubInstance
 		repoOwner   string
@@ -35,6 +40,7 @@ func TestDownloadGitTagZipFile(t *testing.T) {
 	}{
 		{publicGitHub, "gruntwork-io", "fetch-test-public", "v0.0.1", ""},
 		{publicGitHub, "gruntwork-io", "fetch-test-private", "v0.0.2", os.Getenv("GITHUB_OAUTH_TOKEN")},
+		{enterpriseGitHubExample, "temp-internal-org", "bash-commons", "v0.0.4", os.Getenv("GITHUB_OAUTH_TOKEN")},
 	}
 
 	for _, tc := range cases {
@@ -47,7 +53,31 @@ func TestDownloadGitTagZipFile(t *testing.T) {
 		}
 
 		zipFilePath, err := downloadGithubZipFile(gitHubCommit, tc.githubToken, tc.instance)
+
 		defer os.RemoveAll(zipFilePath)
+
+		// We don't have a running instance of GitHub Enterprise against which to validate tests as we do for GitHub public,
+		// so this test will only validate that fetch attempted to download from the expected URL. The download itself
+		// will fail.
+
+		githubEnterpriseDownloadUrl := fmt.Sprintf("https://%s/reposss/%s/%s/zipball/%s", tc.instance.ApiUrl, tc.repoOwner, tc.repoName, tc.gitTag)
+		githubEnterpriseErrorMessage := fmt.Sprintf("Get %s: dial tcp: lookup %s: no such host", githubEnterpriseDownloadUrl, tc.instance.BaseUrl)
+
+		fmt.Printf("Expected error message: %s\n", githubEnterpriseErrorMessage)
+
+		if err != nil {
+			fmt.Printf("Actual error message: %s\n", err.Error())
+		}
+
+		if err != nil && strings.Contains(err.Error(), "no such host") {
+			if strings.Contains(err.Error(), githubEnterpriseErrorMessage) {
+				t.Logf("Found expected download URL %s. Download itself failed as expected because no GitHub Enterprise instance exists at the given URL.", githubEnterpriseDownloadUrl)
+				t.SkipNow()
+			} else {
+				t.Fatalf("Attempted to download from URL other than the expected download URL of %s", githubEnterpriseDownloadUrl)
+			}
+		}
+
 		if err != nil {
 			t.Fatalf("Failed to download file: %s", err)
 		}

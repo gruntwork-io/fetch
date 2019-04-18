@@ -129,7 +129,13 @@ func MakeGitHubZipFileRequest(gitHubCommit GitHubCommit, gitHubToken string, ins
 		return request, fmt.Errorf("Neither a GitCommitSha nor a GitTag nor a BranchName were specified so impossible to identify a specific commit to download.")
 	}
 
-	url := fmt.Sprintf("https://api.github.com/repos/%s/%s/zipball/%s", gitHubCommit.Repo.Owner, gitHubCommit.Repo.Name, gitRef)
+	var url string
+	if instance.ApiUrl != "api.github.com" {
+		url = fmt.Sprintf("https://"+instance.ApiUrl+"/repos/%s/%s/zipball/%s", gitHubCommit.Repo.Owner, gitHubCommit.Repo.Name, gitRef)
+	} else {
+		url = fmt.Sprintf("https://api.github.com/repos/%s/%s/zipball/%s", gitHubCommit.Repo.Owner, gitHubCommit.Repo.Name, gitRef)
+	}
+
 
 	request, err := http.NewRequest("GET", url, nil)
 	if err != nil {

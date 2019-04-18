@@ -42,8 +42,8 @@ func TestGetListOfReleasesFromGitHubRepo(t *testing.T) {
 			t.Fatalf("expected non-empty list of releases for repo %s, but no releases were found", tc.repoUrl)
 		}
 
-		if releases[len(releases) - 1] != tc.firstReleaseTag {
-			t.Fatalf("error parsing github releases for repo %s. expected first release = %s, actual = %s", tc.repoUrl, tc.firstReleaseTag, releases[len(releases) - 1])
+		if releases[len(releases)-1] != tc.firstReleaseTag {
+			t.Fatalf("error parsing github releases for repo %s. expected first release = %s, actual = %s", tc.repoUrl, tc.firstReleaseTag, releases[len(releases)-1])
 		}
 
 		if releases[0] != tc.lastReleaseTag {
@@ -208,22 +208,22 @@ func TestGetGitHubReleaseInfo(t *testing.T) {
 	token := os.Getenv("GITHUB_OAUTH_TOKEN")
 
 	expectedFetchTestPrivateRelease := GitHubReleaseApiResponse{
-		Id: 3064041,
-		Url: "https://api.github.com/repos/gruntwork-io/fetch-test-private/releases/3064041",
+		Id:   3064041,
+		Url:  "https://api.github.com/repos/gruntwork-io/fetch-test-private/releases/3064041",
 		Name: "v0.0.2",
 		Assets: []GitHubReleaseAsset{
 			{
-				Id: 1872521,
-				Url: "https://api.github.com/repos/gruntwork-io/fetch-test-private/releases/assets/1872521",
+				Id:   1872521,
+				Url:  "https://api.github.com/repos/gruntwork-io/fetch-test-private/releases/assets/1872521",
 				Name: "test-asset.png",
 			},
 		},
 	}
 
 	expectedFetchTestPublicRelease := GitHubReleaseApiResponse{
-		Id: 3065803,
-		Url: "https://api.github.com/repos/gruntwork-io/fetch-test-public/releases/3065803",
-		Name: "v0.0.3",
+		Id:     3065803,
+		Url:    "https://api.github.com/repos/gruntwork-io/fetch-test-public/releases/3065803",
+		Name:   "v0.0.3",
 		Assets: []GitHubReleaseAsset{},
 	}
 
@@ -259,7 +259,7 @@ func TestGetGitHubReleaseInfo(t *testing.T) {
 	}
 }
 
-func TestDownloadReleaseAsset(t *testing.T) {
+func TestDownloadGitHubPulicReleaseAsset(t *testing.T) {
 	t.Parallel()
 
 	token := os.Getenv("GITHUB_OAUTH_TOKEN")
@@ -277,7 +277,6 @@ func TestDownloadReleaseAsset(t *testing.T) {
 	}{
 		{"https://github.com/gruntwork-io/fetch-test-private", token, "v0.0.2", 1872521},
 		{"https://github.com/gruntwork-io/fetch-test-public", "", "v0.0.2", 1872641},
-		{"https://github-enterpise.acme.com/org1/bash-commons", "", "v0.0.4", -1},
 	}
 
 	for _, tc := range cases {
