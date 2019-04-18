@@ -46,7 +46,11 @@ func downloadGithubZipFile(gitHubCommit GitHubCommit, gitHubToken string, instan
 
 	// Copy the contents of the downloaded file to our empty file
 	respBodyBuffer := new(bytes.Buffer)
-	respBodyBuffer.ReadFrom(resp.Body)
+	_, err = respBodyBuffer.ReadFrom(resp.Body)
+	if err != nil {
+		return zipFilePath, wrapError(err)
+	}
+
 	err = ioutil.WriteFile(filepath.Join(tempDir, "repo.zip"), respBodyBuffer.Bytes(), 0644)
 	if err != nil {
 		return zipFilePath, wrapError(err)
@@ -87,7 +91,11 @@ func extractFiles(zipFilePath, filesToExtractFromZipPath, localPath string) erro
 
 			if f.FileInfo().IsDir() {
 				// Create a directory
-				os.MkdirAll(filepath.Join(localPath, strings.TrimPrefix(f.Name, pathPrefix)), 0777)
+				path := filepath.Join(localPath, strings.TrimPrefix(f.Name, pathPrefix))
+				err = os.MkdirAll(path, 0777)
+				if err != nil {
+					return fmt.Errorf("Failed to create local directory %s: %s", path, err)
+				}
 			} else {
 				// Read the file into a byte array
 				readCloser, err := f.Open()

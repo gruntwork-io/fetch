@@ -60,21 +60,20 @@ func TestDownloadGitTagZipFile(t *testing.T) {
 		// so this test will only validate that fetch attempted to download from the expected URL. The download itself
 		// will fail.
 
-		githubEnterpriseDownloadUrl := fmt.Sprintf("https://%s/reposss/%s/%s/zipball/%s", tc.instance.ApiUrl, tc.repoOwner, tc.repoName, tc.gitTag)
+		githubEnterpriseDownloadUrl := fmt.Sprintf("https://%s/repos/%s/%s/zipball/%s", tc.instance.ApiUrl, tc.repoOwner, tc.repoName, tc.gitTag)
 		githubEnterpriseErrorMessage := fmt.Sprintf("Get %s: dial tcp: lookup %s: no such host", githubEnterpriseDownloadUrl, tc.instance.BaseUrl)
 
-		fmt.Printf("Expected error message: %s\n", githubEnterpriseErrorMessage)
-
-		if err != nil {
-			fmt.Printf("Actual error message: %s\n", err.Error())
-		}
+		// TODO: The awkwardness of this test makes it clear that a better structure for this program would be to refactor
+		// the downloadGithubZipFile() function to a function called downloadGithubFile() that would accept a URL as a
+		// param. We could then test explicitly that the URL is as expected, which would make GitHub Enterprise test cases
+		// simpler to handle.
 
 		if err != nil && strings.Contains(err.Error(), "no such host") {
 			if strings.Contains(err.Error(), githubEnterpriseErrorMessage) {
 				t.Logf("Found expected download URL %s. Download itself failed as expected because no GitHub Enterprise instance exists at the given URL.", githubEnterpriseDownloadUrl)
 				t.SkipNow()
 			} else {
-				t.Fatalf("Attempted to download from URL other than the expected download URL of %s", githubEnterpriseDownloadUrl)
+				t.Fatalf("Attempted to download from URL other than the expected download URL of %s. Full error: %s", githubEnterpriseDownloadUrl, err.Error())
 			}
 		}
 
