@@ -277,6 +277,7 @@ func TestDownloadReleaseAsset(t *testing.T) {
 	}{
 		{"https://github.com/gruntwork-io/fetch-test-private", token, "v0.0.2", 1872521},
 		{"https://github.com/gruntwork-io/fetch-test-public", "", "v0.0.2", 1872641},
+		{"https://github-enterpise.acme.com/org1/bash-commons", "", "v0.0.4", -1},
 	}
 
 	for _, tc := range cases {

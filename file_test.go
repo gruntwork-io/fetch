@@ -21,14 +21,20 @@ func init() {
 func TestDownloadGitTagZipFile(t *testing.T) {
 	t.Parallel()
 
+	publicGitHub := GitHubInstance{
+		BaseUrl: "github.com",
+		ApiUrl:  "api.github.com",
+	}
+
 	cases := []struct {
+		instance 	GitHubInstance
 		repoOwner   string
 		repoName    string
 		gitTag      string
 		githubToken string
 	}{
-		{"gruntwork-io", "fetch-test-public", "v0.0.1", ""},
-		{"gruntwork-io", "fetch-test-private", "v0.0.2", os.Getenv("GITHUB_OAUTH_TOKEN")},
+		{publicGitHub, "gruntwork-io", "fetch-test-public", "v0.0.1", ""},
+		{publicGitHub, "gruntwork-io", "fetch-test-private", "v0.0.2", os.Getenv("GITHUB_OAUTH_TOKEN")},
 	}
 
 	for _, tc := range cases {
@@ -40,7 +46,7 @@ func TestDownloadGitTagZipFile(t *testing.T) {
 			GitTag: tc.gitTag,
 		}
 
-		zipFilePath, err := downloadGithubZipFile(gitHubCommit, tc.githubToken)
+		zipFilePath, err := downloadGithubZipFile(gitHubCommit, tc.githubToken, tc.instance)
 		defer os.RemoveAll(zipFilePath)
 		if err != nil {
 			t.Fatalf("Failed to download file: %s", err)
@@ -55,14 +61,20 @@ func TestDownloadGitTagZipFile(t *testing.T) {
 func TestDownloadGitBranchZipFile(t *testing.T) {
 	t.Parallel()
 
+	publicGitHub := GitHubInstance{
+		BaseUrl: "github.com",
+		ApiUrl:  "api.github.com",
+	}
+
 	cases := []struct {
+		instance 	GitHubInstance
 		repoOwner   string
 		repoName    string
 		branchName  string
 		githubToken string
 	}{
-		{"gruntwork-io", "fetch-test-public", "sample-branch", ""},
-		{"gruntwork-io", "fetch-test-private", "sample-branch", os.Getenv("GITHUB_OAUTH_TOKEN")},
+		{publicGitHub, "gruntwork-io", "fetch-test-public", "sample-branch", ""},
+		{publicGitHub, "gruntwork-io", "fetch-test-private", "sample-branch", os.Getenv("GITHUB_OAUTH_TOKEN")},
 	}
 
 	for _, tc := range cases {
@@ -74,7 +86,7 @@ func TestDownloadGitBranchZipFile(t *testing.T) {
 			BranchName: tc.branchName,
 		}
 
-		zipFilePath, err := downloadGithubZipFile(gitHubCommit, tc.githubToken)
+		zipFilePath, err := downloadGithubZipFile(gitHubCommit, tc.githubToken, tc.instance)
 		defer os.RemoveAll(zipFilePath)
 		if err != nil {
 			t.Fatalf("Failed to download file: %s", err)
@@ -89,13 +101,19 @@ func TestDownloadGitBranchZipFile(t *testing.T) {
 func TestDownloadBadGitBranchZipFile(t *testing.T) {
 	t.Parallel()
 
+	publicGitHub := GitHubInstance{
+		BaseUrl: "github.com",
+		ApiUrl:  "api.github.com",
+	}
+
 	cases := []struct {
+		instance 	GitHubInstance
 		repoOwner   string
 		repoName    string
 		branchName  string
 		githubToken string
 	}{
-		{"gruntwork-io", "fetch-test-public", "branch-that-doesnt-exist", ""},
+		{publicGitHub, "gruntwork-io", "fetch-test-public", "branch-that-doesnt-exist", ""},
 	}
 
 	for _, tc := range cases {
@@ -107,7 +125,7 @@ func TestDownloadBadGitBranchZipFile(t *testing.T) {
 			BranchName: tc.branchName,
 		}
 
-		zipFilePath, err := downloadGithubZipFile(gitHubCommit, tc.githubToken)
+		zipFilePath, err := downloadGithubZipFile(gitHubCommit, tc.githubToken, tc.instance)
 		defer os.RemoveAll(zipFilePath)
 		if err == nil {
 			t.Fatalf("Expected that attempt to download repo %s/%s for branch \"%s\" would fail, but received no error.", tc.repoOwner, tc.repoName, tc.branchName)
@@ -118,16 +136,22 @@ func TestDownloadBadGitBranchZipFile(t *testing.T) {
 func TestDownloadGitCommitFile(t *testing.T) {
 	t.Parallel()
 
+	publicGitHub := GitHubInstance{
+		BaseUrl: "github.com",
+		ApiUrl:  "api.github.com",
+	}
+
 	cases := []struct {
+		instance 	GitHubInstance
 		repoOwner   string
 		repoName    string
 		commitSha   string
 		githubToken string
 	}{
-		{"gruntwork-io", "fetch-test-public", "d2de34edb4c6564e0674b3f390b3b1fb0468183a", ""},
-		{"gruntwork-io", "fetch-test-public", "57752e7f1df0acbd3c1e61545d5c4d0e87699d84", ""},
-		{"gruntwork-io", "fetch-test-public", "f32a08313e30f116a1f5617b8b68c11f1c1dbb61", ""},
-		{"gruntwork-io", "fetch-test-private", "676cfb92b54d33538c756c7a9479bfc3f6b44de2", os.Getenv("GITHUB_OAUTH_TOKEN")},
+		{publicGitHub, "gruntwork-io", "fetch-test-public", "d2de34edb4c6564e0674b3f390b3b1fb0468183a", ""},
+		{publicGitHub, "gruntwork-io", "fetch-test-public", "57752e7f1df0acbd3c1e61545d5c4d0e87699d84", ""},
+		{publicGitHub, "gruntwork-io", "fetch-test-public", "f32a08313e30f116a1f5617b8b68c11f1c1dbb61", ""},
+		{publicGitHub, "gruntwork-io", "fetch-test-private", "676cfb92b54d33538c756c7a9479bfc3f6b44de2", os.Getenv("GITHUB_OAUTH_TOKEN")},
 	}
 
 	for _, tc := range cases {
@@ -139,7 +163,7 @@ func TestDownloadGitCommitFile(t *testing.T) {
 			CommitSha: tc.commitSha,
 		}
 
-		zipFilePath, err := downloadGithubZipFile(gitHubCommit, tc.githubToken)
+		zipFilePath, err := downloadGithubZipFile(gitHubCommit, tc.githubToken, tc.instance)
 		defer os.RemoveAll(zipFilePath)
 		if err != nil {
 			t.Fatalf("Failed to download file: %s", err)
@@ -154,18 +178,24 @@ func TestDownloadGitCommitFile(t *testing.T) {
 func TestDownloadBadGitCommitFile(t *testing.T) {
 	t.Parallel()
 
+	publicGitHub := GitHubInstance{
+		BaseUrl: "github.com",
+		ApiUrl:  "api.github.com",
+	}
+
 	cases := []struct {
+		instance 	GitHubInstance
 		repoOwner   string
 		repoName    string
 		commitSha   string
 		githubToken string
 	}{
-		{"gruntwork-io", "fetch-test-public", "hello-world", ""},
-		{"gruntwork-io", "fetch-test-public", "i-am-a-non-existent-commit", ""},
+		{publicGitHub, "gruntwork-io", "fetch-test-public", "hello-world", ""},
+		{publicGitHub, "gruntwork-io", "fetch-test-public", "i-am-a-non-existent-commit", ""},
 		// remove a single letter from the beginning of an otherwise legit commit sha
 		// interestingly, through testing I found that GitHub will attempt to find the right commit sha if you
 		// truncate the end of it.
-		{"gruntwork-io", "fetch-test-public", "7752e7f1df0acbd3c1e61545d5c4d0e87699d84", ""},
+		{publicGitHub, "gruntwork-io", "fetch-test-public", "7752e7f1df0acbd3c1e61545d5c4d0e87699d84", ""},
 	}
 
 	for _, tc := range cases {
@@ -177,7 +207,7 @@ func TestDownloadBadGitCommitFile(t *testing.T) {
 			CommitSha: tc.commitSha,
 		}
 
-		zipFilePath, err := downloadGithubZipFile(gitHubCommit, tc.githubToken)
+		zipFilePath, err := downloadGithubZipFile(gitHubCommit, tc.githubToken, tc.instance)
 		defer os.RemoveAll(zipFilePath)
 		if err == nil {
 			t.Fatalf("Expected that attempt to download repo %s/%s at commmit sha \"%s\" would fail, but received no error.", tc.repoOwner, tc.repoName, tc.commitSha)
@@ -188,13 +218,19 @@ func TestDownloadBadGitCommitFile(t *testing.T) {
 func TestDownloadZipFileWithBadRepoValues(t *testing.T) {
 	t.Parallel()
 
+	publicGitHub := GitHubInstance{
+		BaseUrl: "github.com",
+		ApiUrl:  "api.github.com",
+	}
+
 	cases := []struct {
+		instance 	GitHubInstance
 		repoOwner   string
 		repoName    string
 		gitTag      string
 		githubToken string
 	}{
-		{"https://github.com/gruntwork-io/fetch-test-public/archive/does-not-exist.zip", "MyNameIsWhat", "x.y.z", ""},
+		{publicGitHub, "https://github.com/gruntwork-io/fetch-test-public/archive/does-not-exist.zip", "MyNameIsWhat", "x.y.z", ""},
 	}
 
 	for _, tc := range cases {
@@ -206,7 +242,7 @@ func TestDownloadZipFileWithBadRepoValues(t *testing.T) {
 			GitTag: tc.gitTag,
 		}
 
-		_, err := downloadGithubZipFile(gitHubCommit, tc.githubToken)
+		_, err := downloadGithubZipFile(gitHubCommit, tc.githubToken, tc.instance)
 		if err == nil && err.errorCode != 500 {
 			t.Fatalf("Expected error for bad repo values: %s/%s:%s", tc.repoOwner, tc.repoName, tc.gitTag)
 		}
@@ -216,16 +252,22 @@ func TestDownloadZipFileWithBadRepoValues(t *testing.T) {
 func TestExtractFiles(t *testing.T) {
 	t.Parallel()
 
+	publicGitHub := GitHubInstance{
+		BaseUrl: "github.com",
+		ApiUrl:  "api.github.com",
+	}
+
 	cases := []struct {
+		instance 		  GitHubInstance
 		localFilePath     string
 		filePathToExtract string
 		expectedNumFiles  int
 		nonemptyFiles     []string
 	}{
-		{"test-fixtures/fetch-test-public-0.0.1.zip", "/", 1, nil},
-		{"test-fixtures/fetch-test-public-0.0.2.zip", "/", 2, nil},
-		{"test-fixtures/fetch-test-public-0.0.3.zip", "/", 4, []string{"/README.md"} },
-		{"test-fixtures/fetch-test-public-0.0.3.zip", "/folder", 2, nil},
+		{publicGitHub, "test-fixtures/fetch-test-public-0.0.1.zip", "/", 1, nil},
+		{publicGitHub, "test-fixtures/fetch-test-public-0.0.2.zip", "/", 2, nil},
+		{publicGitHub, "test-fixtures/fetch-test-public-0.0.3.zip", "/", 4, []string{"/README.md"} },
+		{publicGitHub, "test-fixtures/fetch-test-public-0.0.3.zip", "/folder", 2, nil},
 	}
 
 	for _, tc := range cases {
