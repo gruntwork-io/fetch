@@ -70,7 +70,7 @@ func TestDownloadGitTagZipFile(t *testing.T) {
 		if err != nil && strings.Contains(err.Error(), "no such host") {
 			if strings.Contains(err.Error(), githubEnterpriseDownloadUrl) {
 				t.Logf("Found expected download URL %s. Download itself failed as expected because no GitHub Enterprise instance exists at the given URL.", githubEnterpriseDownloadUrl)
-				t.SkipNow()
+				return
 			} else {
 				t.Fatalf("Attempted to download from URL other than the expected download URL of %s. Full error: %s", githubEnterpriseDownloadUrl, err.Error())
 			}
