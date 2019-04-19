@@ -110,7 +110,10 @@ func FetchTags(githubRepoUrl string, githubToken string, instance GitHubInstance
 
 	// Convert the response body to a byte array
 	buf := new(bytes.Buffer)
-	buf.ReadFrom(resp.Body)
+	_, goErr := buf.ReadFrom(resp.Body)
+	if goErr != nil {
+		return tagsString, wrapError(goErr)
+	}
 	jsonResp := buf.Bytes()
 
 	// Extract the JSON into our array of gitHubTagsCommitApiResponse's
@@ -175,7 +178,10 @@ func GetGitHubReleaseInfo(repo GitHubRepo, tag string) (GitHubReleaseApiResponse
 
 	// Convert the response body to a byte array
 	buf := new(bytes.Buffer)
-	buf.ReadFrom(resp.Body)
+	_, goErr := buf.ReadFrom(resp.Body)
+	if goErr != nil {
+		return release, wrapError(goErr)
+	}
 	jsonResp := buf.Bytes()
 
 	if err := json.Unmarshal(jsonResp, &release); err != nil {
@@ -208,13 +214,18 @@ func callGitHubApi(repo GitHubRepo, path string, customHeaders map[string]string
 	}
 
 	resp, err := httpClient.Do(request)
+
 	if err != nil {
 		return nil, wrapError(err)
 	}
+
 	if resp.StatusCode != 200 {
 		// Convert the resp.Body to a string
 		buf := new(bytes.Buffer)
-		buf.ReadFrom(resp.Body)
+		_, goErr := buf.ReadFrom(resp.Body)
+		if goErr != nil {
+			return nil, wrapError(goErr)
+		}
 		respBody := buf.String()
 
 		// We leverage the HTTP Response Code as our ErrorCode here.

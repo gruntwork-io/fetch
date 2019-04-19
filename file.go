@@ -14,7 +14,7 @@ import (
 // Download the zip file at the given URL to a temporary local directory.
 // Returns the absolute path to the downloaded zip file.
 // IMPORTANT: You must call "defer os.RemoveAll(dir)" in the calling function when done with the downloaded zip file!
-func downloadGithubZipFile(gitHubCommit GitHubCommit, gitHubToken string) (string, *FetchError) {
+func downloadGithubZipFile(gitHubCommit GitHubCommit, gitHubToken string, instance GitHubInstance) (string, *FetchError) {
 
 	var zipFilePath string
 
@@ -28,7 +28,7 @@ func downloadGithubZipFile(gitHubCommit GitHubCommit, gitHubToken string) (strin
 
 	// Download the zip file, possibly using the GitHub oAuth Token
 	httpClient := &http.Client{}
-	req, err := MakeGitHubZipFileRequest(gitHubCommit, gitHubToken)
+	req, err := MakeGitHubZipFileRequest(gitHubCommit, gitHubToken, instance)
 	if err != nil {
 		return zipFilePath, wrapError(err)
 	}
@@ -46,7 +46,11 @@ func downloadGithubZipFile(gitHubCommit GitHubCommit, gitHubToken string) (strin
 
 	// Copy the contents of the downloaded file to our empty file
 	respBodyBuffer := new(bytes.Buffer)
-	respBodyBuffer.ReadFrom(resp.Body)
+	_, err = respBodyBuffer.ReadFrom(resp.Body)
+	if err != nil {
+		return zipFilePath, wrapError(err)
+	}
+
 	err = ioutil.WriteFile(filepath.Join(tempDir, "repo.zip"), respBodyBuffer.Bytes(), 0644)
 	if err != nil {
 		return zipFilePath, wrapError(err)
@@ -87,7 +91,11 @@ func extractFiles(zipFilePath, filesToExtractFromZipPath, localPath string) erro
 
 			if f.FileInfo().IsDir() {
 				// Create a directory
-				os.MkdirAll(filepath.Join(localPath, strings.TrimPrefix(f.Name, pathPrefix)), 0777)
+				path := filepath.Join(localPath, strings.TrimPrefix(f.Name, pathPrefix))
+				err = os.MkdirAll(path, 0777)
+				if err != nil {
+					return fmt.Errorf("Failed to create local directory %s: %s", path, err)
+				}
 			} else {
 				// Read the file into a byte array
 				readCloser, err := f.Open()
@@ -114,7 +122,7 @@ func extractFiles(zipFilePath, filesToExtractFromZipPath, localPath string) erro
 
 // Return an HTTP request that will fetch the given GitHub repo's zip file for the given tag, possibly with the gitHubOAuthToken in the header
 // Respects the GitHubCommit hierachy as defined in the code comments for GitHubCommit (e.g. GitTag > CommitSha)
-func MakeGitHubZipFileRequest(gitHubCommit GitHubCommit, gitHubToken string) (*http.Request, error) {
+func MakeGitHubZipFileRequest(gitHubCommit GitHubCommit, gitHubToken string, instance GitHubInstance) (*http.Request, error) {
 	var request *http.Request
 
 	// This represents either a commit, branch, or git tag
@@ -129,7 +137,7 @@ func MakeGitHubZipFileRequest(gitHubCommit GitHubCommit, gitHubToken string) (*h
 		return request, fmt.Errorf("Neither a GitCommitSha nor a GitTag nor a BranchName were specified so impossible to identify a specific commit to download.")
 	}
 
-	url := fmt.Sprintf("https://api.github.com/repos/%s/%s/zipball/%s", gitHubCommit.Repo.Owner, gitHubCommit.Repo.Name, gitRef)
+	url := fmt.Sprintf("https://%s/repos/%s/%s/zipball/%s", instance.ApiUrl, gitHubCommit.Repo.Owner, gitHubCommit.Repo.Name, gitRef)
 
 	request, err := http.NewRequest("GET", url, nil)
 	if err != nil {
