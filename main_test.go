@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"os"
 	"testing"
+
+	cli "gopkg.in/urfave/cli.v1"
 )
 
 // Expect to download 2 assets:
@@ -57,4 +59,82 @@ func TestInvalidReleaseAssetsRegex(t *testing.T) {
 	if fetchErr == nil {
 		t.Fatalf("Expected error for invalid regex")
 	}
+}
+
+func TestEmptyOptionValues(t *testing.T) {
+	app := cli.NewApp()
+	app.Name = "main_test"
+	app.Flags = []cli.Flag{
+		cli.StringFlag{
+			Name:  OPTION_REPO,
+		},
+		cli.StringFlag{
+			Name:  OPTION_COMMIT,
+		},
+		cli.StringFlag{
+			Name:  OPTION_BRANCH,
+		},
+		cli.StringFlag{
+			Name:  OPTION_TAG,
+		},
+		cli.StringFlag{
+			Name:   OPTION_GITHUB_TOKEN,
+			EnvVar: ENV_VAR_GITHUB_TOKEN,
+		},
+		cli.StringSliceFlag{
+			Name:  OPTION_SOURCE_PATH,
+		},
+		cli.StringFlag{
+			Name:  OPTION_RELEASE_ASSET,
+		},
+		cli.StringSliceFlag{
+			Name:  OPTION_RELEASE_ASSET_CHECKSUM,
+		},
+		cli.StringFlag{
+			Name:  OPTION_RELEASE_ASSET_CHECKSUM_ALGO,
+		},
+		cli.StringFlag{
+			Name:  OPTION_GITHUB_API_VERSION,
+			Value: "v3",
+		},
+	}
+
+    app.Action = func(c *cli.Context) error {
+        _, err := parseOptions(c)
+        return err
+    }
+
+    var args []string
+    var expected string
+    var err error
+
+    optionsList := []string{
+        OPTION_REPO,
+        OPTION_COMMIT,
+        OPTION_BRANCH,
+        OPTION_TAG,
+        OPTION_GITHUB_TOKEN,
+        OPTION_SOURCE_PATH,
+        OPTION_RELEASE_ASSET,
+        OPTION_RELEASE_ASSET_CHECKSUM,
+        OPTION_RELEASE_ASSET_CHECKSUM_ALGO,
+        OPTION_GITHUB_API_VERSION,
+    }
+
+    for _, option := range optionsList {
+        args = os.Args[0:1]
+        dashedOption := "--" + option
+        emptyOption := dashedOption + "="
+        args = append(args, emptyOption)
+
+        err = app.Run(args)
+        expected = fmt.Sprintf("You specified the %s flag but did not provide any value.", dashedOption)
+        if (err != nil) && (err.Error() != expected) { 
+            t.Fatalf("Expected '%s' but received '%s'", expected, err.Error())
+        }
+
+        if err == nil {
+            t.Fatalf("Expected '%s' but received nothing", expected)
+        }
+    }
 }
