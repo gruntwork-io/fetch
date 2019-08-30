@@ -117,7 +117,11 @@ func runFetchWrapper(c *cli.Context) {
 
 // Run the fetch program
 func runFetch(c *cli.Context) error {
-	options := parseOptions(c)
+	options, err := parseOptions(c)
+	if err != nil {
+        return err
+    }
+
 	if err := validateOptions(options); err != nil {
 		return err
 	}
@@ -188,7 +192,7 @@ func runFetch(c *cli.Context) error {
 	return nil
 }
 
-func parseOptions(c *cli.Context) FetchOptions {
+func parseOptions(c *cli.Context) (FetchOptions, error) {
 	localDownloadPath := c.Args().First()
 	sourcePaths := c.StringSlice(OPTION_SOURCE_PATH)
 	assetChecksums := c.StringSlice(OPTION_RELEASE_ASSET_CHECKSUM)
@@ -201,6 +205,36 @@ func parseOptions(c *cli.Context) FetchOptions {
 		sourcePaths = []string{c.Args().First()}
 		localDownloadPath = c.Args().Get(1)
 	}
+
+    optionsList := []string{
+        OPTION_REPO,
+        OPTION_TAG,
+        OPTION_COMMIT,
+        OPTION_BRANCH,
+        OPTION_GITHUB_TOKEN,
+        OPTION_SOURCE_PATH,
+        OPTION_RELEASE_ASSET,
+        OPTION_RELEASE_ASSET_CHECKSUM,
+        OPTION_RELEASE_ASSET_CHECKSUM_ALGO,
+        OPTION_GITHUB_API_VERSION,
+    }
+
+    for _, option := range optionsList {
+        switch option {
+        case OPTION_SOURCE_PATH, OPTION_RELEASE_ASSET_CHECKSUM:
+            if c.IsSet(option) {
+                for _, slice := range c.StringSlice(option) {
+                    if slice == "" {
+                        return FetchOptions{}, fmt.Errorf("You specified the --%s flag but did not provide any value.", option)
+                    }
+                }
+            }
+        default:
+            if c.IsSet(option) && c.String(option) == "" {
+                return FetchOptions{}, fmt.Errorf("You specified the --%s flag but did not provide any value.", option)
+            }
+        }
+    }
 
 	for _, assetChecksum := range assetChecksums {
 		assetChecksumMap[assetChecksum] = true
@@ -218,7 +252,7 @@ func parseOptions(c *cli.Context) FetchOptions {
 		ReleaseAssetChecksumAlgo: c.String(OPTION_RELEASE_ASSET_CHECKSUM_ALGO),
 		LocalDownloadPath:        localDownloadPath,
 		GithubApiVersion:         c.String(OPTION_GITHUB_API_VERSION),
-	}
+	}, nil
 }
 
 func validateOptions(options FetchOptions) error {
