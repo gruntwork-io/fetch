@@ -296,6 +296,7 @@ func TestExtractFiles(t *testing.T) {
 		{publicGitHub, "test-fixtures/fetch-test-public-0.0.2.zip", "/", 2, nil},
 		{publicGitHub, "test-fixtures/fetch-test-public-0.0.3.zip", "/", 4, []string{"/README.md"} },
 		{publicGitHub, "test-fixtures/fetch-test-public-0.0.3.zip", "/folder", 2, nil},
+		{publicGitHub, "test-fixtures/fetch-test-public-0.0.4.zip", "/aaa", 2, []string{"/hello.txt", "/subaaa/subhello.txt"} },
 	}
 
 	for _, tc := range cases {

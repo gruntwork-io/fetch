@@ -81,6 +81,7 @@ func extractFiles(zipFilePath, filesToExtractFromZipPath, localPath string) erro
 
 	// Add the path from which we will extract files to the path prefix so we can exclude the appropriate files
 	pathPrefix = filepath.Join(pathPrefix, filesToExtractFromZipPath)
+	pathPrefix = pathPrefix + "/"
 
 	// Iterate through the files in the archive,
 	// printing some of their contents.
