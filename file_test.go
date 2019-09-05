@@ -340,6 +340,35 @@ func TestExtractFiles(t *testing.T) {
 	}
 }
 
+func TestExtractFilesExtractFile(t *testing.T) {
+	// Create a temp directory
+	tempDir, err := ioutil.TempDir("", "")
+	if err != nil {
+		t.Fatalf("Failed to create temp directory: %s", err)
+	}
+	defer os.RemoveAll(tempDir)
+
+	zipFilePath := "test-fixtures/fetch-test-public-0.0.4.zip"
+	filePathToExtract := "zzz.txt"
+	localFileName := "/localzzz.txt"
+	localPathName := filepath.Join(tempDir, localFileName)
+	err = extractFiles(zipFilePath, filePathToExtract, localPathName)
+	if err != nil {
+		t.Fatalf("Failed to extract files: %s", err)
+	}
+
+	filepath.Walk(tempDir, func(path string, info os.FileInfo, err error) error {
+		relativeFilename := strings.TrimPrefix(path, tempDir)
+
+		if ! info.IsDir() {
+			if relativeFilename != localFileName {
+				t.Fatalf("Expected local file %s to be created, but not found.\n", localFileName)
+			}
+		}
+		return nil
+	})
+}
+
 // Return ture if the given slice contains the given string
 func stringInSlice(s string, slice []string) bool {
 	for _, val := range slice {
