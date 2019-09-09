@@ -61,6 +61,26 @@ func downloadGithubZipFile(gitHubCommit GitHubCommit, gitHubToken string, instan
 	return zipFilePath, nil
 }
 
+func shouldExtractPathInZip(pathPrefix string, zipPath *zip.File) bool {
+	//
+	// We need to return true (i.e extract file) based on the following conditions:
+	//
+	// The current archive item is a directory.
+	//     Archive item's path name will always be appended with a "/", so we use
+	//     this fact to ensure we are working with a full directory name.
+	//     Extract the file if (pathPrefix + "/") is a prefix in path name
+	//
+	// The current archive item is a file.
+	// 		There are two things possible here:
+	//		1  User specified a filename that is an exact match for the current archive file,
+	//         we need to extract this file.
+	//      2  The current archive filename is not a exact match to the user supplied filename.
+	//		   Check if (pathPrefix + "/") is a prefix in f.Name, if yes, we extract this file.
+
+	zipPathIsFile := !zipPath.FileInfo().IsDir()
+	return (zipPathIsFile && zipPath.Name == pathPrefix) || strings.Index(zipPath.Name, pathPrefix + "/") == 0
+}
+
 // Decompress the file at zipFileAbsPath and move only those files under filesToExtractFromZipPath to localPath
 func extractFiles(zipFilePath, filesToExtractFromZipPath, localPath string) error {
 
@@ -86,37 +106,8 @@ func extractFiles(zipFilePath, filesToExtractFromZipPath, localPath string) erro
 	// printing some of their contents.
 	for _, f := range r.File {
 
-			//
-			// Skip the current archive item being processed based on
-			// rules described in comments below.
-			//
-			if f.FileInfo().IsDir() {
-				// The current archive item is a directory.
-				// Archive item's f.Name will always be appended with a "/", so we use
-				// that fact to ensure we are working with a full directory name. Skip
-				// to next item if (pathPrefix + "/") is not a prefix in f.Name
-				if strings.Index(f.Name, pathPrefix + "/") != 0 {
-					continue
-				}
-			} else {
-				// The current archive item is a file.
-				// There are three things possible here:
-				//		1  User specified a filename using --source-path option and if we hit
-				//		   that file in archive, we need to process this file, so do not skip.
-				//      2  We do additional checks if we did not hit the exact file specified by user:
-				//			2a User specified a directory (or wants to download full repo);
-				//		   	   the (pathPrefix + "/") is a prefix in f.Name, we want to process this
-				//		   	   file, so not skipping.
-				//			2b User specified either file or directory.
-				//             (pathPrefix + "/") is not a prefix in the current item's f.Name, we
-				//             have hit a file that is not within the folder that the user specified,
-				// 			   so we skip it.
-				if f.Name != pathPrefix {
-					if strings.Index(f.Name, pathPrefix + "/") != 0 {
-						continue
-					}
-				}
-			}
+		// check if current archive file needs to be extracted
+		if shouldExtractPathInZip(pathPrefix, f) {
 
 			if f.FileInfo().IsDir() {
 				// Create a directory
@@ -143,6 +134,7 @@ func extractFiles(zipFilePath, filesToExtractFromZipPath, localPath string) erro
 					return fmt.Errorf("Failed to write file: %s", err)
 				}
 			}
+		}
 	}
 
 	return nil
