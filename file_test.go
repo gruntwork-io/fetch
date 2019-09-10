@@ -296,6 +296,7 @@ func TestExtractFiles(t *testing.T) {
 		{publicGitHub, "test-fixtures/fetch-test-public-0.0.2.zip", "/", 2, nil},
 		{publicGitHub, "test-fixtures/fetch-test-public-0.0.3.zip", "/", 4, []string{"/README.md"} },
 		{publicGitHub, "test-fixtures/fetch-test-public-0.0.3.zip", "/folder", 2, nil},
+		{publicGitHub, "test-fixtures/fetch-test-public-0.0.4.zip", "/aaa", 2, []string{"/hello.txt", "/subaaa/subhello.txt"} },
 	}
 
 	for _, tc := range cases {
@@ -337,6 +338,35 @@ func TestExtractFiles(t *testing.T) {
 		})
 
 	}
+}
+
+func TestExtractFilesExtractFile(t *testing.T) {
+	// Create a temp directory
+	tempDir, err := ioutil.TempDir("", "")
+	if err != nil {
+		t.Fatalf("Failed to create temp directory: %s", err)
+	}
+	defer os.RemoveAll(tempDir)
+
+	zipFilePath := "test-fixtures/fetch-test-public-0.0.4.zip"
+	filePathToExtract := "zzz.txt"
+	localFileName := "/localzzz.txt"
+	localPathName := filepath.Join(tempDir, localFileName)
+	err = extractFiles(zipFilePath, filePathToExtract, localPathName)
+	if err != nil {
+		t.Fatalf("Failed to extract files: %s", err)
+	}
+
+	filepath.Walk(tempDir, func(path string, info os.FileInfo, err error) error {
+		relativeFilename := strings.TrimPrefix(path, tempDir)
+
+		if ! info.IsDir() {
+			if relativeFilename != localFileName {
+				t.Fatalf("Expected local file %s to be created, but not found.\n", localFileName)
+			}
+		}
+		return nil
+	})
 }
 
 // Return ture if the given slice contains the given string

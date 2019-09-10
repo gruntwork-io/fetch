@@ -61,6 +61,26 @@ func downloadGithubZipFile(gitHubCommit GitHubCommit, gitHubToken string, instan
 	return zipFilePath, nil
 }
 
+func shouldExtractPathInZip(pathPrefix string, zipPath *zip.File) bool {
+	//
+	// We need to return true (i.e extract file) based on the following conditions:
+	//
+	// The current archive item is a directory.
+	//     Archive item's path name will always be appended with a "/", so we use
+	//     this fact to ensure we are working with a full directory name.
+	//     Extract the file if (pathPrefix + "/") is a prefix in path name
+	//
+	// The current archive item is a file.
+	// 		There are two things possible here:
+	//		1  User specified a filename that is an exact match for the current archive file,
+	//         we need to extract this file.
+	//      2  The current archive filename is not a exact match to the user supplied filename.
+	//		   Check if (pathPrefix + "/") is a prefix in f.Name, if yes, we extract this file.
+
+	zipPathIsFile := !zipPath.FileInfo().IsDir()
+	return (zipPathIsFile && zipPath.Name == pathPrefix) || strings.Index(zipPath.Name, pathPrefix + "/") == 0
+}
+
 // Decompress the file at zipFileAbsPath and move only those files under filesToExtractFromZipPath to localPath
 func extractFiles(zipFilePath, filesToExtractFromZipPath, localPath string) error {
 
@@ -86,8 +106,8 @@ func extractFiles(zipFilePath, filesToExtractFromZipPath, localPath string) erro
 	// printing some of their contents.
 	for _, f := range r.File {
 
-		// If the given file is in the filesToExtractFromZipPath, proceed
-		if strings.Index(f.Name, pathPrefix) == 0 {
+		// check if current archive file needs to be extracted
+		if shouldExtractPathInZip(pathPrefix, f) {
 
 			if f.FileInfo().IsDir() {
 				// Create a directory
