@@ -26,3 +26,7 @@
 
 [[constraint]]
   name = "github.com/hashicorp/go-version"
+
+[[constraint]]
+  name = "github.com/dustin/go-humanize"
+  version = "1.0.0"

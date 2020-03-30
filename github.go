@@ -9,6 +9,9 @@ import (
 	"net/url"
 	"os"
 	"regexp"
+	"strings"
+
+	"github.com/dustin/go-humanize"
 )
 
 type GitHubRepo struct {
@@ -156,14 +159,13 @@ func ParseUrlIntoGitHubRepo(url string, token string, instance GitHubInstance) (
 }
 
 // Download the release asset with the given id and return its body
-func DownloadReleaseAsset(repo GitHubRepo, assetId int, destPath string) *FetchError {
+func DownloadReleaseAsset(repo GitHubRepo, assetId int, destPath string, withProgress bool) *FetchError {
 	url := createGitHubRepoUrlForPath(repo, fmt.Sprintf("releases/assets/%d", assetId))
 	resp, err := callGitHubApi(repo, url, map[string]string{"Accept": "application/octet-stream"})
 	if err != nil {
 		return err
 	}
-
-	return writeResonseToDisk(resp, destPath)
+	return writeResonseToDisk(resp, destPath, withProgress)
 }
 
 // Get information about the GitHub release with the given tag
@@ -235,8 +237,39 @@ func callGitHubApi(repo GitHubRepo, path string, customHeaders map[string]string
 	return resp, nil
 }
 
+type writeCounter struct {
+	written uint64
+	suffix string // contains " / SIZE MB" if size is known, otherwise empty
+}
+
+func newWriteCounter(total int64) *writeCounter {
+	if total > 0 {
+		return &writeCounter{
+			suffix: fmt.Sprintf(" / %s", humanize.Bytes(uint64(total))),
+		}
+	}
+	return &writeCounter{}
+}
+
+func (wc *writeCounter) Write(p []byte) (int, error) {
+	n := len(p)
+	wc.written += uint64(n)
+	wc.PrintProgress()
+	return n, nil
+}
+
+func (wc writeCounter) PrintProgress() {
+	// Clear the line by using a character return to go back to the start and remove
+	// the remaining characters by filling it with spaces
+	fmt.Printf("\r%s", strings.Repeat(" ", 35))
+
+	// Return again and print current status of download
+	// We use the humanize package to print the bytes in a meaningful way (e.g. 10 MB)
+	fmt.Printf("\rDownloading... %s%s", humanize.Bytes(wc.written), wc.suffix)
+}
+
 // Write the body of the given HTTP response to disk at the given path
-func writeResonseToDisk(resp *http.Response, destPath string) *FetchError {
+func writeResonseToDisk(resp *http.Response, destPath string, withProgress bool) *FetchError {
 	out, err := os.Create(destPath)
 	if err != nil {
 		return wrapError(err)
@@ -245,6 +278,12 @@ func writeResonseToDisk(resp *http.Response, destPath string) *FetchError {
 	defer out.Close()
 	defer resp.Body.Close()
 
-	_, err = io.Copy(out, resp.Body)
+	var readCloser io.Reader
+	if withProgress{
+		readCloser = io.TeeReader(resp.Body, newWriteCounter(resp.ContentLength))
+	} else {
+		readCloser = resp.Body
+	}
+	_, err = io.Copy(out, readCloser)
 	return wrapError(err)
 }

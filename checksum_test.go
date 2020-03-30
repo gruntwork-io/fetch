@@ -37,7 +37,7 @@ func TestVerifyReleaseAsset(t *testing.T) {
 		t.Fatalf("Failed to parse sample release asset GitHub URL into Fetch GitHubRepo struct: %s", err)
 	}
 
-	assetPaths, fetchErr := downloadReleaseAssets(SAMPLE_RELEASE_ASSET_NAME, tmpDir, githubRepo, SAMPLE_RELEASE_ASSET_VERSION)
+	assetPaths, fetchErr := downloadReleaseAssets(SAMPLE_RELEASE_ASSET_NAME, tmpDir, githubRepo, SAMPLE_RELEASE_ASSET_VERSION, false)
 	if fetchErr != nil {
 		t.Fatalf("Failed to download release asset: %s", fetchErr)
 	}
@@ -72,7 +72,7 @@ func TestVerifyChecksumOfReleaseAsset(t *testing.T) {
 		t.Fatalf("Failed to parse sample release asset GitHub URL into Fetch GitHubRepo struct: %s", err)
 	}
 
-	assetPaths, fetchErr := downloadReleaseAssets(SAMPLE_RELEASE_ASSET_REGEX, tmpDir, githubRepo, SAMPLE_RELEASE_ASSET_VERSION)
+	assetPaths, fetchErr := downloadReleaseAssets(SAMPLE_RELEASE_ASSET_REGEX, tmpDir, githubRepo, SAMPLE_RELEASE_ASSET_VERSION, false)
 	if fetchErr != nil {
 		t.Fatalf("Failed to download release asset: %s", fetchErr)
 	}

@@ -28,6 +28,7 @@ type FetchOptions struct {
 	ReleaseAssetChecksumAlgo string
 	LocalDownloadPath        string
 	GithubApiVersion         string
+	WithProgress             bool
 }
 
 type AssetDownloadResult struct {
@@ -45,6 +46,7 @@ const OPTION_RELEASE_ASSET = "release-asset"
 const OPTION_RELEASE_ASSET_CHECKSUM = "release-asset-checksum"
 const OPTION_RELEASE_ASSET_CHECKSUM_ALGO = "release-asset-checksum-algo"
 const OPTION_GITHUB_API_VERSION = "github-api-version"
+const OPTION_WITH_PROGRESS = "progress"
 
 const ENV_VAR_GITHUB_TOKEN = "GITHUB_OAUTH_TOKEN"
 
@@ -97,6 +99,10 @@ func main() {
 			Name:  OPTION_GITHUB_API_VERSION,
 			Value: "v3",
 			Usage: "The api version of the GitHub instance. If left blank, v3 will be used.\n\tThis will only be used if the repo url is not a github.com url.",
+		},
+		cli.BoolFlag{
+			Name:  OPTION_WITH_PROGRESS,
+			Usage: "Display progress on file downloads, especially useful for large files",
 		},
 	}
 
@@ -174,7 +180,7 @@ func runFetch(c *cli.Context) error {
 	}
 
 	// Download the requested release assets
-	assetPaths, err := downloadReleaseAssets(options.ReleaseAsset, options.LocalDownloadPath, repo, desiredTag)
+	assetPaths, err := downloadReleaseAssets(options.ReleaseAsset, options.LocalDownloadPath, repo, desiredTag, options.WithProgress)
 	if err != nil {
 		return err
 	}
@@ -217,6 +223,7 @@ func parseOptions(c *cli.Context) (FetchOptions, error) {
         OPTION_RELEASE_ASSET_CHECKSUM,
         OPTION_RELEASE_ASSET_CHECKSUM_ALGO,
         OPTION_GITHUB_API_VERSION,
+        OPTION_WITH_PROGRESS,
     }
 
     for _, option := range optionsList {
@@ -252,6 +259,7 @@ func parseOptions(c *cli.Context) (FetchOptions, error) {
 		ReleaseAssetChecksumAlgo: c.String(OPTION_RELEASE_ASSET_CHECKSUM_ALGO),
 		LocalDownloadPath:        localDownloadPath,
 		GithubApiVersion:         c.String(OPTION_GITHUB_API_VERSION),
+		WithProgress:             c.IsSet(OPTION_WITH_PROGRESS),
 	}, nil
 }
 
@@ -331,7 +339,7 @@ func downloadSourcePaths(sourcePaths []string, destPath string, githubRepo GitHu
 // were downloaded. For those that succeeded, the path they were downloaded to will be passed back
 // along with the error.
 // Returns the paths where the release assets were downloaded.
-func downloadReleaseAssets(assetRegex string, destPath string, githubRepo GitHubRepo, tag string) ([]string, error) {
+func downloadReleaseAssets(assetRegex string, destPath string, githubRepo GitHubRepo, tag string, withProgress bool) ([]string, error) {
 	var err error
 	var assetPaths []string
 
@@ -363,7 +371,7 @@ func downloadReleaseAssets(assetRegex string, destPath string, githubRepo GitHub
 
 			assetPath := path.Join(destPath, asset.Name)
 			fmt.Printf("Downloading release asset %s to %s\n", asset.Name, assetPath)
-			if downloadErr := DownloadReleaseAsset(githubRepo, asset.Id, assetPath); downloadErr == nil {
+			if downloadErr := DownloadReleaseAsset(githubRepo, asset.Id, assetPath, withProgress); downloadErr == nil {
 				fmt.Printf("Downloaded %s\n", assetPath)
 				results <- AssetDownloadResult{assetPath, nil}
 			} else {

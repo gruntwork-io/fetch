@@ -25,7 +25,7 @@ func TestDownloadReleaseAssets(t *testing.T) {
 		t.Fatalf("Failed to parse sample release asset GitHub URL into Fetch GitHubRepo struct: %s", err)
 	}
 
-	assetPaths, fetchErr := downloadReleaseAssets(SAMPLE_RELEASE_ASSET_REGEX, tmpDir, githubRepo, SAMPLE_RELEASE_ASSET_VERSION)
+	assetPaths, fetchErr := downloadReleaseAssets(SAMPLE_RELEASE_ASSET_REGEX, tmpDir, githubRepo, SAMPLE_RELEASE_ASSET_VERSION, false)
 	if fetchErr != nil {
 		t.Fatalf("Failed to download release asset: %s", fetchErr)
 	}
@@ -55,7 +55,7 @@ func TestInvalidReleaseAssetsRegex(t *testing.T) {
 		t.Fatalf("Failed to parse sample release asset GitHub URL into Fetch GitHubRepo struct: %s", err)
 	}
 
-	_, fetchErr := downloadReleaseAssets("*", tmpDir, githubRepo, SAMPLE_RELEASE_ASSET_VERSION)
+	_, fetchErr := downloadReleaseAssets("*", tmpDir, githubRepo, SAMPLE_RELEASE_ASSET_VERSION, false)
 	if fetchErr == nil {
 		t.Fatalf("Expected error for invalid regex")
 	}
@@ -97,6 +97,9 @@ func TestEmptyOptionValues(t *testing.T) {
 			Name:  OPTION_GITHUB_API_VERSION,
 			Value: "v3",
 		},
+		cli.StringFlag{
+			Name: OPTION_WITH_PROGRESS,
+		},
 	}
 
     app.Action = func(c *cli.Context) error {
@@ -119,6 +122,7 @@ func TestEmptyOptionValues(t *testing.T) {
         OPTION_RELEASE_ASSET_CHECKSUM,
         OPTION_RELEASE_ASSET_CHECKSUM_ALGO,
         OPTION_GITHUB_API_VERSION,
+        OPTION_WITH_PROGRESS,
     }
 
     for _, option := range optionsList {
