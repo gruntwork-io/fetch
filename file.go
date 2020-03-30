@@ -1,27 +1,32 @@
 package main
 
 import (
-	"io/ioutil"
-	"os"
-	"fmt"
-	"net/http"
-	"path/filepath"
-	"bytes"
 	"archive/zip"
+	"bytes"
+	"fmt"
+	"io/ioutil"
+	"net/http"
+	"os"
+	"path/filepath"
+	"strconv"
 	"strings"
+	"time"
 )
 
 // Download the zip file at the given URL to a temporary local directory.
 // Returns the absolute path to the downloaded zip file.
 // IMPORTANT: You must call "defer os.RemoveAll(dir)" in the calling function when done with the downloaded zip file!
 func downloadGithubZipFile(gitHubCommit GitHubCommit, gitHubToken string, instance GitHubInstance) (string, *FetchError) {
-
-	var zipFilePath string
-
 	// Create a temp directory
 	// Note that ioutil.TempDir has a peculiar interface. We need not specify any meaningful values to achieve our
 	// goal of getting a temporary directory.
 	tempDir, err := ioutil.TempDir("", "")
+	if err != nil {
+		return "", wrapError(err)
+	}
+
+	var zipFilePath = filepath.Join(tempDir, "repo.zip")
+	tempFile,err := os.OpenFile(zipFilePath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0544)
 	if err != nil {
 		return zipFilePath, wrapError(err)
 	}
@@ -33,31 +38,46 @@ func downloadGithubZipFile(gitHubCommit GitHubCommit, gitHubToken string, instan
 		return zipFilePath, wrapError(err)
 	}
 
+	done := make(chan int64)
+	headResp, err := httpClient.Head(req.URL.String())
+	if err != nil {
+		return zipFilePath, wrapError(err)
+	}
+	defer headResp.Body.Close()
+	if headResp.StatusCode != 200 {
+		return "", newError(FAILED_TO_DOWNLOAD_FILE_HEADER, fmt.Sprintf("Failed to download file header at the url %s. Received HTTP Response %d.", req.URL.String(), headResp.StatusCode))
+	}
+
+	size, err := strconv.Atoi(headResp.Header.Get("Content-Length"))
+	go func() {
+		err := PrintDownloadPercent(done, zipFilePath, int64(size))
+		if err != nil {
+			fmt.Printf("Failed printing progress: %v", err)
+		}
+	}()
+
 	resp, err := httpClient.Do(req)
 	if err != nil {
 		return zipFilePath, wrapError(err)
 	}
 	if resp.StatusCode != 200 {
-		return zipFilePath, newError(FAILED_TO_DOWNLOAD_FILE, fmt.Sprintf("Failed to download file at the url %s. Received HTTP Response %d.", req.URL.String(), resp.StatusCode))
+		return "", newError(FAILED_TO_DOWNLOAD_FILE, fmt.Sprintf("Failed to download file at the url %s. Received HTTP Response %d.", req.URL.String(), resp.StatusCode))
 	}
 	if resp.Header.Get("Content-Type") != "application/zip" {
-		return zipFilePath, newError(FAILED_TO_DOWNLOAD_FILE, fmt.Sprintf("Failed to download file at the url %s. Expected HTTP Response's \"Content-Type\" header to be \"application/zip\", but was \"%s\"", req.URL.String(), resp.Header.Get("Content-Type")))
+		return "", newError(FAILED_TO_DOWNLOAD_FILE, fmt.Sprintf("Failed to download file at the url %s. Expected HTTP Response's \"Content-Type\" header to be \"application/zip\", but was \"%s\"", req.URL.String(), resp.Header.Get("Content-Type")))
 	}
 
 	// Copy the contents of the downloaded file to our empty file
 	respBodyBuffer := new(bytes.Buffer)
 	_, err = respBodyBuffer.ReadFrom(resp.Body)
 	if err != nil {
-		return zipFilePath, wrapError(err)
+		return "", wrapError(err)
 	}
 
-	err = ioutil.WriteFile(filepath.Join(tempDir, "repo.zip"), respBodyBuffer.Bytes(), 0644)
+	_, err = tempFile.Write(respBodyBuffer.Bytes())
 	if err != nil {
-		return zipFilePath, wrapError(err)
+		return "", wrapError(err)
 	}
-
-	zipFilePath = filepath.Join(tempDir, "repo.zip")
-
 	return zipFilePath, nil
 }
 
@@ -169,4 +189,35 @@ func MakeGitHubZipFileRequest(gitHubCommit GitHubCommit, gitHubToken string, ins
 	}
 
 	return request, nil
+}
+
+// Print the progress once per second on all github fetch requests
+func PrintDownloadPercent(done chan int64, path string, total int64) error {
+	var stop = false
+	for {
+		select {
+		case <-done:
+			stop = true
+		default:
+			file, err := os.Open(path)
+			if err != nil {
+				return err
+			}
+			fi, err := file.Stat()
+			if err != nil {
+				return err
+			}
+			size := fi.Size()
+			if size == 0 {
+				size = 1
+			}
+			var percent = float64(size) / float64(total) * 100
+			fmt.Printf("%.0f %", percent)
+		}
+		if stop {
+			break
+		}
+		time.Sleep(time.Second)
+	}
+	return nil
 }
