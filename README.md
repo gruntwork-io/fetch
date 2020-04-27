@@ -86,6 +86,7 @@ The supported options are:
   saved in bash history.
 - `--github-api-version` (**Optional**): Used when fetching an artifact from a GitHub Enterprise instance.
   Defaults to `v3`. This is ignored when fetching from GitHub.com.
+- `--progress` (**Optional**): Used when fetching a big file and want to see progress on the fetch.
 
 The supported arguments are:
 

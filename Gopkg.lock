@@ -10,6 +10,14 @@
   version = "v1.1.1"
 
 [[projects]]
+  digest = "1:f1a75a8e00244e5ea77ff274baa9559eb877437b240ee7b278f3fc560d9f08bf"
+  name = "github.com/dustin/go-humanize"
+  packages = ["."]
+  pruneopts = ""
+  revision = "9f541cc9db5d55bce703bd99987c9d5cb8eea45e"
+  version = "v1.0.0"
+
+[[projects]]
   digest = "1:7398a6dcdc9283fdbd3ee279c7b80fa81e7ad9d6f9e71bc8e6394810870cc54d"
   name = "github.com/hashicorp/go-version"
   packages = ["."]
@@ -44,6 +52,7 @@
   analyzer-name = "dep"
   analyzer-version = 1
   input-imports = [
+    "github.com/dustin/go-humanize",
     "github.com/hashicorp/go-version",
     "github.com/stretchr/testify/assert",
     "gopkg.in/urfave/cli.v1",

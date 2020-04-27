@@ -274,9 +274,11 @@ func TestDownloadGitHubPulicReleaseAsset(t *testing.T) {
 		repoToken string
 		tag       string
 		assetId   int
+		progress  bool
 	}{
-		{"https://github.com/gruntwork-io/fetch-test-private", token, "v0.0.2", 1872521},
-		{"https://github.com/gruntwork-io/fetch-test-public", "", "v0.0.2", 1872641},
+		{"https://github.com/gruntwork-io/fetch-test-private", token, "v0.0.2", 1872521, false},
+		{"https://github.com/gruntwork-io/fetch-test-public", "", "v0.0.2", 1872641, false},
+		{"https://github.com/gruntwork-io/fetch-test-public", "", "v0.0.2", 1872641, true},
 	}
 
 	for _, tc := range cases {
@@ -290,7 +292,7 @@ func TestDownloadGitHubPulicReleaseAsset(t *testing.T) {
 			t.Fatalf("Failed to create temp file due to error: %s", tmpErr.Error())
 		}
 
-		if err := DownloadReleaseAsset(repo, tc.assetId, tmpFile.Name()); err != nil {
+		if err := DownloadReleaseAsset(repo, tc.assetId, tmpFile.Name(), tc.progress); err != nil {
 			t.Fatalf("Failed to download asset %d to %s from GitHub URL %s due to error: %s", tc.assetId, tmpFile.Name(), tc.repoUrl, err.Error())
 		}
 
