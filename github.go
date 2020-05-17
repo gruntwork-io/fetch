@@ -221,7 +221,7 @@ func callGitHubApi(repo GitHubRepo, path string, customHeaders map[string]string
 		return nil, wrapError(err)
 	}
 
-	if resp.StatusCode != 200 {
+	if resp.StatusCode != http.StatusOK {
 		// Convert the resp.Body to a string
 		buf := new(bytes.Buffer)
 		_, goErr := buf.ReadFrom(resp.Body)

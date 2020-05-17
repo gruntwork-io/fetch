@@ -37,7 +37,7 @@ func downloadGithubZipFile(gitHubCommit GitHubCommit, gitHubToken string, instan
 	if err != nil {
 		return zipFilePath, wrapError(err)
 	}
-	if resp.StatusCode != 200 {
+	if resp.StatusCode != http.StatusOK {
 		return zipFilePath, newError(FAILED_TO_DOWNLOAD_FILE, fmt.Sprintf("Failed to download file at the url %s. Received HTTP Response %d.", req.URL.String(), resp.StatusCode))
 	}
 	if resp.Header.Get("Content-Type") != "application/zip" {
