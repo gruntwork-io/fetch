@@ -47,7 +47,17 @@ See more examples in the [Examples section](#examples).
 
 ## Installation
 
+### Download from releases page
+
 Download the fetch binary from the [GitHub Releases](https://github.com/gruntwork-io/fetch/releases) tab.
+
+### Install via package manager
+
+Note that package managers are third party. The third party fetch packages may not be updated with the latest version, but are often close. Please check your version against the latest available on the [releases page](https://github.com/gruntwork-io/fetch/releases). If you want the latest version, the recommended installation option is to [download from the releases page](https://github.com/gruntwork-io/fetch/releases).
+
+- **macOS:** You can install fetch using [Homebrew](https://brew.sh/): `brew install fetch`. 
+
+- **Linux:** Most Linux users can use [Homebrew](https://docs.brew.sh/Homebrew-on-Linux): `brew install fetch`.
 
 ## Usage
 
