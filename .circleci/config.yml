@@ -33,10 +33,14 @@ workflows:
   build-and-test:
     jobs:
       - test:
+          context:
+            - Gruntwork Admin
           filters:
             tags:
               only: /^v.*/
       - build:
+          context:
+            - Gruntwork Admin
           requires:
             - test
           filters:
@@ -44,6 +48,8 @@ workflows:
               only: /^v.*/
 
       - deploy:
+          context:
+            - Gruntwork Admin
           requires:
             - build
           filters:
@@ -61,4 +67,6 @@ workflows:
             branches:
               only: master
     jobs:
-      - test
+      - test:
+          context:
+            - Gruntwork Admin
