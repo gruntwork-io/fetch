@@ -39,6 +39,8 @@ workflows:
             tags:
               only: /^v.*/
       - build:
+          context:
+            - Gruntwork Admin
           requires:
             - test
           filters:
