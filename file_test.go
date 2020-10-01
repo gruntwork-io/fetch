@@ -1,12 +1,12 @@
 package main
 
 import (
-	"os"
-	"testing"
-	"path/filepath"
-	"io/ioutil"
 	"fmt"
+	"io/ioutil"
+	"os"
+	"path/filepath"
 	"strings"
+	"testing"
 )
 
 // Although other tests besides those in this file require this env var, this init() func will cover all tests.
@@ -28,11 +28,11 @@ func TestDownloadGitTagZipFile(t *testing.T) {
 
 	enterpriseGitHubExample := GitHubInstance{
 		BaseUrl: "github.acme.com",
-		ApiUrl: "github.acme.com/api/v3",
+		ApiUrl:  "github.acme.com/api/v3",
 	}
 
 	cases := []struct {
-		instance 	GitHubInstance
+		instance    GitHubInstance
 		repoOwner   string
 		repoName    string
 		gitTag      string
@@ -47,7 +47,7 @@ func TestDownloadGitTagZipFile(t *testing.T) {
 		gitHubCommit := GitHubCommit{
 			Repo: GitHubRepo{
 				Owner: tc.repoOwner,
-				Name: tc.repoName,
+				Name:  tc.repoName,
 			},
 			GitTag: tc.gitTag,
 		}
@@ -95,7 +95,7 @@ func TestDownloadGitBranchZipFile(t *testing.T) {
 	}
 
 	cases := []struct {
-		instance 	GitHubInstance
+		instance    GitHubInstance
 		repoOwner   string
 		repoName    string
 		branchName  string
@@ -109,7 +109,7 @@ func TestDownloadGitBranchZipFile(t *testing.T) {
 		gitHubCommit := GitHubCommit{
 			Repo: GitHubRepo{
 				Owner: tc.repoOwner,
-				Name: tc.repoName,
+				Name:  tc.repoName,
 			},
 			BranchName: tc.branchName,
 		}
@@ -135,7 +135,7 @@ func TestDownloadBadGitBranchZipFile(t *testing.T) {
 	}
 
 	cases := []struct {
-		instance 	GitHubInstance
+		instance    GitHubInstance
 		repoOwner   string
 		repoName    string
 		branchName  string
@@ -148,7 +148,7 @@ func TestDownloadBadGitBranchZipFile(t *testing.T) {
 		gitHubCommit := GitHubCommit{
 			Repo: GitHubRepo{
 				Owner: tc.repoOwner,
-				Name: tc.repoName,
+				Name:  tc.repoName,
 			},
 			BranchName: tc.branchName,
 		}
@@ -170,7 +170,7 @@ func TestDownloadGitCommitFile(t *testing.T) {
 	}
 
 	cases := []struct {
-		instance 	GitHubInstance
+		instance    GitHubInstance
 		repoOwner   string
 		repoName    string
 		commitSha   string
@@ -186,7 +186,7 @@ func TestDownloadGitCommitFile(t *testing.T) {
 		gitHubCommit := GitHubCommit{
 			Repo: GitHubRepo{
 				Owner: tc.repoOwner,
-				Name: tc.repoName,
+				Name:  tc.repoName,
 			},
 			CommitSha: tc.commitSha,
 		}
@@ -212,7 +212,7 @@ func TestDownloadBadGitCommitFile(t *testing.T) {
 	}
 
 	cases := []struct {
-		instance 	GitHubInstance
+		instance    GitHubInstance
 		repoOwner   string
 		repoName    string
 		commitSha   string
@@ -230,7 +230,7 @@ func TestDownloadBadGitCommitFile(t *testing.T) {
 		gitHubCommit := GitHubCommit{
 			Repo: GitHubRepo{
 				Owner: tc.repoOwner,
-				Name: tc.repoName,
+				Name:  tc.repoName,
 			},
 			CommitSha: tc.commitSha,
 		}
@@ -252,7 +252,7 @@ func TestDownloadZipFileWithBadRepoValues(t *testing.T) {
 	}
 
 	cases := []struct {
-		instance 	GitHubInstance
+		instance    GitHubInstance
 		repoOwner   string
 		repoName    string
 		gitTag      string
@@ -265,7 +265,7 @@ func TestDownloadZipFileWithBadRepoValues(t *testing.T) {
 		gitHubCommit := GitHubCommit{
 			Repo: GitHubRepo{
 				Owner: tc.repoOwner,
-				Name: tc.repoName,
+				Name:  tc.repoName,
 			},
 			GitTag: tc.gitTag,
 		}
@@ -286,7 +286,7 @@ func TestExtractFiles(t *testing.T) {
 	}
 
 	cases := []struct {
-		instance 		  GitHubInstance
+		instance          GitHubInstance
 		localFilePath     string
 		filePathToExtract string
 		expectedNumFiles  int
@@ -294,9 +294,9 @@ func TestExtractFiles(t *testing.T) {
 	}{
 		{publicGitHub, "test-fixtures/fetch-test-public-0.0.1.zip", "/", 1, nil},
 		{publicGitHub, "test-fixtures/fetch-test-public-0.0.2.zip", "/", 2, nil},
-		{publicGitHub, "test-fixtures/fetch-test-public-0.0.3.zip", "/", 4, []string{"/README.md"} },
+		{publicGitHub, "test-fixtures/fetch-test-public-0.0.3.zip", "/", 4, []string{"/README.md"}},
 		{publicGitHub, "test-fixtures/fetch-test-public-0.0.3.zip", "/folder", 2, nil},
-		{publicGitHub, "test-fixtures/fetch-test-public-0.0.4.zip", "/aaa", 2, []string{"/hello.txt", "/subaaa/subhello.txt"} },
+		{publicGitHub, "test-fixtures/fetch-test-public-0.0.4.zip", "/aaa", 2, []string{"/hello.txt", "/subaaa/subhello.txt"}},
 	}
 
 	for _, tc := range cases {
@@ -315,13 +315,13 @@ func TestExtractFiles(t *testing.T) {
 		// Count the number of files in the directory
 		var numFiles int
 		filepath.Walk(tempDir, func(path string, info os.FileInfo, err error) error {
-			if ! info.IsDir() {
+			if !info.IsDir() {
 				numFiles++
 			}
 			return nil
 		})
 
-		if (numFiles != tc.expectedNumFiles) {
+		if numFiles != tc.expectedNumFiles {
 			t.Fatalf("While extracting %s, expected to find %d file(s), but found %d. Local path = %s", tc.localFilePath, tc.expectedNumFiles, numFiles, tempDir)
 		}
 
@@ -329,7 +329,7 @@ func TestExtractFiles(t *testing.T) {
 		filepath.Walk(tempDir, func(path string, info os.FileInfo, err error) error {
 			relativeFilename := strings.TrimPrefix(path, tempDir)
 
-			if ! info.IsDir() && stringInSlice(relativeFilename, tc.nonemptyFiles) {
+			if !info.IsDir() && stringInSlice(relativeFilename, tc.nonemptyFiles) {
 				if info.Size() == 0 {
 					t.Fatalf("Expected %s in %s to have non-zero file size, but found file size = %d.\n", relativeFilename, tc.localFilePath, info.Size())
 				}
@@ -360,7 +360,7 @@ func TestExtractFilesExtractFile(t *testing.T) {
 	filepath.Walk(tempDir, func(path string, info os.FileInfo, err error) error {
 		relativeFilename := strings.TrimPrefix(path, tempDir)
 
-		if ! info.IsDir() {
+		if !info.IsDir() {
 			if relativeFilename != localFileName {
 				t.Fatalf("Expected local file %s to be created, but not found.\n", localFileName)
 			}

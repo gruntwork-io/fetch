@@ -17,8 +17,8 @@ func (e *FetchError) Error() string {
 func newError(errorCode int, details string) *FetchError {
 	return &FetchError{
 		errorCode: errorCode,
-		details: details,
-		err: nil,
+		details:   details,
+		err:       nil,
 	}
 }
 
@@ -28,7 +28,7 @@ func wrapError(err error) *FetchError {
 	}
 	return &FetchError{
 		errorCode: -1,
-		details: err.Error(),
-		err: err,
+		details:   err.Error(),
+		err:       err,
 	}
 }

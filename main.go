@@ -36,19 +36,19 @@ type AssetDownloadResult struct {
 	err       error
 }
 
-const OPTION_REPO = "repo"
-const OPTION_COMMIT = "commit"
-const OPTION_BRANCH = "branch"
-const OPTION_TAG = "tag"
-const OPTION_GITHUB_TOKEN = "github-oauth-token"
-const OPTION_SOURCE_PATH = "source-path"
-const OPTION_RELEASE_ASSET = "release-asset"
-const OPTION_RELEASE_ASSET_CHECKSUM = "release-asset-checksum"
-const OPTION_RELEASE_ASSET_CHECKSUM_ALGO = "release-asset-checksum-algo"
-const OPTION_GITHUB_API_VERSION = "github-api-version"
-const OPTION_WITH_PROGRESS = "progress"
+const optionRepo = "repo"
+const optionCommit = "commit"
+const optionBranch = "branch"
+const optionTag = "tag"
+const optionGithubToken = "github-oauth-token"
+const optionSourcePath = "source-path"
+const optionReleaseAsset = "release-asset"
+const optionReleaseAssetChecksum = "release-asset-checksum"
+const optionReleaseAssetChecksumAlgo = "release-asset-checksum-algo"
+const optionGithubAPIVersion = "github-api-version"
+const optionWithProgress = "progress"
 
-const ENV_VAR_GITHUB_TOKEN = "GITHUB_OAUTH_TOKEN"
+const envVarGithubToken = "GITHUB_OAUTH_TOKEN"
 
 func main() {
 	app := cli.NewApp()
@@ -59,49 +59,49 @@ func main() {
 
 	app.Flags = []cli.Flag{
 		cli.StringFlag{
-			Name:  OPTION_REPO,
+			Name:  optionRepo,
 			Usage: "Required. Fully qualified URL of the GitHub repo.",
 		},
 		cli.StringFlag{
-			Name:  OPTION_COMMIT,
+			Name:  optionCommit,
 			Usage: "The specific git commit SHA to download. If specified, will override --branch and --tag.",
 		},
 		cli.StringFlag{
-			Name:  OPTION_BRANCH,
+			Name:  optionBranch,
 			Usage: "The git branch from which to download the commit; the latest commit in the branch\n\twill be used.\n\tIf specified, will override --tag.",
 		},
 		cli.StringFlag{
-			Name:  OPTION_TAG,
+			Name:  optionTag,
 			Usage: "The specific git tag to download, expressed with Version Constraint Operators.\n\tIf left blank, fetch will download the latest git tag.\n\tSee https://github.com/gruntwork-io/fetch#version-constraint-operators for examples.",
 		},
 		cli.StringFlag{
-			Name:   OPTION_GITHUB_TOKEN,
+			Name:   optionGithubToken,
 			Usage:  "A GitHub Personal Access Token, which is required for downloading from private\n\trepos. Populate by setting env var",
-			EnvVar: ENV_VAR_GITHUB_TOKEN,
+			EnvVar: envVarGithubToken,
 		},
 		cli.StringSliceFlag{
-			Name:  OPTION_SOURCE_PATH,
+			Name:  optionSourcePath,
 			Usage: "The source path to download from the repo. If this or --release-asset aren't specified,\n\tall files are downloaded. Can be specified more than once.",
 		},
 		cli.StringFlag{
-			Name:  OPTION_RELEASE_ASSET,
+			Name:  optionReleaseAsset,
 			Usage: "The name of a release asset--that is, a binary uploaded to a GitHub Release--to download.\n\tOnly works with --tag.",
 		},
 		cli.StringSliceFlag{
-			Name:  OPTION_RELEASE_ASSET_CHECKSUM,
+			Name:  optionReleaseAssetChecksum,
 			Usage: "The checksum that a release asset should have. Fetch will fail if this value is non-empty\n\tand does not match any of the checksums computed by Fetch.\n\tCan be specified more than once. If more than one\n\trelease asset is downloaded and one or more checksums are provided,\n\tthe asset's checksum must match one.",
 		},
 		cli.StringFlag{
-			Name:  OPTION_RELEASE_ASSET_CHECKSUM_ALGO,
+			Name:  optionReleaseAssetChecksumAlgo,
 			Usage: "The algorithm Fetch will use to compute a checksum of the release asset. Acceptable values\n\tare \"sha256\" and \"sha512\".",
 		},
 		cli.StringFlag{
-			Name:  OPTION_GITHUB_API_VERSION,
+			Name:  optionGithubAPIVersion,
 			Value: "v3",
 			Usage: "The api version of the GitHub instance. If left blank, v3 will be used.\n\tThis will only be used if the repo url is not a github.com url.",
 		},
 		cli.BoolFlag{
-			Name:  OPTION_WITH_PROGRESS,
+			Name:  optionWithProgress,
 			Usage: "Display progress on file downloads, especially useful for large files",
 		},
 	}
@@ -136,10 +136,10 @@ func runFetch(c *cli.Context) error {
 	// Get the tags for the given repo
 	tags, fetchErr := FetchTags(options.RepoUrl, options.GithubToken, instance)
 	if fetchErr != nil {
-		if fetchErr.errorCode == INVALID_GITHUB_TOKEN_OR_ACCESS_DENIED {
-			return errors.New(getErrorMessage(INVALID_GITHUB_TOKEN_OR_ACCESS_DENIED, fetchErr.details))
-		} else if fetchErr.errorCode == REPO_DOES_NOT_EXIST_OR_ACCESS_DENIED {
-			return errors.New(getErrorMessage(REPO_DOES_NOT_EXIST_OR_ACCESS_DENIED, fetchErr.details))
+		if fetchErr.errorCode == invalidGithubTokenOrAccessDenied {
+			return errors.New(getErrorMessage(invalidGithubTokenOrAccessDenied, fetchErr.details))
+		} else if fetchErr.errorCode == repoDoesNotExistOrAccessDenied {
+			return errors.New(getErrorMessage(repoDoesNotExistOrAccessDenied, fetchErr.details))
 		} else {
 			return fmt.Errorf("Error occurred while getting tags from GitHub repo: %s", fetchErr)
 		}
@@ -150,8 +150,8 @@ func runFetch(c *cli.Context) error {
 		// Find the specific release that matches the latest version constraint
 		latestTag, err := getLatestAcceptableTag(options.TagConstraint, tags)
 		if err != nil {
-			if err.errorCode == INVALID_TAG_CONSTRAINT_EXPRESSION {
-				return errors.New(getErrorMessage(INVALID_TAG_CONSTRAINT_EXPRESSION, err.details))
+			if err.errorCode == invalidTagConstraintExpression {
+				return errors.New(getErrorMessage(invalidTagConstraintExpression, err.details))
 			} else {
 				return fmt.Errorf("Error occurred while computing latest tag that satisfies version contraint expression: %s", err)
 			}
@@ -196,14 +196,14 @@ func runFetch(c *cli.Context) error {
 
 func parseOptions(c *cli.Context) FetchOptions {
 	localDownloadPath := c.Args().First()
-	sourcePaths := c.StringSlice(OPTION_SOURCE_PATH)
-	assetChecksums := c.StringSlice(OPTION_RELEASE_ASSET_CHECKSUM)
+	sourcePaths := c.StringSlice(optionSourcePath)
+	assetChecksums := c.StringSlice(optionReleaseAssetChecksum)
 	assetChecksumMap := make(map[string]bool, len(assetChecksums))
 
 	// Maintain backwards compatibility with older versions of fetch that passed source paths as an optional first
 	// command-line arg
 	if c.NArg() == 2 {
-		fmt.Printf("DEPRECATION WARNING: passing source paths via command-line args is deprecated. Please use the --%s option instead!\n", OPTION_SOURCE_PATH)
+		fmt.Printf("DEPRECATION WARNING: passing source paths via command-line args is deprecated. Please use the --%s option instead!\n", optionSourcePath)
 		sourcePaths = []string{c.Args().First()}
 		localDownloadPath = c.Args().Get(1)
 	}
@@ -213,24 +213,24 @@ func parseOptions(c *cli.Context) FetchOptions {
 	}
 
 	return FetchOptions{
-		RepoUrl:                  c.String(OPTION_REPO),
-		CommitSha:                c.String(OPTION_COMMIT),
-		BranchName:               c.String(OPTION_BRANCH),
-		TagConstraint:            c.String(OPTION_TAG),
-		GithubToken:              c.String(OPTION_GITHUB_TOKEN),
+		RepoUrl:                  c.String(optionRepo),
+		CommitSha:                c.String(optionCommit),
+		BranchName:               c.String(optionBranch),
+		TagConstraint:            c.String(optionTag),
+		GithubToken:              c.String(optionGithubToken),
 		SourcePaths:              sourcePaths,
-		ReleaseAsset:             c.String(OPTION_RELEASE_ASSET),
+		ReleaseAsset:             c.String(optionReleaseAsset),
 		ReleaseAssetChecksums:    assetChecksumMap,
-		ReleaseAssetChecksumAlgo: c.String(OPTION_RELEASE_ASSET_CHECKSUM_ALGO),
+		ReleaseAssetChecksumAlgo: c.String(optionReleaseAssetChecksumAlgo),
 		LocalDownloadPath:        localDownloadPath,
-		GithubApiVersion:         c.String(OPTION_GITHUB_API_VERSION),
-		WithProgress:             c.IsSet(OPTION_WITH_PROGRESS),
+		GithubApiVersion:         c.String(optionGithubAPIVersion),
+		WithProgress:             c.IsSet(optionWithProgress),
 	}
 }
 
 func validateOptions(options FetchOptions) error {
 	if options.RepoUrl == "" {
-		return fmt.Errorf("The --%s flag is required. Run \"fetch --help\" for full usage info.", OPTION_REPO)
+		return fmt.Errorf("The --%s flag is required. Run \"fetch --help\" for full usage info.", optionRepo)
 	}
 
 	if options.LocalDownloadPath == "" {
@@ -238,15 +238,15 @@ func validateOptions(options FetchOptions) error {
 	}
 
 	if options.TagConstraint == "" && options.CommitSha == "" && options.BranchName == "" {
-		return fmt.Errorf("You must specify exactly one of --%s, --%s, or --%s. Run \"fetch --help\" for full usage info.", OPTION_TAG, OPTION_COMMIT, OPTION_BRANCH)
+		return fmt.Errorf("You must specify exactly one of --%s, --%s, or --%s. Run \"fetch --help\" for full usage info.", optionTag, optionCommit, optionBranch)
 	}
 
 	if options.ReleaseAsset != "" && options.TagConstraint == "" {
-		return fmt.Errorf("The --%s flag can only be used with --%s. Run \"fetch --help\" for full usage info.", OPTION_RELEASE_ASSET, OPTION_TAG)
+		return fmt.Errorf("The --%s flag can only be used with --%s. Run \"fetch --help\" for full usage info.", optionReleaseAsset, optionTag)
 	}
 
 	if len(options.ReleaseAssetChecksums) > 0 && options.ReleaseAssetChecksumAlgo == "" {
-		return fmt.Errorf("If the %s flag is set, you must also enter a value for the %s flag.", OPTION_RELEASE_ASSET_CHECKSUM, OPTION_RELEASE_ASSET_CHECKSUM_ALGO)
+		return fmt.Errorf("If the %s flag is set, you must also enter a value for the %s flag.", optionReleaseAssetChecksum, optionReleaseAssetChecksumAlgo)
 	}
 
 	return nil
@@ -397,7 +397,7 @@ func cleanupZipFile(localZipFilePath string) error {
 
 func getErrorMessage(errorCode int, errorDetails string) string {
 	switch errorCode {
-	case INVALID_TAG_CONSTRAINT_EXPRESSION:
+	case invalidTagConstraintExpression:
 		return fmt.Sprintf(`
 The --tag value you entered is not a valid constraint expression.
 See https://github.com/gruntwork-io/fetch#version-constraint-operators for examples.
@@ -405,7 +405,7 @@ See https://github.com/gruntwork-io/fetch#version-constraint-operators for examp
 Underlying error message:
 %s
 `, errorDetails)
-	case INVALID_GITHUB_TOKEN_OR_ACCESS_DENIED:
+	case invalidGithubTokenOrAccessDenied:
 		return fmt.Sprintf(`
 Received an HTTP 401 Response when attempting to query the repo for its tags.
 
@@ -415,7 +415,7 @@ to either a public repo or a private repo to which you don't have access.
 Underlying error message:
 %s
 `, errorDetails)
-	case REPO_DOES_NOT_EXIST_OR_ACCESS_DENIED:
+	case repoDoesNotExistOrAccessDenied:
 		return fmt.Sprintf(`
 Received an HTTP 404 Response when attempting to query the repo for its tags.
 

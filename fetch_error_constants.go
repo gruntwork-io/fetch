@@ -1,12 +1,12 @@
 package main
 
-const INVALID_TAG_CONSTRAINT_EXPRESSION = 100
+const invalidTagConstraintExpression = 100
 
-const GITHUB_REPO_URL_MALFORMED_OR_NOT_PARSEABLE = 300
+const githubRepoUrlMalformedOrNotParseable = 300
 
-const INVALID_GITHUB_TOKEN_OR_ACCESS_DENIED = 401
-const REPO_DOES_NOT_EXIST_OR_ACCESS_DENIED = 404
+const invalidGithubTokenOrAccessDenied = 401
+const repoDoesNotExistOrAccessDenied = 404
 
-const FAILED_TO_DOWNLOAD_FILE = 500
-const CHECKSUM_DOES_NOT_MATCH = 510
-const ERROR_WHILE_COMPUTING_CHECKSUM = 520
+const failedToDownloadFile = 500
+const checksumDoesNotMatch = 510
+const errorWhileComputingChecksum = 520
