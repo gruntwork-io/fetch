@@ -1,9 +1,10 @@
 package main
 
 import (
+	"errors"
 	"sort"
 	"strings"
-	"errors"
+
 	"github.com/hashicorp/go-version"
 )
 
@@ -57,7 +58,7 @@ func getLatestAcceptableTag(tagConstraint string, tags []string) (string, *Fetch
 	if err != nil {
 		// Explicitly check for a malformed tag value so we can return a nice error to the user
 		if strings.Contains(err.Error(), "Malformed constraint") {
-			return "", newError(INVALID_TAG_CONSTRAINT_EXPRESSION, err.Error())
+			return "", newError(invalidTagConstraintExpression, err.Error())
 		} else {
 			return "", wrapError(err)
 		}

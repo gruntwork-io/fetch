@@ -78,7 +78,7 @@ func ParseUrlIntoGithubInstance(repoUrl string, apiv string) (GitHubInstance, *F
 
 	u, err := url.Parse(repoUrl)
 	if err != nil {
-		return instance, newError(GITHUB_REPO_URL_MALFORMED_OR_NOT_PARSEABLE, fmt.Sprintf("GitHub Repo URL %s is malformed.", repoUrl))
+		return instance, newError(githubRepoUrlMalformedOrNotParseable, fmt.Sprintf("GitHub Repo URL %s is malformed.", repoUrl))
 	}
 
 	baseUrl := u.Host
@@ -138,12 +138,12 @@ func ParseUrlIntoGitHubRepo(url string, token string, instance GitHubInstance) (
 
 	regex, regexErr := regexp.Compile("https?://(?:www\\.)?" + instance.BaseUrl + "/(.+?)/(.+?)(?:$|\\?|#|/)")
 	if regexErr != nil {
-		return gitHubRepo, newError(GITHUB_REPO_URL_MALFORMED_OR_NOT_PARSEABLE, fmt.Sprintf("GitHub Repo URL %s is malformed.", url))
+		return gitHubRepo, newError(githubRepoUrlMalformedOrNotParseable, fmt.Sprintf("GitHub Repo URL %s is malformed.", url))
 	}
 
 	matches := regex.FindStringSubmatch(url)
 	if len(matches) != 3 {
-		return gitHubRepo, newError(GITHUB_REPO_URL_MALFORMED_OR_NOT_PARSEABLE, fmt.Sprintf("GitHub Repo URL %s could not be parsed correctly", url))
+		return gitHubRepo, newError(githubRepoUrlMalformedOrNotParseable, fmt.Sprintf("GitHub Repo URL %s could not be parsed correctly", url))
 	}
 
 	gitHubRepo = GitHubRepo{
@@ -239,7 +239,7 @@ func callGitHubApi(repo GitHubRepo, path string, customHeaders map[string]string
 
 type writeCounter struct {
 	written uint64
-	suffix string // contains " / SIZE MB" if size is known, otherwise empty
+	suffix  string // contains " / SIZE MB" if size is known, otherwise empty
 }
 
 func newWriteCounter(total int64) *writeCounter {
@@ -279,7 +279,7 @@ func writeResonseToDisk(resp *http.Response, destPath string, withProgress bool)
 	defer resp.Body.Close()
 
 	var readCloser io.Reader
-	if withProgress{
+	if withProgress {
 		readCloser = io.TeeReader(resp.Body, newWriteCounter(resp.ContentLength))
 	} else {
 		readCloser = resp.Body

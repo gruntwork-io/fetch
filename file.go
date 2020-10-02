@@ -1,13 +1,13 @@
 package main
 
 import (
-	"io/ioutil"
-	"os"
-	"fmt"
-	"net/http"
-	"path/filepath"
-	"bytes"
 	"archive/zip"
+	"bytes"
+	"fmt"
+	"io/ioutil"
+	"net/http"
+	"os"
+	"path/filepath"
 	"strings"
 )
 
@@ -38,10 +38,10 @@ func downloadGithubZipFile(gitHubCommit GitHubCommit, gitHubToken string, instan
 		return zipFilePath, wrapError(err)
 	}
 	if resp.StatusCode != http.StatusOK {
-		return zipFilePath, newError(FAILED_TO_DOWNLOAD_FILE, fmt.Sprintf("Failed to download file at the url %s. Received HTTP Response %d.", req.URL.String(), resp.StatusCode))
+		return zipFilePath, newError(failedToDownloadFile, fmt.Sprintf("Failed to download file at the url %s. Received HTTP Response %d.", req.URL.String(), resp.StatusCode))
 	}
 	if resp.Header.Get("Content-Type") != "application/zip" {
-		return zipFilePath, newError(FAILED_TO_DOWNLOAD_FILE, fmt.Sprintf("Failed to download file at the url %s. Expected HTTP Response's \"Content-Type\" header to be \"application/zip\", but was \"%s\"", req.URL.String(), resp.Header.Get("Content-Type")))
+		return zipFilePath, newError(failedToDownloadFile, fmt.Sprintf("Failed to download file at the url %s. Expected HTTP Response's \"Content-Type\" header to be \"application/zip\", but was \"%s\"", req.URL.String(), resp.Header.Get("Content-Type")))
 	}
 
 	// Copy the contents of the downloaded file to our empty file
@@ -78,7 +78,7 @@ func shouldExtractPathInZip(pathPrefix string, zipPath *zip.File) bool {
 	//		   Check if (pathPrefix + "/") is a prefix in f.Name, if yes, we extract this file.
 
 	zipPathIsFile := !zipPath.FileInfo().IsDir()
-	return (zipPathIsFile && zipPath.Name == pathPrefix) || strings.Index(zipPath.Name, pathPrefix + "/") == 0
+	return (zipPathIsFile && zipPath.Name == pathPrefix) || strings.Index(zipPath.Name, pathPrefix+"/") == 0
 }
 
 // Decompress the file at zipFileAbsPath and move only those files under filesToExtractFromZipPath to localPath
