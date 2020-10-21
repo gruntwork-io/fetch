@@ -307,7 +307,7 @@ func TestExtractFiles(t *testing.T) {
 		}
 		defer os.RemoveAll(tempDir)
 
-		err = extractFiles(tc.localFilePath, tc.filePathToExtract, tempDir)
+		_, err = extractFiles(tc.localFilePath, tc.filePathToExtract, tempDir)
 		if err != nil {
 			t.Fatalf("Failed to extract files: %s", err)
 		}
@@ -352,7 +352,7 @@ func TestExtractFilesExtractFile(t *testing.T) {
 	filePathToExtract := "zzz.txt"
 	localFileName := "/localzzz.txt"
 	localPathName := filepath.Join(tempDir, localFileName)
-	err = extractFiles(zipFilePath, filePathToExtract, localPathName)
+	_, err = extractFiles(zipFilePath, filePathToExtract, localPathName)
 	if err != nil {
 		t.Fatalf("Failed to extract files: %s", err)
 	}

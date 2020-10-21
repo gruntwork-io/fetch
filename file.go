@@ -82,12 +82,12 @@ func shouldExtractPathInZip(pathPrefix string, zipPath *zip.File) bool {
 }
 
 // Decompress the file at zipFileAbsPath and move only those files under filesToExtractFromZipPath to localPath
-func extractFiles(zipFilePath, filesToExtractFromZipPath, localPath string) error {
+func extractFiles(zipFilePath, filesToExtractFromZipPath, localPath string) (int, error) {
 
 	// Open the zip file for reading.
 	r, err := zip.OpenReader(zipFilePath)
 	if err != nil {
-		return err
+		return 0, err
 	}
 	defer r.Close()
 
@@ -102,6 +102,9 @@ func extractFiles(zipFilePath, filesToExtractFromZipPath, localPath string) erro
 	// Add the path from which we will extract files to the path prefix so we can exclude the appropriate files
 	pathPrefix = filepath.Join(pathPrefix, filesToExtractFromZipPath)
 
+	// Count the number of files (not directories) unpacked
+	fileCount := 0
+
 	// Iterate through the files in the archive,
 	// printing some of their contents.
 	for _, f := range r.File {
@@ -114,30 +117,31 @@ func extractFiles(zipFilePath, filesToExtractFromZipPath, localPath string) erro
 				path := filepath.Join(localPath, strings.TrimPrefix(f.Name, pathPrefix))
 				err = os.MkdirAll(path, 0777)
 				if err != nil {
-					return fmt.Errorf("Failed to create local directory %s: %s", path, err)
+					return 0, fmt.Errorf("Failed to create local directory %s: %s", path, err)
 				}
 			} else {
 				// Read the file into a byte array
 				readCloser, err := f.Open()
 				if err != nil {
-					return fmt.Errorf("Failed to open file %s: %s", f.Name, err)
+					return 0, fmt.Errorf("Failed to open file %s: %s", f.Name, err)
 				}
 
 				byteArray, err := ioutil.ReadAll(readCloser)
 				if err != nil {
-					return fmt.Errorf("Failed to read file %s: %s", f.Name, err)
+					return 0, fmt.Errorf("Failed to read file %s: %s", f.Name, err)
 				}
 
 				// Write the file
 				err = ioutil.WriteFile(filepath.Join(localPath, strings.TrimPrefix(f.Name, pathPrefix)), byteArray, 0644)
 				if err != nil {
-					return fmt.Errorf("Failed to write file: %s", err)
+					return 0, fmt.Errorf("Failed to write file: %s", err)
 				}
+				fileCount++
 			}
 		}
 	}
 
-	return nil
+	return fileCount, nil
 }
 
 // Return an HTTP request that will fetch the given GitHub repo's zip file for the given tag, possibly with the gitHubOAuthToken in the header
