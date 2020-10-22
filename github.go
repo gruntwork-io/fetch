@@ -12,6 +12,7 @@ import (
 	"strings"
 
 	"github.com/dustin/go-humanize"
+	"github.com/hashicorp/go-version"
 )
 
 type GitHubRepo struct {
@@ -96,7 +97,7 @@ func ParseUrlIntoGithubInstance(repoUrl string, apiv string) (GitHubInstance, *F
 	return instance, nil
 }
 
-// Fetch all tags from the given GitHub repo
+// Fetch all SemVer tags from the given GitHub repo
 func FetchTags(githubRepoUrl string, githubToken string, instance GitHubInstance) ([]string, *FetchError) {
 	var tagsString []string
 
@@ -106,6 +107,7 @@ func FetchTags(githubRepoUrl string, githubToken string, instance GitHubInstance
 	}
 
 	url := createGitHubRepoUrlForPath(repo, "tags")
+
 	resp, err := callGitHubApi(repo, url, map[string]string{})
 	if err != nil {
 		return tagsString, err
@@ -126,7 +128,9 @@ func FetchTags(githubRepoUrl string, githubToken string, instance GitHubInstance
 	}
 
 	for _, tag := range tags {
-		tagsString = append(tagsString, tag.Name)
+		if _, err := version.NewVersion(tag.Name); err == nil {
+			tagsString = append(tagsString, tag.Name)
+		}
 	}
 
 	return tagsString, nil
