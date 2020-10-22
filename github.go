@@ -107,7 +107,6 @@ func FetchTags(githubRepoUrl string, githubToken string, instance GitHubInstance
 	}
 
 	url := createGitHubRepoUrlForPath(repo, "tags")
-
 	resp, err := callGitHubApi(repo, url, map[string]string{})
 	if err != nil {
 		return tagsString, err
