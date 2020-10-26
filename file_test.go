@@ -355,10 +355,16 @@ func TestExtractFilesExtractFile(t *testing.T) {
 	zipFilePath := "test-fixtures/fetch-test-public-0.0.4.zip"
 	filePathToExtract := "zzz.txt"
 	localFileName := "/localzzz.txt"
+	expectedFileCount := 1
 	localPathName := filepath.Join(tempDir, localFileName)
-	_, err = extractFiles(zipFilePath, filePathToExtract, localPathName)
+	fileCount, err := extractFiles(zipFilePath, filePathToExtract, localPathName)
+
 	if err != nil {
 		t.Fatalf("Failed to extract files: %s", err)
+	}
+
+	if fileCount != expectedFileCount {
+		t.Fatalf("Expected to extract %d files, extracted %d instead", expectedFileCount, fileCount)
 	}
 
 	filepath.Walk(tempDir, func(path string, info os.FileInfo, err error) error {
