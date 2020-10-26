@@ -127,6 +127,7 @@ func FetchTags(githubRepoUrl string, githubToken string, instance GitHubInstance
 	}
 
 	for _, tag := range tags {
+		// Skip tags that are not semantically versioned so that they don't cause errors. (issue #75)
 		if _, err := version.NewVersion(tag.Name); err == nil {
 			tagsString = append(tagsString, tag.Name)
 		}
