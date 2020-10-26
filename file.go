@@ -117,24 +117,24 @@ func extractFiles(zipFilePath, filesToExtractFromZipPath, localPath string) (int
 				path := filepath.Join(localPath, strings.TrimPrefix(f.Name, pathPrefix))
 				err = os.MkdirAll(path, 0777)
 				if err != nil {
-					return 0, fmt.Errorf("Failed to create local directory %s: %s", path, err)
+					return fileCount, fmt.Errorf("Failed to create local directory %s: %s", path, err)
 				}
 			} else {
 				// Read the file into a byte array
 				readCloser, err := f.Open()
 				if err != nil {
-					return 0, fmt.Errorf("Failed to open file %s: %s", f.Name, err)
+					return fileCount, fmt.Errorf("Failed to open file %s: %s", f.Name, err)
 				}
 
 				byteArray, err := ioutil.ReadAll(readCloser)
 				if err != nil {
-					return 0, fmt.Errorf("Failed to read file %s: %s", f.Name, err)
+					return fileCount, fmt.Errorf("Failed to read file %s: %s", f.Name, err)
 				}
 
 				// Write the file
 				err = ioutil.WriteFile(filepath.Join(localPath, strings.TrimPrefix(f.Name, pathPrefix)), byteArray, 0644)
 				if err != nil {
-					return 0, fmt.Errorf("Failed to write file: %s", err)
+					return fileCount, fmt.Errorf("Failed to write file: %s", err)
 				}
 				fileCount++
 			}
