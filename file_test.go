@@ -307,9 +307,13 @@ func TestExtractFiles(t *testing.T) {
 		}
 		defer os.RemoveAll(tempDir)
 
-		_, err = extractFiles(tc.localFilePath, tc.filePathToExtract, tempDir)
+		fileCount, err := extractFiles(tc.localFilePath, tc.filePathToExtract, tempDir)
 		if err != nil {
 			t.Fatalf("Failed to extract files: %s", err)
+		}
+
+		if fileCount != tc.expectedNumFiles {
+			t.Fatalf("Expected to extract %d files, extracted %d instead", tc.expectedNumFiles, fileCount)
 		}
 
 		// Count the number of files in the directory
