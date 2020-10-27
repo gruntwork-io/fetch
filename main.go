@@ -288,10 +288,17 @@ func downloadSourcePaths(sourcePaths []string, destPath string, githubRepo GitHu
 
 	// Unzip and move the files we need to our destination
 	for _, sourcePath := range sourcePaths {
-		fmt.Printf("Extracting files from <repo>%s to %s ...\n", sourcePath, destPath)
-		if err := extractFiles(localZipFilePath, sourcePath, destPath); err != nil {
+		fmt.Printf("Extracting files from <repo>%s to %s ... ", sourcePath, destPath)
+		fileCount, err := extractFiles(localZipFilePath, sourcePath, destPath)
+		plural := ""
+		if fileCount != 1 {
+			plural = "s"
+		}
+		fmt.Printf("%d file%s extracted\n", fileCount, plural)
+		if err != nil {
 			return fmt.Errorf("Error occurred while extracting files from GitHub zip file: %s", err.Error())
 		}
+
 	}
 
 	fmt.Println("Download and file extraction complete.")
