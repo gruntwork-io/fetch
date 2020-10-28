@@ -18,14 +18,15 @@ func TestGetListOfReleasesFromGitHubRepo(t *testing.T) {
 		repoUrl          string
 		firstReleaseTag  string
 		lastReleaseTag   string
+		expectedNumTags  int
 		gitHubOAuthToken string
 		testInst         GitHubInstance
 	}{
 		// Test on a public repo whose sole purpose is to be a test fixture for this tool
-		{"https://github.com/gruntwork-io/fetch-test-public", "v0.0.1", "v0.0.3", "", testInst},
+		{"https://github.com/gruntwork-io/fetch-test-public", "v0.0.1", "v0.0.3", 3, "", testInst},
 
 		// Private repo equivalent
-		{"https://github.com/gruntwork-io/fetch-test-private", "v0.0.2", "v0.0.2", os.Getenv("GITHUB_OAUTH_TOKEN"), testInst},
+		{"https://github.com/gruntwork-io/fetch-test-private", "v0.0.2", "v0.0.2", 1, os.Getenv("GITHUB_OAUTH_TOKEN"), testInst},
 	}
 
 	for _, tc := range cases {
@@ -40,6 +41,10 @@ func TestGetListOfReleasesFromGitHubRepo(t *testing.T) {
 
 		if len(releases) == 0 && tc.firstReleaseTag != "" {
 			t.Fatalf("expected non-empty list of releases for repo %s, but no releases were found", tc.repoUrl)
+		}
+
+		if len(releases) != tc.expectedNumTags {
+			t.Fatalf("expected %d releases, but got %d", tc.expectedNumTags, len(releases))
 		}
 
 		if releases[len(releases)-1] != tc.firstReleaseTag {
