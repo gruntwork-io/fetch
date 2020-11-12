@@ -74,12 +74,12 @@ fetch [OPTIONS] <local-download-path>
 The supported options are:
 
 - `--repo` (**Required**): The fully qualified URL of the GitHub repo to download from (e.g. https://github.com/foo/bar).
+- `--ref` (**Optional**): The git reference to download. If specified, will override `--commit`, `--branch`, and `--tag`.
 - `--tag` (**Optional**): The git tag to download. Can be a specific tag or a [Tag Constraint
   Expression](#tag-constraint-expressions).
 - `--branch` (**Optional**): The git branch from which to download; the latest commit in the branch will be used. If
   specified, will override `--tag`.
 - `--commit` (**Optional**): The SHA of a git commit to download. If specified, will override `--branch` and `--tag`.
-- `--ref` (**Optional**): The git reference to download. If specified, will override `--commit`, `--branch`, and `--tag`.
 - `--source-path` (**Optional**): The source path to download from the repo (e.g. `--source-path=/folder` will download
   the `/folder` path and all files below it). By default, all files are downloaded from the repo unless `--source-path`
   or `--release-asset` is specified. This option can be specified more than once.
