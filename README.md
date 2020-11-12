@@ -15,7 +15,7 @@ authentication. Fetch makes it possible to handle all of these cases with a one-
 
 #### Features
 
-- Download from a specific git tag, branch, or commit SHA.
+- Download from a generic git reference or specific git tag, branch, or commit SHA.
 - Download a single file, a subset of files, or all files from the repo.
 - Download one or more binary assets from a specific release that match a regular expression.
 - Verify the SHA256 or SHA512 checksum of a binary asset.
@@ -79,6 +79,7 @@ The supported options are:
 - `--branch` (**Optional**): The git branch from which to download; the latest commit in the branch will be used. If
   specified, will override `--tag`.
 - `--commit` (**Optional**): The SHA of a git commit to download. If specified, will override `--branch` and `--tag`.
+- `--ref` (**Optional**): The git reference to download. If specified, will override `--commit`, `--branch`, and `--tag`.
 - `--source-path` (**Optional**): The source path to download from the repo (e.g. `--source-path=/folder` will download
   the `/folder` path and all files below it). By default, all files are downloaded from the repo unless `--source-path`
   or `--release-asset` is specified. This option can be specified more than once.
@@ -163,7 +164,7 @@ fetch --repo="https://github.com/foo/bar" --branch="sample-branch" /tmp/josh1
 Download all files from the git commit `f32a08313e30f116a1f5617b8b68c11f1c1dbb61`, and save them to `/tmp`:
 
 ```
-fetch --repo="https://github.com/foo/bar" --commit="f32a08313e30f116a1f5617b8b68c11f1c1dbb61" /tmp/josh1
+fetch --repo="https://github.com/foo/bar" --commit="f32a08313e30f116a1f5617b8b68c11f1c1dbb61" /tmp
 ```
 
 #### Usage Example 6
@@ -182,6 +183,14 @@ Download the release asset `foo.exe` from a GitHub release hosted on a GitHub En
 fetch --repo="https://ghe.mycompany.com/foo/bar" --tag="0.1.5" --release-asset="foo.exe" /tmp
 ```
 
+#### Usage Example 8
+
+Download all files from the latest commit on the `sample-branch` branch by specifying the branch as a git reference, and save them to `/tmp`:
+
+```
+fetch --repo="https://github.com/foo/bar" --ref="sample-branch" /tmp
+```
+
 ## License
 
 This code is released under the MIT License. See [LICENSE.txt](/LICENSE.txt).
@@ -191,3 +200,12 @@ This code is released under the MIT License. See [LICENSE.txt](/LICENSE.txt).
 - Introduce code verification using something like GPG signatures or published checksums
 - Explicitly test for exotic repo and org names
 - Apply stricter parsing for repo-filter command-line arg
+
+## Issue #73
+
+- Modify CLI to accept --ref
+- --ref takes precidence over --commit, --branch, --tag (in validateOptions)
+- downloadSourcePaths() adds gitRef parameter
+- Modify GitHubCommit to add a `GitRef` of type string
+- For testing in `file_test.go`, all commit, branch, and tag tests should be repeated with gitref specified instead of the specific type.
+
