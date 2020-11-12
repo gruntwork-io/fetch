@@ -44,44 +44,56 @@ func TestDownloadGitTagZipFile(t *testing.T) {
 	}
 
 	for _, tc := range cases {
-		gitHubCommit := GitHubCommit{
-			Repo: GitHubRepo{
-				Owner: tc.repoOwner,
-				Name:  tc.repoName,
+		gitHubCommits := []GitHubCommit{
+			// Test as a GitTag
+			GitHubCommit{
+				Repo: GitHubRepo{
+					Owner: tc.repoOwner,
+					Name:  tc.repoName,
+				},
+				GitTag: tc.gitTag,
 			},
-			GitTag: tc.gitTag,
+			// Test as a GitRef
+			GitHubCommit{
+				Repo: GitHubRepo{
+					Owner: tc.repoOwner,
+					Name:  tc.repoName,
+				},
+				GitRef: tc.gitTag,
+			},
 		}
+		for _, gitHubCommit := range gitHubCommits {
+			zipFilePath, err := downloadGithubZipFile(gitHubCommit, tc.githubToken, tc.instance)
 
-		zipFilePath, err := downloadGithubZipFile(gitHubCommit, tc.githubToken, tc.instance)
+			defer os.RemoveAll(zipFilePath)
 
-		defer os.RemoveAll(zipFilePath)
+			// We don't have a running instance of GitHub Enterprise against which to validate tests as we do for GitHub public,
+			// so this test will only validate that fetch attempted to download from the expected URL. The download itself
+			// will fail.
 
-		// We don't have a running instance of GitHub Enterprise against which to validate tests as we do for GitHub public,
-		// so this test will only validate that fetch attempted to download from the expected URL. The download itself
-		// will fail.
+			githubEnterpriseDownloadUrl := fmt.Sprintf("https://%s/repos/%s/%s/zipball/%s", tc.instance.ApiUrl, tc.repoOwner, tc.repoName, tc.gitTag)
 
-		githubEnterpriseDownloadUrl := fmt.Sprintf("https://%s/repos/%s/%s/zipball/%s", tc.instance.ApiUrl, tc.repoOwner, tc.repoName, tc.gitTag)
+			// TODO: The awkwardness of this test makes it clear that a better structure for this program would be to refactor
+			// the downloadGithubZipFile() function to a function called downloadGithubFile() that would accept a URL as a
+			// param. We could then test explicitly that the URL is as expected, which would make GitHub Enterprise test cases
+			// simpler to handle.
 
-		// TODO: The awkwardness of this test makes it clear that a better structure for this program would be to refactor
-		// the downloadGithubZipFile() function to a function called downloadGithubFile() that would accept a URL as a
-		// param. We could then test explicitly that the URL is as expected, which would make GitHub Enterprise test cases
-		// simpler to handle.
-
-		if err != nil && strings.Contains(err.Error(), "no such host") {
-			if strings.Contains(err.Error(), githubEnterpriseDownloadUrl) {
-				t.Logf("Found expected download URL %s. Download itself failed as expected because no GitHub Enterprise instance exists at the given URL.", githubEnterpriseDownloadUrl)
-				return
-			} else {
-				t.Fatalf("Attempted to download from URL other than the expected download URL of %s. Full error: %s", githubEnterpriseDownloadUrl, err.Error())
+			if err != nil && strings.Contains(err.Error(), "no such host") {
+				if strings.Contains(err.Error(), githubEnterpriseDownloadUrl) {
+					t.Logf("Found expected download URL %s. Download itself failed as expected because no GitHub Enterprise instance exists at the given URL.", githubEnterpriseDownloadUrl)
+					return
+				} else {
+					t.Fatalf("Attempted to download from URL other than the expected download URL of %s. Full error: %s", githubEnterpriseDownloadUrl, err.Error())
+				}
 			}
-		}
 
-		if err != nil {
-			t.Fatalf("Failed to download file: %s", err)
-		}
+			if err != nil {
+				t.Fatalf("Failed to download file: %s", err)
+			}
 
-		if _, err := os.Stat(zipFilePath); os.IsNotExist(err) {
-			t.Fatalf("Downloaded file doesn't exist at the expected path of %s", zipFilePath)
+			if _, err := os.Stat(zipFilePath); os.IsNotExist(err) {
+				t.Fatalf("Downloaded file doesn't exist at the expected path of %s", zipFilePath)
+			}
 		}
 	}
 }
@@ -106,22 +118,32 @@ func TestDownloadGitBranchZipFile(t *testing.T) {
 	}
 
 	for _, tc := range cases {
-		gitHubCommit := GitHubCommit{
-			Repo: GitHubRepo{
-				Owner: tc.repoOwner,
-				Name:  tc.repoName,
+		gitHubCommits := []GitHubCommit{
+			GitHubCommit{
+				Repo: GitHubRepo{
+					Owner: tc.repoOwner,
+					Name:  tc.repoName,
+				},
+				BranchName: tc.branchName,
 			},
-			BranchName: tc.branchName,
+			GitHubCommit{
+				Repo: GitHubRepo{
+					Owner: tc.repoOwner,
+					Name:  tc.repoName,
+				},
+				GitRef: tc.branchName,
+			},
 		}
+		for _, gitHubCommit := range gitHubCommits {
+			zipFilePath, err := downloadGithubZipFile(gitHubCommit, tc.githubToken, tc.instance)
+			defer os.RemoveAll(zipFilePath)
+			if err != nil {
+				t.Fatalf("Failed to download file: %s", err)
+			}
 
-		zipFilePath, err := downloadGithubZipFile(gitHubCommit, tc.githubToken, tc.instance)
-		defer os.RemoveAll(zipFilePath)
-		if err != nil {
-			t.Fatalf("Failed to download file: %s", err)
-		}
-
-		if _, err := os.Stat(zipFilePath); os.IsNotExist(err) {
-			t.Fatalf("Downloaded file doesn't exist at the expected path of %s", zipFilePath)
+			if _, err := os.Stat(zipFilePath); os.IsNotExist(err) {
+				t.Fatalf("Downloaded file doesn't exist at the expected path of %s", zipFilePath)
+			}
 		}
 	}
 }
@@ -145,18 +167,28 @@ func TestDownloadBadGitBranchZipFile(t *testing.T) {
 	}
 
 	for _, tc := range cases {
-		gitHubCommit := GitHubCommit{
-			Repo: GitHubRepo{
-				Owner: tc.repoOwner,
-				Name:  tc.repoName,
+		gitHubCommits := []GitHubCommit{
+			GitHubCommit{
+				Repo: GitHubRepo{
+					Owner: tc.repoOwner,
+					Name:  tc.repoName,
+				},
+				BranchName: tc.branchName,
 			},
-			BranchName: tc.branchName,
+			GitHubCommit{
+				Repo: GitHubRepo{
+					Owner: tc.repoOwner,
+					Name:  tc.repoName,
+				},
+				GitRef: tc.branchName,
+			},
 		}
-
-		zipFilePath, err := downloadGithubZipFile(gitHubCommit, tc.githubToken, tc.instance)
-		defer os.RemoveAll(zipFilePath)
-		if err == nil {
-			t.Fatalf("Expected that attempt to download repo %s/%s for branch \"%s\" would fail, but received no error.", tc.repoOwner, tc.repoName, tc.branchName)
+		for _, gitHubCommit := range gitHubCommits {
+			zipFilePath, err := downloadGithubZipFile(gitHubCommit, tc.githubToken, tc.instance)
+			defer os.RemoveAll(zipFilePath)
+			if err == nil {
+				t.Fatalf("Expected that attempt to download repo %s/%s for branch \"%s\" would fail, but received no error.", tc.repoOwner, tc.repoName, tc.branchName)
+			}
 		}
 	}
 }
@@ -183,22 +215,32 @@ func TestDownloadGitCommitFile(t *testing.T) {
 	}
 
 	for _, tc := range cases {
-		gitHubCommit := GitHubCommit{
-			Repo: GitHubRepo{
-				Owner: tc.repoOwner,
-				Name:  tc.repoName,
+		GitHubCommits := []GitHubCommit{
+			GitHubCommit{
+				Repo: GitHubRepo{
+					Owner: tc.repoOwner,
+					Name:  tc.repoName,
+				},
+				CommitSha: tc.commitSha,
 			},
-			CommitSha: tc.commitSha,
+			GitHubCommit{
+				Repo: GitHubRepo{
+					Owner: tc.repoOwner,
+					Name:  tc.repoName,
+				},
+				GitRef: tc.commitSha,
+			},
 		}
+		for _, gitHubCommit := range GitHubCommits {
+			zipFilePath, err := downloadGithubZipFile(gitHubCommit, tc.githubToken, tc.instance)
+			defer os.RemoveAll(zipFilePath)
+			if err != nil {
+				t.Fatalf("Failed to download file: %s", err)
+			}
 
-		zipFilePath, err := downloadGithubZipFile(gitHubCommit, tc.githubToken, tc.instance)
-		defer os.RemoveAll(zipFilePath)
-		if err != nil {
-			t.Fatalf("Failed to download file: %s", err)
-		}
-
-		if _, err := os.Stat(zipFilePath); os.IsNotExist(err) {
-			t.Fatalf("Downloaded file doesn't exist at the expected path of %s", zipFilePath)
+			if _, err := os.Stat(zipFilePath); os.IsNotExist(err) {
+				t.Fatalf("Downloaded file doesn't exist at the expected path of %s", zipFilePath)
+			}
 		}
 	}
 }
@@ -227,18 +269,29 @@ func TestDownloadBadGitCommitFile(t *testing.T) {
 	}
 
 	for _, tc := range cases {
-		gitHubCommit := GitHubCommit{
-			Repo: GitHubRepo{
-				Owner: tc.repoOwner,
-				Name:  tc.repoName,
-			},
-			CommitSha: tc.commitSha,
-		}
 
-		zipFilePath, err := downloadGithubZipFile(gitHubCommit, tc.githubToken, tc.instance)
-		defer os.RemoveAll(zipFilePath)
-		if err == nil {
-			t.Fatalf("Expected that attempt to download repo %s/%s at commmit sha \"%s\" would fail, but received no error.", tc.repoOwner, tc.repoName, tc.commitSha)
+		gitHubCommits := []GitHubCommit{
+			GitHubCommit{
+				Repo: GitHubRepo{
+					Owner: tc.repoOwner,
+					Name:  tc.repoName,
+				},
+				CommitSha: tc.commitSha,
+			},
+			GitHubCommit{
+				Repo: GitHubRepo{
+					Owner: tc.repoOwner,
+					Name:  tc.repoName,
+				},
+				GitRef: tc.commitSha,
+			},
+		}
+		for _, gitHubCommit := range gitHubCommits {
+			zipFilePath, err := downloadGithubZipFile(gitHubCommit, tc.githubToken, tc.instance)
+			defer os.RemoveAll(zipFilePath)
+			if err == nil {
+				t.Fatalf("Expected that attempt to download repo %s/%s at commmit sha \"%s\" would fail, but received no error.", tc.repoOwner, tc.repoName, tc.commitSha)
+			}
 		}
 	}
 }
@@ -262,17 +315,28 @@ func TestDownloadZipFileWithBadRepoValues(t *testing.T) {
 	}
 
 	for _, tc := range cases {
-		gitHubCommit := GitHubCommit{
-			Repo: GitHubRepo{
-				Owner: tc.repoOwner,
-				Name:  tc.repoName,
+		gitHubCommits := []GitHubCommit{
+			GitHubCommit{
+				Repo: GitHubRepo{
+					Owner: tc.repoOwner,
+					Name:  tc.repoName,
+				},
+				GitTag: tc.gitTag,
 			},
-			GitTag: tc.gitTag,
+			GitHubCommit{
+				Repo: GitHubRepo{
+					Owner: tc.repoOwner,
+					Name:  tc.repoName,
+				},
+				GitRef: tc.gitTag,
+			},
 		}
+		for _, gitHubCommit := range gitHubCommits {
 
-		_, err := downloadGithubZipFile(gitHubCommit, tc.githubToken, tc.instance)
-		if err == nil && err.errorCode != 500 {
-			t.Fatalf("Expected error for bad repo values: %s/%s:%s", tc.repoOwner, tc.repoName, tc.gitTag)
+			_, err := downloadGithubZipFile(gitHubCommit, tc.githubToken, tc.instance)
+			if err == nil && err.errorCode != 500 {
+				t.Fatalf("Expected error for bad repo values: %s/%s:%s", tc.repoOwner, tc.repoName, tc.gitTag)
+			}
 		}
 	}
 }
