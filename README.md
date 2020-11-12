@@ -15,7 +15,7 @@ authentication. Fetch makes it possible to handle all of these cases with a one-
 
 #### Features
 
-- Download from a generic git reference or specific git tag, branch, or commit SHA.
+- Download from any git reference, such as a specific git tag, branch, or commit SHA.
 - Download a single file, a subset of files, or all files from the repo.
 - Download one or more binary assets from a specific release that match a regular expression.
 - Verify the SHA256 or SHA512 checksum of a binary asset.
@@ -200,4 +200,3 @@ This code is released under the MIT License. See [LICENSE.txt](/LICENSE.txt).
 - downloadSourcePaths() adds gitRef parameter
 - Modify GitHubCommit to add a `GitRef` of type string
 - For testing in `file_test.go`, all commit, branch, and tag tests should be repeated with gitref specified instead of the specific type.
-
