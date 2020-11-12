@@ -138,7 +138,7 @@ fetch --repo="https://github.com/foo/bar" --tag="~>0.1.5" --source-path="/module
 Download all files in `/modules/foo` from a GitHub release where the tag is exactly `0.1.5`, and save them to `/tmp`:
 
 ```
-fetch --repo="https://github.com/foo/bar" --tag="0.1.5" --source-path="/modules/foo" /tmp
+fetch --repo="https://github.com/foo/bar" --ref="0.1.5" --source-path="/modules/foo" /tmp
 ```
 
 #### Usage Example 3
@@ -148,7 +148,7 @@ Download all files from a private GitHub repo using the GitHUb oAuth Token `123`
 ```
 GITHUB_OAUTH_TOKEN=123
 
-fetch --repo="https://github.com/foo/bar" --tag="0.1.5" /tmp
+fetch --repo="https://github.com/foo/bar" --ref="0.1.5" /tmp
 ```
 
 #### Usage Example 4
@@ -156,7 +156,7 @@ fetch --repo="https://github.com/foo/bar" --tag="0.1.5" /tmp
 Download all files from the latest commit on the `sample-branch` branch, and save them to `/tmp`:
 
 ```
-fetch --repo="https://github.com/foo/bar" --branch="sample-branch" /tmp/josh1
+fetch --repo="https://github.com/foo/bar" --ref="sample-branch" /tmp/josh1
 ```
 
 #### Usage Example 5
@@ -164,7 +164,7 @@ fetch --repo="https://github.com/foo/bar" --branch="sample-branch" /tmp/josh1
 Download all files from the git commit `f32a08313e30f116a1f5617b8b68c11f1c1dbb61`, and save them to `/tmp`:
 
 ```
-fetch --repo="https://github.com/foo/bar" --commit="f32a08313e30f116a1f5617b8b68c11f1c1dbb61" /tmp
+fetch --repo="https://github.com/foo/bar" --ref="f32a08313e30f116a1f5617b8b68c11f1c1dbb61" /tmp
 ```
 
 #### Usage Example 6
@@ -172,7 +172,7 @@ fetch --repo="https://github.com/foo/bar" --commit="f32a08313e30f116a1f5617b8b68
 Download the release asset `foo.exe` from a GitHub release where the tag is exactly `0.1.5`, and save it to `/tmp`:
 
 ```
-fetch --repo="https://github.com/foo/bar" --tag="0.1.5" --release-asset="foo.exe" /tmp
+fetch --repo="https://github.com/foo/bar" --ref="0.1.5" --release-asset="foo.exe" /tmp
 ```
 
 #### Usage Example 7
@@ -180,15 +180,7 @@ fetch --repo="https://github.com/foo/bar" --tag="0.1.5" --release-asset="foo.exe
 Download the release asset `foo.exe` from a GitHub release hosted on a GitHub Enterprise instance running at `ghe.mycompany.com` where the tag is exactly `0.1.5`, and save it to `/tmp`:
 
 ```
-fetch --repo="https://ghe.mycompany.com/foo/bar" --tag="0.1.5" --release-asset="foo.exe" /tmp
-```
-
-#### Usage Example 8
-
-Download all files from the latest commit on the `sample-branch` branch by specifying the branch as a git reference, and save them to `/tmp`:
-
-```
-fetch --repo="https://github.com/foo/bar" --ref="sample-branch" /tmp
+fetch --repo="https://ghe.mycompany.com/foo/bar" --ref="0.1.5" --release-asset="foo.exe" /tmp
 ```
 
 ## License
