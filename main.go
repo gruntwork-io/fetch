@@ -151,10 +151,21 @@ func runFetch(c *cli.Context) error {
 		}
 	}
 
-	specific, desiredTag := isTagConstraintSpecificTag(options.TagConstraint)
+	var specific bool
+	var desiredTag string
+	var tagConstraint string
+
+	if options.GitRef != "" {
+		specific, desiredTag = isTagConstraintSpecificTag(options.GitRef)
+		tagConstraint = options.GitRef
+	} else {
+		specific, desiredTag = isTagConstraintSpecificTag(options.TagConstraint)
+		tagConstraint = options.TagConstraint
+	}
+
 	if !specific {
 		// Find the specific release that matches the latest version constraint
-		latestTag, err := getLatestAcceptableTag(options.TagConstraint, tags)
+		latestTag, err := getLatestAcceptableTag(tagConstraint, tags)
 		if err != nil {
 			if err.errorCode == invalidTagConstraintExpression {
 				return errors.New(getErrorMessage(invalidTagConstraintExpression, err.details))
@@ -271,13 +282,14 @@ func downloadSourcePaths(sourcePaths []string, destPath string, githubRepo GitHu
 	// So we can guarantee (at least logically) that this struct instance is in a valid state right now.
 	gitHubCommit := GitHubCommit{
 		Repo:       githubRepo,
-		GitRef:     gitRef,
+		GitRef:     latestTag,
 		GitTag:     latestTag,
 		BranchName: branchName,
 		CommitSha:  commitSha,
 	}
 
 	// Download that release as a .zip file
+
 	if gitHubCommit.GitRef != "" {
 		fmt.Printf("Downloading git reference \"%s\" of %s ...\n", gitHubCommit.GitRef, githubRepo.Url)
 	} else if gitHubCommit.CommitSha != "" {
