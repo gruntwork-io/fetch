@@ -195,10 +195,10 @@ This code is released under the MIT License. See [LICENSE.txt](/LICENSE.txt).
 
 ## Issue #73
 
-- Modify CLI to accept --ref
-- --ref takes precidence over --commit, --branch, --tag (in validateOptions)
-- downloadSourcePaths() adds gitRef parameter
-- Modify GitHubCommit to add a `GitRef` of type string
+- ~~Modify CLI to accept --ref~~
+- ~~--ref takes precidence over --commit, --branch, --tag (in validateOptions)~~
+- ~~downloadSourcePaths() adds gitRef parameter~~
+- ~~Modify GitHubCommit to add a `GitRef` of type string~~
 - For testing in `file_test.go`, all commit, branch, and tag tests should be repeated with gitref specified instead of the specific type.
 - Needs more thought by Pete: can `--ref` detect a tag constraint and do the right thing? That'd be great. Let's see how time permits.
 

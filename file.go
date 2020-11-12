@@ -151,7 +151,9 @@ func MakeGitHubZipFileRequest(gitHubCommit GitHubCommit, gitHubToken string, ins
 
 	// This represents either a commit, branch, or git tag
 	var gitRef string
-	if gitHubCommit.CommitSha != "" {
+	if gitHubCommit.GitRef != "" {
+		gitRef = gitHubCommit.GitRef
+	} else if gitHubCommit.CommitSha != "" {
 		gitRef = gitHubCommit.CommitSha
 	} else if gitHubCommit.BranchName != "" {
 		gitRef = gitHubCommit.BranchName

@@ -18,6 +18,7 @@ var VERSION string
 
 type FetchOptions struct {
 	RepoUrl                  string
+	GitRef                   string
 	CommitSha                string
 	BranchName               string
 	TagConstraint            string
@@ -37,6 +38,7 @@ type AssetDownloadResult struct {
 }
 
 const optionRepo = "repo"
+const optionRef = "ref"
 const optionCommit = "commit"
 const optionBranch = "branch"
 const optionTag = "tag"
@@ -61,6 +63,10 @@ func main() {
 		cli.StringFlag{
 			Name:  optionRepo,
 			Usage: "Required. Fully qualified URL of the GitHub repo.",
+		},
+		cli.StringFlag{
+			Name:  optionRef,
+			Usage: "The git reference to download. If specified, will override --commit, --branch, and --tag.",
 		},
 		cli.StringFlag{
 			Name:  optionCommit,
@@ -171,7 +177,7 @@ func runFetch(c *cli.Context) error {
 	}
 
 	// Download any requested source files
-	if err := downloadSourcePaths(options.SourcePaths, options.LocalDownloadPath, repo, desiredTag, options.BranchName, options.CommitSha, instance); err != nil {
+	if err := downloadSourcePaths(options.SourcePaths, options.LocalDownloadPath, repo, options.GitRef, desiredTag, options.BranchName, options.CommitSha, instance); err != nil {
 		return err
 	}
 
@@ -214,6 +220,7 @@ func parseOptions(c *cli.Context) FetchOptions {
 
 	return FetchOptions{
 		RepoUrl:                  c.String(optionRepo),
+		GitRef:                   c.String(optionRef),
 		CommitSha:                c.String(optionCommit),
 		BranchName:               c.String(optionBranch),
 		TagConstraint:            c.String(optionTag),
@@ -237,8 +244,8 @@ func validateOptions(options FetchOptions) error {
 		return fmt.Errorf("Missing required arguments specifying the local download path. Run \"fetch --help\" for full usage info.")
 	}
 
-	if options.TagConstraint == "" && options.CommitSha == "" && options.BranchName == "" {
-		return fmt.Errorf("You must specify exactly one of --%s, --%s, or --%s. Run \"fetch --help\" for full usage info.", optionTag, optionCommit, optionBranch)
+	if options.GitRef == "" && options.TagConstraint == "" && options.CommitSha == "" && options.BranchName == "" {
+		return fmt.Errorf("You must specify exactly one of --%s, --%s, --%s, or --%s. Run \"fetch --help\" for full usage info.", optionRef, optionTag, optionCommit, optionBranch)
 	}
 
 	if options.ReleaseAsset != "" && options.TagConstraint == "" {
@@ -253,7 +260,7 @@ func validateOptions(options FetchOptions) error {
 }
 
 // Download the specified source files from the given repo
-func downloadSourcePaths(sourcePaths []string, destPath string, githubRepo GitHubRepo, latestTag string, branchName string, commitSha string, instance GitHubInstance) error {
+func downloadSourcePaths(sourcePaths []string, destPath string, githubRepo GitHubRepo, gitRef string, latestTag string, branchName string, commitSha string, instance GitHubInstance) error {
 	if len(sourcePaths) == 0 {
 		return nil
 	}
@@ -264,13 +271,16 @@ func downloadSourcePaths(sourcePaths []string, destPath string, githubRepo GitHu
 	// So we can guarantee (at least logically) that this struct instance is in a valid state right now.
 	gitHubCommit := GitHubCommit{
 		Repo:       githubRepo,
+		GitRef:     gitRef,
 		GitTag:     latestTag,
 		BranchName: branchName,
 		CommitSha:  commitSha,
 	}
 
 	// Download that release as a .zip file
-	if gitHubCommit.CommitSha != "" {
+	if gitHubCommit.GitRef != "" {
+		fmt.Printf("Downloading git reference \"%s\" of %s ...\n", gitHubCommit.GitRef, githubRepo.Url)
+	} else if gitHubCommit.CommitSha != "" {
 		fmt.Printf("Downloading git commit \"%s\" of %s ...\n", gitHubCommit.CommitSha, githubRepo.Url)
 	} else if gitHubCommit.BranchName != "" {
 		fmt.Printf("Downloading latest commit from branch \"%s\" of %s ...\n", gitHubCommit.BranchName, githubRepo.Url)
