@@ -188,7 +188,7 @@ func runFetch(c *cli.Context) error {
 	}
 
 	// Download any requested source files
-	if err := downloadSourcePaths(options.SourcePaths, options.LocalDownloadPath, repo, options.GitRef, desiredTag, options.BranchName, options.CommitSha, instance); err != nil {
+	if err := downloadSourcePaths(options.SourcePaths, options.LocalDownloadPath, repo, desiredTag, options.BranchName, options.CommitSha, instance); err != nil {
 		return err
 	}
 
@@ -271,7 +271,7 @@ func validateOptions(options FetchOptions) error {
 }
 
 // Download the specified source files from the given repo
-func downloadSourcePaths(sourcePaths []string, destPath string, githubRepo GitHubRepo, gitRef string, latestTag string, branchName string, commitSha string, instance GitHubInstance) error {
+func downloadSourcePaths(sourcePaths []string, destPath string, githubRepo GitHubRepo, latestTag string, branchName string, commitSha string, instance GitHubInstance) error {
 	if len(sourcePaths) == 0 {
 		return nil
 	}
