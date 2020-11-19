@@ -75,7 +75,7 @@ type GitHubReleaseAsset struct {
 	Name string
 }
 
-const retrySleepSeconds = 1 * time.Second;
+const retrySleepSeconds = 1 * time.Second
 
 func ParseUrlIntoGithubInstance(repoUrl string, apiv string) (GitHubInstance, *FetchError) {
 	var instance GitHubInstance
@@ -208,25 +208,25 @@ func createGitHubRepoUrlForPath(repo GitHubRepo, path string) string {
 func HttpDoWithRetry(httpClient *http.Client, request *http.Request, retries int) (*http.Response, error) {
 	var err error
 	var resp *http.Response
-		// This looks slightly artificial, but if retries = 0, we never invoke the loop.
-		// Intuitively though the CLI retries is the number of times we _retry_ as opposed
-		// to try. There are alternative ways of structuring it, but we should probably
-		// just replace this with retryablehttp anyway.
-		for retries += 1; retries > 0; retries -= 1 {
-			resp, err := httpClient.Do(request)
-			if err != nil {
-				fmt.Printf("Error encountered downloading from %s: %s; continuing", request, err)
-				time.Sleep(retrySleepSeconds) // Effective linear backoff
-			} else {
-				retries = 0
-			}
-		}
-		// By the time we're here, we either have an error we deem permanent, or
-		// we've retried enough to succeed.
+	// This looks slightly artificial, but if retries = 0, we never invoke the loop.
+	// Intuitively though the CLI retries is the number of times we _retry_ as opposed
+	// to try. There are alternative ways of structuring it, but we should probably
+	// just replace this with retryablehttp anyway.
+	for retries += 1; retries > 0; retries -= 1 {
+		resp, err := httpClient.Do(request)
 		if err != nil {
-			return nil, wrapError(err)
+			fmt.Printf("Error encountered downloading from %s: %s; continuing", request, err)
+			time.Sleep(retrySleepSeconds) // Effective linear backoff
+		} else {
+			retries = 0
 		}
-		return resp, err
+	}
+	// By the time we're here, we either have an error we deem permanent, or
+	// we've retried enough to succeed.
+	if err != nil {
+		return nil, wrapError(err)
+	}
+	return resp, err
 }
 
 // Call the GitHub API at the given path and return the HTTP response

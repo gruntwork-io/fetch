@@ -34,7 +34,7 @@ func downloadGithubZipFile(gitHubCommit GitHubCommit, gitHubToken string, instan
 		return zipFilePath, wrapError(err)
 	}
 
-  resp, err = HttpDoWithRetry(httpClient, req, retries)
+	resp, err = HttpDoWithRetry(httpClient, req, retries)
 
 	if resp.StatusCode != http.StatusOK {
 		return zipFilePath, newError(failedToDownloadFile, fmt.Sprintf("Failed to download file at the url %s. Received HTTP Response %d.", req.URL.String(), resp.StatusCode))
