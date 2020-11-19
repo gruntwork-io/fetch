@@ -75,8 +75,6 @@ type GitHubReleaseAsset struct {
 	Name string
 }
 
-const retrySleepSeconds = 1;
-
 func ParseUrlIntoGithubInstance(repoUrl string, apiv string) (GitHubInstance, *FetchError) {
 	var instance GitHubInstance
 
@@ -234,7 +232,6 @@ func callGitHubApi(repo GitHubRepo, path string, customHeaders map[string]string
 		resp, err := httpClient.Do(request)
 		if err != nil {
 			fmt.Printf("Error encountered downloading from %s: %s; continuing", request, err)
-		} else {
 			time.Sleep(retrySleepSeconds * time.Second) // Effective linear backoff
 		}
   }

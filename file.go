@@ -9,14 +9,18 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 )
+
+const retrySleepSeconds = 1;
 
 // Download the zip file at the given URL to a temporary local directory.
 // Returns the absolute path to the downloaded zip file.
 // IMPORTANT: You must call "defer os.RemoveAll(dir)" in the calling function when done with the downloaded zip file!
-func downloadGithubZipFile(gitHubCommit GitHubCommit, gitHubToken string, instance GitHubInstance, retryNumber int) (string, *FetchError) {
+func downloadGithubZipFile(gitHubCommit GitHubCommit, gitHubToken string, instance GitHubInstance, retries int) (string, *FetchError) {
 
 	var zipFilePath string
+	var resp http.Response
 
 	// Create a temp directory
 	// Note that ioutil.TempDir has a peculiar interface. We need not specify any meaningful values to achieve our
@@ -28,12 +32,21 @@ func downloadGithubZipFile(gitHubCommit GitHubCommit, gitHubToken string, instan
 
 	// Download the zip file, possibly using the GitHub oAuth Token
 	httpClient := &http.Client{}
-	req, err := MakeGitHubZipFileRequest(gitHubCommit, gitHubToken, instance, retryNumber)
+	req, err := MakeGitHubZipFileRequest(gitHubCommit, gitHubToken, instance)
 	if err != nil {
 		return zipFilePath, wrapError(err)
 	}
 
-	resp, err := httpClient.Do(req)
+	for retries +=1; retries > 0; retries -= 1 {
+		resp, err := httpClient.Do(req)
+		if err != nil {
+			fmt.Printf("Error encountered downloading from %s: %s; continuing", req, err)
+			time.Sleep(retrySleepSeconds * time.Second) // Effective linear backoff
+		}
+	}
+
+	// By the time we're here, we either have an error we deem permanent, or
+	// we've retried enough to succeed.
 	if err != nil {
 		return zipFilePath, wrapError(err)
 	}
@@ -146,7 +159,7 @@ func extractFiles(zipFilePath, filesToExtractFromZipPath, localPath string) (int
 
 // Return an HTTP request that will fetch the given GitHub repo's zip file for the given tag, possibly with the gitHubOAuthToken in the header
 // Respects the GitHubCommit hierachy as defined in the code comments for GitHubCommit (e.g. GitTag > CommitSha)
-func MakeGitHubZipFileRequest(gitHubCommit GitHubCommit, gitHubToken string, instance GitHubInstance, retryNumber int) (*http.Request, error) {
+func MakeGitHubZipFileRequest(gitHubCommit GitHubCommit, gitHubToken string, instance GitHubInstance) (*http.Request, error) {
 	var request *http.Request
 
 	// This represents either a commit, branch, or git tag
