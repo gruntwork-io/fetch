@@ -29,6 +29,7 @@ type FetchOptions struct {
 	LocalDownloadPath        string
 	GithubApiVersion         string
 	WithProgress             bool
+	RetryNumber              int
 }
 
 type AssetDownloadResult struct {
@@ -47,6 +48,7 @@ const optionReleaseAssetChecksum = "release-asset-checksum"
 const optionReleaseAssetChecksumAlgo = "release-asset-checksum-algo"
 const optionGithubAPIVersion = "github-api-version"
 const optionWithProgress = "progress"
+const optionRetryNumber = "enable-retries"
 
 const envVarGithubToken = "GITHUB_OAUTH_TOKEN"
 
@@ -100,6 +102,11 @@ func main() {
 			Value: "v3",
 			Usage: "The api version of the GitHub instance. If left blank, v3 will be used.\n\tThis will only be used if the repo url is not a github.com url.",
 		},
+		cli.IntFlag{
+			Name:  optionRetryNumber,
+			Value: 0,
+			Usage: "The number of retries fetch will attempt to make to retrieve the target. 0, the default, means no retries.",
+		},
 		cli.BoolFlag{
 			Name:  optionWithProgress,
 			Usage: "Display progress on file downloads, especially useful for large files",
@@ -134,7 +141,7 @@ func runFetch(c *cli.Context) error {
 	}
 
 	// Get the tags for the given repo
-	tags, fetchErr := FetchTags(options.RepoUrl, options.GithubToken, instance)
+	tags, fetchErr := FetchTags(options.RepoUrl, options.GithubToken, instance, options.RetryNumber)
 	if fetchErr != nil {
 		if fetchErr.errorCode == invalidGithubTokenOrAccessDenied {
 			return errors.New(getErrorMessage(invalidGithubTokenOrAccessDenied, fetchErr.details))
@@ -171,12 +178,12 @@ func runFetch(c *cli.Context) error {
 	}
 
 	// Download any requested source files
-	if err := downloadSourcePaths(options.SourcePaths, options.LocalDownloadPath, repo, desiredTag, options.BranchName, options.CommitSha, instance); err != nil {
+	if err := downloadSourcePaths(options.SourcePaths, options.LocalDownloadPath, repo, desiredTag, options.BranchName, options.CommitSha, instance, options.RetryNumber); err != nil {
 		return err
 	}
 
 	// Download the requested release assets
-	assetPaths, err := downloadReleaseAssets(options.ReleaseAsset, options.LocalDownloadPath, repo, desiredTag, options.WithProgress)
+	assetPaths, err := downloadReleaseAssets(options.ReleaseAsset, options.LocalDownloadPath, repo, desiredTag, options.WithProgress, options.RetryNumber)
 	if err != nil {
 		return err
 	}
@@ -225,6 +232,7 @@ func parseOptions(c *cli.Context) FetchOptions {
 		LocalDownloadPath:        localDownloadPath,
 		GithubApiVersion:         c.String(optionGithubAPIVersion),
 		WithProgress:             c.IsSet(optionWithProgress),
+		RetryNumber:              c.Int(optionRetryNumber),
 	}
 }
 
@@ -253,7 +261,7 @@ func validateOptions(options FetchOptions) error {
 }
 
 // Download the specified source files from the given repo
-func downloadSourcePaths(sourcePaths []string, destPath string, githubRepo GitHubRepo, latestTag string, branchName string, commitSha string, instance GitHubInstance) error {
+func downloadSourcePaths(sourcePaths []string, destPath string, githubRepo GitHubRepo, latestTag string, branchName string, commitSha string, instance GitHubInstance, retryNumber int) error {
 	if len(sourcePaths) == 0 {
 		return nil
 	}
@@ -280,7 +288,7 @@ func downloadSourcePaths(sourcePaths []string, destPath string, githubRepo GitHu
 		return fmt.Errorf("The commit sha, tag, and branch name are all empty.")
 	}
 
-	localZipFilePath, err := downloadGithubZipFile(gitHubCommit, githubRepo.Token, instance)
+	localZipFilePath, err := downloadGithubZipFile(gitHubCommit, githubRepo.Token, instance, retryNumber)
 	if err != nil {
 		return fmt.Errorf("Error occurred while downloading zip file from GitHub repo: %s", err)
 	}
@@ -311,7 +319,7 @@ func downloadSourcePaths(sourcePaths []string, destPath string, githubRepo GitHu
 // were downloaded. For those that succeeded, the path they were downloaded to will be passed back
 // along with the error.
 // Returns the paths where the release assets were downloaded.
-func downloadReleaseAssets(assetRegex string, destPath string, githubRepo GitHubRepo, tag string, withProgress bool) ([]string, error) {
+func downloadReleaseAssets(assetRegex string, destPath string, githubRepo GitHubRepo, tag string, withProgress bool, retryNumber int) ([]string, error) {
 	var err error
 	var assetPaths []string
 
@@ -319,7 +327,7 @@ func downloadReleaseAssets(assetRegex string, destPath string, githubRepo GitHub
 		return assetPaths, nil
 	}
 
-	release, releaseInfoErr := GetGitHubReleaseInfo(githubRepo, tag)
+	release, releaseInfoErr := GetGitHubReleaseInfo(githubRepo, tag, retryNumber)
 	if releaseInfoErr != nil {
 		return nil, err
 	}
@@ -343,7 +351,7 @@ func downloadReleaseAssets(assetRegex string, destPath string, githubRepo GitHub
 
 			assetPath := path.Join(destPath, asset.Name)
 			fmt.Printf("Downloading release asset %s to %s\n", asset.Name, assetPath)
-			if downloadErr := DownloadReleaseAsset(githubRepo, asset.Id, assetPath, withProgress); downloadErr == nil {
+			if downloadErr := DownloadReleaseAsset(githubRepo, asset.Id, assetPath, withProgress, retryNumber); downloadErr == nil {
 				fmt.Printf("Downloaded %s\n", assetPath)
 				results <- AssetDownloadResult{assetPath, nil}
 			} else {

@@ -10,6 +10,7 @@ import (
 	"os"
 	"regexp"
 	"strings"
+	"time"
 
 	"github.com/dustin/go-humanize"
 	"github.com/hashicorp/go-version"
@@ -74,6 +75,8 @@ type GitHubReleaseAsset struct {
 	Name string
 }
 
+const retrySleepSeconds = 1;
+
 func ParseUrlIntoGithubInstance(repoUrl string, apiv string) (GitHubInstance, *FetchError) {
 	var instance GitHubInstance
 
@@ -98,7 +101,7 @@ func ParseUrlIntoGithubInstance(repoUrl string, apiv string) (GitHubInstance, *F
 }
 
 // Fetch all SemVer tags from the given GitHub repo
-func FetchTags(githubRepoUrl string, githubToken string, instance GitHubInstance) ([]string, *FetchError) {
+func FetchTags(githubRepoUrl string, githubToken string, instance GitHubInstance, retryNumber int) ([]string, *FetchError) {
 	var tagsString []string
 
 	repo, err := ParseUrlIntoGitHubRepo(githubRepoUrl, githubToken, instance)
@@ -107,7 +110,7 @@ func FetchTags(githubRepoUrl string, githubToken string, instance GitHubInstance
 	}
 
 	url := createGitHubRepoUrlForPath(repo, "tags")
-	resp, err := callGitHubApi(repo, url, map[string]string{})
+	resp, err := callGitHubApi(repo, url, map[string]string{}, retryNumber)
 	if err != nil {
 		return tagsString, err
 	}
@@ -163,9 +166,9 @@ func ParseUrlIntoGitHubRepo(url string, token string, instance GitHubInstance) (
 }
 
 // Download the release asset with the given id and return its body
-func DownloadReleaseAsset(repo GitHubRepo, assetId int, destPath string, withProgress bool) *FetchError {
+func DownloadReleaseAsset(repo GitHubRepo, assetId int, destPath string, withProgress bool, retryNumber int) *FetchError {
 	url := createGitHubRepoUrlForPath(repo, fmt.Sprintf("releases/assets/%d", assetId))
-	resp, err := callGitHubApi(repo, url, map[string]string{"Accept": "application/octet-stream"})
+	resp, err := callGitHubApi(repo, url, map[string]string{"Accept": "application/octet-stream"}, retryNumber)
 	if err != nil {
 		return err
 	}
@@ -173,11 +176,11 @@ func DownloadReleaseAsset(repo GitHubRepo, assetId int, destPath string, withPro
 }
 
 // Get information about the GitHub release with the given tag
-func GetGitHubReleaseInfo(repo GitHubRepo, tag string) (GitHubReleaseApiResponse, *FetchError) {
+func GetGitHubReleaseInfo(repo GitHubRepo, tag string, retryNumber int) (GitHubReleaseApiResponse, *FetchError) {
 	release := GitHubReleaseApiResponse{}
 
 	url := createGitHubRepoUrlForPath(repo, fmt.Sprintf("releases/tags/%s", tag))
-	resp, err := callGitHubApi(repo, url, map[string]string{})
+	resp, err := callGitHubApi(repo, url, map[string]string{}, retryNumber)
 	if err != nil {
 		return release, err
 	}
@@ -203,8 +206,11 @@ func createGitHubRepoUrlForPath(repo GitHubRepo, path string) string {
 }
 
 // Call the GitHub API at the given path and return the HTTP response
-func callGitHubApi(repo GitHubRepo, path string, customHeaders map[string]string) (*http.Response, *FetchError) {
+func callGitHubApi(repo GitHubRepo, path string, customHeaders map[string]string, retries int) (*http.Response, *FetchError) {
 	httpClient := &http.Client{}
+
+  var resp *http.Response
+	var err error
 
 	request, err := http.NewRequest("GET", fmt.Sprintf("https://"+repo.ApiUrl+"/%s", path), nil)
 	if err != nil {
@@ -219,8 +225,21 @@ func callGitHubApi(repo GitHubRepo, path string, customHeaders map[string]string
 		request.Header.Set(headerName, headerValue)
 	}
 
-	resp, err := httpClient.Do(request)
+	// This looks slightly artificial, but if retries = 0, we never invoke the loop,
+	// but intuitively on the CLI retries is the number of times we _retry_ as opposed
+	// to try. There are alternative ways of structuring it, but we should probably
+	// just replace this with retryablehttp anyway.
 
+	for retries +=1; retries > 0; retries -= 1 {
+		resp, err := httpClient.Do(request)
+		if err != nil {
+			fmt.Printf("Error encountered downloading from %s: %s; continuing", request, err)
+		} else {
+			time.Sleep(retrySleepSeconds * time.Second) // Effective linear backoff
+		}
+  }
+  // By the time we're here, we either have an error we deem permanent, or
+	// we've retried enough to succeed.
 	if err != nil {
 		return nil, wrapError(err)
 	}
