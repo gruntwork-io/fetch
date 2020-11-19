@@ -105,7 +105,7 @@ func main() {
 		cli.IntFlag{
 			Name:  optionRetryNumber,
 			Value: 0,
-			Usage: "The number of retries fetch will attempt to make to retrieve the target. 0, the default, means no retries.",
+			Usage: "The number of retries fetch will attempt to make to retrieve the target in the case of transient errors (e.g. timeouts). 0, the default, means no retries.",
 		},
 		cli.BoolFlag{
 			Name:  optionWithProgress,

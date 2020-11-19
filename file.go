@@ -9,10 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"time"
 )
-
-const retrySleepSeconds = 1;
 
 // Download the zip file at the given URL to a temporary local directory.
 // Returns the absolute path to the downloaded zip file.
@@ -20,7 +17,7 @@ const retrySleepSeconds = 1;
 func downloadGithubZipFile(gitHubCommit GitHubCommit, gitHubToken string, instance GitHubInstance, retries int) (string, *FetchError) {
 
 	var zipFilePath string
-	var resp http.Response
+	var resp *http.Response
 
 	// Create a temp directory
 	// Note that ioutil.TempDir has a peculiar interface. We need not specify any meaningful values to achieve our
@@ -37,19 +34,8 @@ func downloadGithubZipFile(gitHubCommit GitHubCommit, gitHubToken string, instan
 		return zipFilePath, wrapError(err)
 	}
 
-	for retries +=1; retries > 0; retries -= 1 {
-		resp, err := httpClient.Do(req)
-		if err != nil {
-			fmt.Printf("Error encountered downloading from %s: %s; continuing", req, err)
-			time.Sleep(retrySleepSeconds * time.Second) // Effective linear backoff
-		}
-	}
+  resp, err = HttpDoWithRetry(httpClient, req, retries)
 
-	// By the time we're here, we either have an error we deem permanent, or
-	// we've retried enough to succeed.
-	if err != nil {
-		return zipFilePath, wrapError(err)
-	}
 	if resp.StatusCode != http.StatusOK {
 		return zipFilePath, newError(failedToDownloadFile, fmt.Sprintf("Failed to download file at the url %s. Received HTTP Response %d.", req.URL.String(), resp.StatusCode))
 	}
