@@ -106,31 +106,36 @@ func FetchTags(githubRepoUrl string, githubToken string, instance GitHubInstance
 		return tagsString, wrapError(err)
 	}
 
-	url := createGitHubRepoUrlForPath(repo, "tags")
-	resp, err := callGitHubApi(repo, url, map[string]string{})
-	if err != nil {
-		return tagsString, err
-	}
-
-	// Convert the response body to a byte array
-	buf := new(bytes.Buffer)
-	_, goErr := buf.ReadFrom(resp.Body)
-	if goErr != nil {
-		return tagsString, wrapError(goErr)
-	}
-	jsonResp := buf.Bytes()
-
-	// Extract the JSON into our array of gitHubTagsCommitApiResponse's
-	var tags []GitHubTagsApiResponse
-	if err := json.Unmarshal(jsonResp, &tags); err != nil {
-		return tagsString, wrapError(err)
-	}
-
-	for _, tag := range tags {
-		// Skip tags that are not semantically versioned so that they don't cause errors. (issue #75)
-		if _, err := version.NewVersion(tag.Name); err == nil {
-			tagsString = append(tagsString, tag.Name)
+	//per_page is max to reduce network calls
+	for currPath := "tags?per_page=100"; currPath != ""; {
+		url := createGitHubRepoUrlForPath(repo, currPath)
+		resp, err := callGitHubApi(repo, url, map[string]string{})
+		if err != nil {
+			return tagsString, err
 		}
+
+		// Convert the response body to a byte array
+		buf := new(bytes.Buffer)
+		_, goErr := buf.ReadFrom(resp.Body)
+		if goErr != nil {
+			return tagsString, wrapError(goErr)
+		}
+		jsonResp := buf.Bytes()
+
+		// Extract the JSON into our array of gitHubTagsCommitApiResponse's
+		var tags []GitHubTagsApiResponse
+		if err := json.Unmarshal(jsonResp, &tags); err != nil {
+			return tagsString, wrapError(err)
+		}
+
+		for _, tag := range tags {
+			// Skip tags that are not semantically versioned so that they don't cause errors. (issue #75)
+			if _, err := version.NewVersion(tag.Name); err == nil {
+				tagsString = append(tagsString, tag.Name)
+			}
+		}
+		//Get paginated tags (issue #26 and #46)
+		currPath = getNextPath(resp.Header.Get("link"))
 	}
 
 	return tagsString, nil
@@ -200,6 +205,29 @@ func GetGitHubReleaseInfo(repo GitHubRepo, tag string) (GitHubReleaseApiResponse
 // Craft a URL for the GitHub repos API of the form repos/:owner/:repo/:path
 func createGitHubRepoUrlForPath(repo GitHubRepo, path string) string {
 	return fmt.Sprintf("repos/%s/%s/%s", repo.Owner, repo.Name, path)
+}
+
+// Get the Next paginated path from the link url api.github.com/repos/:owner/:repo/:path
+// Links are formatted: "<url>; rel=next, <url>; rel=last"
+func getNextPath(links string) string {
+	if len(links) == 0 {
+		return ""
+	}
+
+	for _, link := range strings.Split(links, ",") {
+
+		if attrs := strings.Split(link, ";"); len(attrs) > 1 {
+			url, rel := attrs[0], attrs[1]
+
+			// Get only the next link
+			if strings.Contains(rel, "next") {
+				url = strings.Trim(url, " <>")
+				return url[strings.LastIndex(url, "/")+1:]
+			}
+		}
+	}
+
+	return ""
 }
 
 // Call the GitHub API at the given path and return the HTTP response
