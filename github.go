@@ -208,6 +208,7 @@ func createGitHubRepoUrlForPath(repo GitHubRepo, path string) string {
 }
 
 // Get the Next paginated path from the link url api.github.com/repos/:owner/:repo/:path
+// If there is no next page, return an empty string
 // Links are formatted: "<url>; rel=next, <url>; rel=last"
 func getNextPath(links string) string {
 	if len(links) == 0 {
