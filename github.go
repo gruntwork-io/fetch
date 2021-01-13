@@ -37,6 +37,7 @@ type GitHubInstance struct {
 // - Example: BranchName alone is specified; use BranchName
 type GitHubCommit struct {
 	Repo       GitHubRepo // The GitHub repo where this release lives
+	GitRef     string     // The git reference
 	GitTag     string     // The specific git tag for this release
 	BranchName string     // If specified, indicates that this commit should be the latest commit on the given branch
 	CommitSha  string     // If specified, indicates that this commit should be exactly this Git Commit SHA.
