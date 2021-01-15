@@ -14,9 +14,10 @@ import (
 // Download the zip file at the given URL to a temporary local directory.
 // Returns the absolute path to the downloaded zip file.
 // IMPORTANT: You must call "defer os.RemoveAll(dir)" in the calling function when done with the downloaded zip file!
-func downloadGithubZipFile(gitHubCommit GitHubCommit, gitHubToken string, instance GitHubInstance) (string, *FetchError) {
+func downloadGithubZipFile(gitHubCommit GitHubCommit, gitHubToken string, instance GitHubInstance, retries int) (string, *FetchError) {
 
 	var zipFilePath string
+	var resp *http.Response
 
 	// Create a temp directory
 	// Note that ioutil.TempDir has a peculiar interface. We need not specify any meaningful values to achieve our
@@ -33,10 +34,8 @@ func downloadGithubZipFile(gitHubCommit GitHubCommit, gitHubToken string, instan
 		return zipFilePath, wrapError(err)
 	}
 
-	resp, err := httpClient.Do(req)
-	if err != nil {
-		return zipFilePath, wrapError(err)
-	}
+	resp, err = HttpDoWithRetry(httpClient, req, retries)
+
 	if resp.StatusCode != http.StatusOK {
 		return zipFilePath, newError(failedToDownloadFile, fmt.Sprintf("Failed to download file at the url %s. Received HTTP Response %d.", req.URL.String(), resp.StatusCode))
 	}
