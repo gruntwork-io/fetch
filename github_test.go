@@ -57,6 +57,33 @@ func TestGetListOfReleasesFromGitHubRepo(t *testing.T) {
 	}
 }
 
+func TestGetNextPath(t *testing.T) {
+	t.Parallel()
+
+	cases := []struct {
+		links            string
+		expectedNextPath string
+	}{
+		{`<https://api.github.com/search/code?q=addClass+user%3Amozilla&page=15>; rel="next", <https://api.github.com/search/code?q=addClass+user%3Amozilla&page=34>; rel="last"`, "code?q=addClass+user%3Amozilla&page=15"},
+		{`<https://api.github.com/search/code?q=addClass+user%3Amozilla&page=15>; rel="first", <https://api.github.com/search/code?q=addClass+user%3Amozilla&page=34>; rel="last"`, ""},
+		{`<https://api.github.com/temp/proj/tags?page=15>; rel="next", <https://api.github.com/temp/proj/tags?page=15>; rel="last"`, "tags?page=15"},
+		{`<https://api.github.com/temp/proj/tags?per_page=100&page=15>;  	rel="next", <https://api.github.com/temp/proj/tags?per_page=100&page=15>;  rel="last"`, "tags?per_page=100&page=15"},
+	}
+
+	for _, tc := range cases {
+		nextPath, err := getNextPath(tc.links)
+
+		if err != nil {
+			t.Fatalf("error getting next path: %s", err)
+		}
+
+		if nextPath != tc.expectedNextPath {
+			t.Fatalf("Expected next path %s, but got %s", tc.expectedNextPath, nextPath)
+		}
+	}
+
+}
+
 func TestParseUrlIntoGithubInstance(t *testing.T) {
 	t.Parallel()
 

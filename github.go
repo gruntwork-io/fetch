@@ -134,8 +134,13 @@ func FetchTags(githubRepoUrl string, githubToken string, instance GitHubInstance
 				tagsString = append(tagsString, tag.Name)
 			}
 		}
+
 		//Get paginated tags (issue #26 and #46)
-		currPath = getNextPath(resp.Header.Get("link"))
+		currPath, err = getNextPath(resp.Header.Get("link"))
+		if err != nil {
+			return tagsString, err
+		}
+
 	}
 
 	return tagsString, nil
@@ -210,25 +215,34 @@ func createGitHubRepoUrlForPath(repo GitHubRepo, path string) string {
 // Get the Next paginated path from the link url api.github.com/repos/:owner/:repo/:path
 // If there is no next page, return an empty string
 // Links are formatted: "<url>; rel=next, <url>; rel=last"
-func getNextPath(links string) string {
+func getNextPath(links string) (string, *FetchError) {
 	if len(links) == 0 {
-		return ""
+		return "", nil
+	}
+
+	nextLinkRegex, regexErr := regexp.Compile(`<(.+?)>;\s+rel="next"`)
+	if regexErr != nil {
+		return "", wrapError(regexErr)
+	}
+	pathRegex, regexErr := regexp.Compile(`([^\/]+$)`)
+	if regexErr != nil {
+		return "", wrapError(regexErr)
 	}
 
 	for _, link := range strings.Split(links, ",") {
 
-		if attrs := strings.Split(link, ";"); len(attrs) > 1 {
-			url, rel := attrs[0], attrs[1]
-
-			// Get only the next link
-			if strings.Contains(rel, "next") {
-				url = strings.Trim(url, " <>")
-				return url[strings.LastIndex(url, "/")+1:]
+		urlMatches := nextLinkRegex.FindStringSubmatch(link)
+		if len(urlMatches) == 2 {
+			// Get only the next link path
+			pathMatches := pathRegex.FindStringSubmatch(urlMatches[1])
+			if len(pathMatches) != 2 {
+				return "", newError(githubRepoUrlMalformedOrNotParseable, fmt.Sprintf("Path parsed incorrectly for url: %s", urlMatches[1]))
 			}
+			return pathMatches[1], nil
 		}
 	}
 
-	return ""
+	return "", nil
 }
 
 // Call the GitHub API at the given path and return the HTTP response
