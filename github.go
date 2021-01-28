@@ -106,8 +106,8 @@ func FetchTags(githubRepoUrl string, githubToken string, instance GitHubInstance
 		return tagsString, wrapError(err)
 	}
 
+	// Set per_page to 100, which is the max, to reduce network calls
 	tagsUrl := formatUrl(repo, createGitHubRepoUrlForPath(repo, "tags?per_page=100"))
-	//per_page is max to reduce network calls
 	for tagsUrl != "" {
 		resp, err := callGitHubApiRaw(tagsUrl, "GET", repo.Token, map[string]string{})
 		if err != nil {
