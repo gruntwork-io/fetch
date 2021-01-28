@@ -212,25 +212,20 @@ func createGitHubRepoUrlForPath(repo GitHubRepo, path string) string {
 	return fmt.Sprintf("repos/%s/%s/%s", repo.Owner, repo.Name, path)
 }
 
+var nextLinkRegex = regexp.MustCompile(`<(.+?)>;\s+rel="next"`)
+var pathRegex = regexp.MustCompile(`([^/]+$)`)
+
 // Get the Next paginated path from the link url api.github.com/repos/:owner/:repo/:path
 // If there is no next page, return an empty string
-// Links are formatted: "<url>; rel=next, <url>; rel=last"
+// Links are expected to be formatted as follows:
+//
+//<url>; rel="next", <url>; rel="last"
 func getNextPath(links string) (string, *FetchError) {
 	if len(links) == 0 {
 		return "", nil
 	}
 
-	nextLinkRegex, regexErr := regexp.Compile(`<(.+?)>;\s+rel="next"`)
-	if regexErr != nil {
-		return "", wrapError(regexErr)
-	}
-	pathRegex, regexErr := regexp.Compile(`([^\/]+$)`)
-	if regexErr != nil {
-		return "", wrapError(regexErr)
-	}
-
 	for _, link := range strings.Split(links, ",") {
-
 		urlMatches := nextLinkRegex.FindStringSubmatch(link)
 		if len(urlMatches) == 2 {
 			// Get only the next link path

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/stretchr/testify/require"
 	"io/ioutil"
 	"os"
 	"reflect"
@@ -61,25 +62,28 @@ func TestGetNextPath(t *testing.T) {
 	t.Parallel()
 
 	cases := []struct {
+		name             string
 		links            string
 		expectedNextPath string
 	}{
-		{`<https://api.github.com/search/code?q=addClass+user%3Amozilla&page=15>; rel="next", <https://api.github.com/search/code?q=addClass+user%3Amozilla&page=34>; rel="last"`, "code?q=addClass+user%3Amozilla&page=15"},
-		{`<https://api.github.com/search/code?q=addClass+user%3Amozilla&page=15>; rel="first", <https://api.github.com/search/code?q=addClass+user%3Amozilla&page=34>; rel="last"`, ""},
-		{`<https://api.github.com/temp/proj/tags?page=15>; rel="next", <https://api.github.com/temp/proj/tags?page=15>; rel="last"`, "tags?page=15"},
-		{`<https://api.github.com/temp/proj/tags?per_page=100&page=15>;  	rel="next", <https://api.github.com/temp/proj/tags?per_page=100&page=15>;  rel="last"`, "tags?per_page=100&page=15"},
+		{"", `<https://api.github.com/search/code?q=addClass+user%3Amozilla&page=15>; rel="next", <https://api.github.com/search/code?q=addClass+user%3Amozilla&page=34>; rel="last"`, "code?q=addClass+user%3Amozilla&page=15"},
+		{"", `<https://api.github.com/search/code?q=addClass+user%3Amozilla&page=15>; rel="first", <https://api.github.com/search/code?q=addClass+user%3Amozilla&page=34>; rel="last"`, ""},
+		{"", `<https://api.github.com/temp/proj/tags?page=15>; rel="next", <https://api.github.com/temp/proj/tags?page=15>; rel="last"`, "tags?page=15"},
+		{"", `<https://api.github.com/temp/proj/tags?per_page=100&page=15>;  	rel="next", <https://api.github.com/temp/proj/tags?per_page=100&page=15>;  rel="last"`, "tags?per_page=100&page=15"},
 	}
 
 	for _, tc := range cases {
-		nextPath, err := getNextPath(tc.links)
+		// The following is necessary to make sure tc's values don't
+		// get updated due to concurrency within the scope of t.Run(..) below
+		tc := tc
 
-		if err != nil {
-			t.Fatalf("error getting next path: %s", err)
-		}
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
 
-		if nextPath != tc.expectedNextPath {
-			t.Fatalf("Expected next path %s, but got %s", tc.expectedNextPath, nextPath)
-		}
+			nextPath, err := getNextPath(tc.links)
+			require.NoError(t, err)
+			require.Equal(t, tc.expectedNextPath, nextPath)
+		})
 	}
 
 }
