@@ -62,14 +62,18 @@ func TestGetNextPath(t *testing.T) {
 	t.Parallel()
 
 	cases := []struct {
-		name             string
-		links            string
-		expectedNextPath string
+		name        string
+		links       string
+		expectedUrl string
 	}{
-		{"", `<https://api.github.com/search/code?q=addClass+user%3Amozilla&page=15>; rel="next", <https://api.github.com/search/code?q=addClass+user%3Amozilla&page=34>; rel="last"`, "code?q=addClass+user%3Amozilla&page=15"},
-		{"", `<https://api.github.com/search/code?q=addClass+user%3Amozilla&page=15>; rel="first", <https://api.github.com/search/code?q=addClass+user%3Amozilla&page=34>; rel="last"`, ""},
-		{"", `<https://api.github.com/temp/proj/tags?page=15>; rel="next", <https://api.github.com/temp/proj/tags?page=15>; rel="last"`, "tags?page=15"},
-		{"", `<https://api.github.com/temp/proj/tags?per_page=100&page=15>;  	rel="next", <https://api.github.com/temp/proj/tags?per_page=100&page=15>;  rel="last"`, "tags?per_page=100&page=15"},
+		{"next-and-last-urls", `<https://api.github.com/repos/123456789/example-repo/tags?per_page=100&page=2>; rel="next", <https://api.github.com/repos/123456789/example-repo/tags?per_page=100&page=3>; rel="last"`, "https://api.github.com/repos/123456789/example-repo/tags?per_page=100&page=2"},
+		{"next-and-last-urls-no-whitespace", `<https://api.github.com/repos/123456789/example-repo/tags?per_page=100&page=2>;rel="next",<https://api.github.com/repos/123456789/example-repo/tags?per_page=100&page=3>;rel="last"`, "https://api.github.com/repos/123456789/example-repo/tags?per_page=100&page=2"},
+		{"next-and-last-urls-extra-whitespace", `    <https://api.github.com/repos/123456789/example-repo/tags?per_page=100&page=2>;      rel="next",     <https://api.github.com/repos/123456789/example-repo/tags?per_page=100&page=3>   ;    rel="last"`, "https://api.github.com/repos/123456789/example-repo/tags?per_page=100&page=2"},
+		{"first-and-next-urls", `<https://api.github.com/repos/123456789/example-repo/tags?page=1>; rel="first", <https://api.github.com/repos/123456789/example-repo/tags?per_page=100&page=2>; rel="next"`, "https://api.github.com/repos/123456789/example-repo/tags?per_page=100&page=2"},
+		{"next-only", `<https://api.github.com/repos/123456789/example-repo/tags?per_page=100&page=2>; rel="next"`, "https://api.github.com/repos/123456789/example-repo/tags?per_page=100&page=2"},
+		{"first-and-last-urls", `<https://api.github.com/repos/123456789/example-repo/tags?page=1>; rel="first", <https://api.github.com/repos/123456789/example-repo/tags?per_page=100&page=2>; rel="last"`, ""},
+		{"empty", ``, ""},
+		{"garbage", `junk not related to links header at all`, ""},
 	}
 
 	for _, tc := range cases {
@@ -80,9 +84,8 @@ func TestGetNextPath(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			nextPath, err := getNextPath(tc.links)
-			require.NoError(t, err)
-			require.Equal(t, tc.expectedNextPath, nextPath)
+			nextUrl := getNextUrl(tc.links)
+			require.Equal(t, tc.expectedUrl, nextUrl)
 		})
 	}
 

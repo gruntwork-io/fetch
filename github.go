@@ -106,10 +106,10 @@ func FetchTags(githubRepoUrl string, githubToken string, instance GitHubInstance
 		return tagsString, wrapError(err)
 	}
 
+	tagsUrl := formatUrl(repo, createGitHubRepoUrlForPath(repo, "tags?per_page=100"))
 	//per_page is max to reduce network calls
-	for currPath := "tags?per_page=100"; currPath != ""; {
-		url := createGitHubRepoUrlForPath(repo, currPath)
-		resp, err := callGitHubApi(repo, url, map[string]string{})
+	for tagsUrl != "" {
+		resp, err := callGitHubApiRaw(tagsUrl, "GET", repo.Token, map[string]string{})
 		if err != nil {
 			return tagsString, err
 		}
@@ -135,12 +135,8 @@ func FetchTags(githubRepoUrl string, githubToken string, instance GitHubInstance
 			}
 		}
 
-		//Get paginated tags (issue #26 and #46)
-		currPath, err = getNextPath(resp.Header.Get("link"))
-		if err != nil {
-			return tagsString, err
-		}
-
+		// Get paginated tags (issue #26 and #46)
+		tagsUrl = getNextUrl(resp.Header.Get("link"))
 	}
 
 	return tagsString, nil
@@ -212,45 +208,50 @@ func createGitHubRepoUrlForPath(repo GitHubRepo, path string) string {
 	return fmt.Sprintf("repos/%s/%s/%s", repo.Owner, repo.Name, path)
 }
 
-var nextLinkRegex = regexp.MustCompile(`<(.+?)>;\s+rel="next"`)
-var pathRegex = regexp.MustCompile(`([^/]+$)`)
+var nextLinkRegex = regexp.MustCompile(`<(.+?)>;\s*rel="next"`)
 
-// Get the Next paginated path from the link url api.github.com/repos/:owner/:repo/:path
-// If there is no next page, return an empty string
-// Links are expected to be formatted as follows:
+// Get the next page URL from the given link header returned by the GitHub API. If there is no next page, return an
+// empty string. The link header is expected to be of the form:
 //
-//<url>; rel="next", <url>; rel="last"
-func getNextPath(links string) (string, *FetchError) {
+// <url>; rel="next", <url>; rel="last"
+//
+func getNextUrl(links string) string {
 	if len(links) == 0 {
-		return "", nil
+		return ""
 	}
 
 	for _, link := range strings.Split(links, ",") {
 		urlMatches := nextLinkRegex.FindStringSubmatch(link)
 		if len(urlMatches) == 2 {
-			// Get only the next link path
-			pathMatches := pathRegex.FindStringSubmatch(urlMatches[1])
-			if len(pathMatches) != 2 {
-				return "", newError(githubRepoUrlMalformedOrNotParseable, fmt.Sprintf("Path parsed incorrectly for url: %s", urlMatches[1]))
-			}
-			return pathMatches[1], nil
+			return strings.TrimSpace(urlMatches[1])
 		}
 	}
 
-	return "", nil
+	return ""
+}
+
+// Format a URL for calling the GitHub API for the given repo and path
+func formatUrl(repo GitHubRepo, path string) string {
+	return fmt.Sprintf("https://"+repo.ApiUrl+"/%s", path)
 }
 
 // Call the GitHub API at the given path and return the HTTP response
 func callGitHubApi(repo GitHubRepo, path string, customHeaders map[string]string) (*http.Response, *FetchError) {
+	return callGitHubApiRaw(formatUrl(repo, path), "GET", repo.Token, customHeaders)
+}
+
+// Call the GitHub API at the given URL, using the given HTTP method, and passing the given token and headers, and
+// return the response
+func callGitHubApiRaw(url string, method string, token string, customHeaders map[string]string) (*http.Response, *FetchError) {
 	httpClient := &http.Client{}
 
-	request, err := http.NewRequest("GET", fmt.Sprintf("https://"+repo.ApiUrl+"/%s", path), nil)
+	request, err := http.NewRequest(method, url, nil)
 	if err != nil {
 		return nil, wrapError(err)
 	}
 
-	if repo.Token != "" {
-		request.Header.Set("Authorization", fmt.Sprintf("token %s", repo.Token))
+	if token != "" {
+		request.Header.Set("Authorization", fmt.Sprintf("token %s", token))
 	}
 
 	for headerName, headerValue := range customHeaders {
@@ -273,7 +274,7 @@ func callGitHubApi(repo GitHubRepo, path string, customHeaders map[string]string
 		respBody := buf.String()
 
 		// We leverage the HTTP Response Code as our ErrorCode here.
-		return nil, newError(resp.StatusCode, fmt.Sprintf("Received HTTP Response %d while fetching releases for GitHub URL %s. Full HTTP response: %s", resp.StatusCode, repo.Url, respBody))
+		return nil, newError(resp.StatusCode, fmt.Sprintf("Received HTTP Response %d while fetching releases for GitHub URL %s. Full HTTP response: %s", resp.StatusCode, url, respBody))
 	}
 
 	return resp, nil
