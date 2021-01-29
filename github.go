@@ -107,31 +107,37 @@ func FetchTags(githubRepoUrl string, githubToken string, instance GitHubInstance
 		return tagsString, wrapError(err)
 	}
 
-	url := createGitHubRepoUrlForPath(repo, "tags")
-	resp, err := callGitHubApi(repo, url, map[string]string{})
-	if err != nil {
-		return tagsString, err
-	}
-
-	// Convert the response body to a byte array
-	buf := new(bytes.Buffer)
-	_, goErr := buf.ReadFrom(resp.Body)
-	if goErr != nil {
-		return tagsString, wrapError(goErr)
-	}
-	jsonResp := buf.Bytes()
-
-	// Extract the JSON into our array of gitHubTagsCommitApiResponse's
-	var tags []GitHubTagsApiResponse
-	if err := json.Unmarshal(jsonResp, &tags); err != nil {
-		return tagsString, wrapError(err)
-	}
-
-	for _, tag := range tags {
-		// Skip tags that are not semantically versioned so that they don't cause errors. (issue #75)
-		if _, err := version.NewVersion(tag.Name); err == nil {
-			tagsString = append(tagsString, tag.Name)
+	// Set per_page to 100, which is the max, to reduce network calls
+	tagsUrl := formatUrl(repo, createGitHubRepoUrlForPath(repo, "tags?per_page=100"))
+	for tagsUrl != "" {
+		resp, err := callGitHubApiRaw(tagsUrl, "GET", repo.Token, map[string]string{})
+		if err != nil {
+			return tagsString, err
 		}
+
+		// Convert the response body to a byte array
+		buf := new(bytes.Buffer)
+		_, goErr := buf.ReadFrom(resp.Body)
+		if goErr != nil {
+			return tagsString, wrapError(goErr)
+		}
+		jsonResp := buf.Bytes()
+
+		// Extract the JSON into our array of gitHubTagsCommitApiResponse's
+		var tags []GitHubTagsApiResponse
+		if err := json.Unmarshal(jsonResp, &tags); err != nil {
+			return tagsString, wrapError(err)
+		}
+
+		for _, tag := range tags {
+			// Skip tags that are not semantically versioned so that they don't cause errors. (issue #75)
+			if _, err := version.NewVersion(tag.Name); err == nil {
+				tagsString = append(tagsString, tag.Name)
+			}
+		}
+
+		// Get paginated tags (issue #26 and #46)
+		tagsUrl = getNextUrl(resp.Header.Get("link"))
 	}
 
 	return tagsString, nil
@@ -203,17 +209,50 @@ func createGitHubRepoUrlForPath(repo GitHubRepo, path string) string {
 	return fmt.Sprintf("repos/%s/%s/%s", repo.Owner, repo.Name, path)
 }
 
+var nextLinkRegex = regexp.MustCompile(`<(.+?)>;\s*rel="next"`)
+
+// Get the next page URL from the given link header returned by the GitHub API. If there is no next page, return an
+// empty string. The link header is expected to be of the form:
+//
+// <url>; rel="next", <url>; rel="last"
+//
+func getNextUrl(links string) string {
+	if len(links) == 0 {
+		return ""
+	}
+
+	for _, link := range strings.Split(links, ",") {
+		urlMatches := nextLinkRegex.FindStringSubmatch(link)
+		if len(urlMatches) == 2 {
+			return strings.TrimSpace(urlMatches[1])
+		}
+	}
+
+	return ""
+}
+
+// Format a URL for calling the GitHub API for the given repo and path
+func formatUrl(repo GitHubRepo, path string) string {
+	return fmt.Sprintf("https://"+repo.ApiUrl+"/%s", path)
+}
+
 // Call the GitHub API at the given path and return the HTTP response
 func callGitHubApi(repo GitHubRepo, path string, customHeaders map[string]string) (*http.Response, *FetchError) {
+	return callGitHubApiRaw(formatUrl(repo, path), "GET", repo.Token, customHeaders)
+}
+
+// Call the GitHub API at the given URL, using the given HTTP method, and passing the given token and headers, and
+// return the response
+func callGitHubApiRaw(url string, method string, token string, customHeaders map[string]string) (*http.Response, *FetchError) {
 	httpClient := &http.Client{}
 
-	request, err := http.NewRequest("GET", fmt.Sprintf("https://"+repo.ApiUrl+"/%s", path), nil)
+	request, err := http.NewRequest(method, url, nil)
 	if err != nil {
 		return nil, wrapError(err)
 	}
 
-	if repo.Token != "" {
-		request.Header.Set("Authorization", fmt.Sprintf("token %s", repo.Token))
+	if token != "" {
+		request.Header.Set("Authorization", fmt.Sprintf("token %s", token))
 	}
 
 	for headerName, headerValue := range customHeaders {
@@ -236,7 +275,7 @@ func callGitHubApi(repo GitHubRepo, path string, customHeaders map[string]string
 		respBody := buf.String()
 
 		// We leverage the HTTP Response Code as our ErrorCode here.
-		return nil, newError(resp.StatusCode, fmt.Sprintf("Received HTTP Response %d while fetching releases for GitHub URL %s. Full HTTP response: %s", resp.StatusCode, repo.Url, respBody))
+		return nil, newError(resp.StatusCode, fmt.Sprintf("Received HTTP Response %d while fetching releases for GitHub URL %s. Full HTTP response: %s", resp.StatusCode, url, respBody))
 	}
 
 	return resp, nil
