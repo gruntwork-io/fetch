@@ -151,14 +151,14 @@ func MakeGitHubZipFileRequest(gitHubCommit GitHubCommit, gitHubToken string, ins
 
 	// This represents either a commit, branch, or git tag
 	var gitRef string
-	if gitHubCommit.GitRef != "" {
-		gitRef = gitHubCommit.GitRef
-	} else if gitHubCommit.CommitSha != "" {
+	if gitHubCommit.CommitSha != "" {
 		gitRef = gitHubCommit.CommitSha
 	} else if gitHubCommit.BranchName != "" {
 		gitRef = gitHubCommit.BranchName
 	} else if gitHubCommit.GitTag != "" {
 		gitRef = gitHubCommit.GitTag
+	} else if gitHubCommit.GitRef != "" {
+		gitRef = gitHubCommit.GitRef
 	} else {
 		return request, fmt.Errorf("Neither a GitCommitSha nor a GitTag nor a BranchName were specified so impossible to identify a specific commit to download.")
 	}
