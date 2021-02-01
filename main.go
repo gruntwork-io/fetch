@@ -290,14 +290,14 @@ func downloadSourcePaths(sourcePaths []string, destPath string, githubRepo GitHu
 
 	// Download that release as a .zip file
 
-	if gitHubCommit.GitRef != "" {
-		fmt.Printf("Downloading git reference \"%s\" of %s ...\n", gitHubCommit.GitRef, githubRepo.Url)
-	} else if gitHubCommit.CommitSha != "" {
+	if gitHubCommit.CommitSha != "" {
 		fmt.Printf("Downloading git commit \"%s\" of %s ...\n", gitHubCommit.CommitSha, githubRepo.Url)
 	} else if gitHubCommit.BranchName != "" {
 		fmt.Printf("Downloading latest commit from branch \"%s\" of %s ...\n", gitHubCommit.BranchName, githubRepo.Url)
 	} else if gitHubCommit.GitTag != "" {
 		fmt.Printf("Downloading tag \"%s\" of %s ...\n", latestTag, githubRepo.Url)
+	} else if gitHubCommit.GitRef != "" {
+		fmt.Printf("Downloading git reference \"%s\" of %s ...\n", gitHubCommit.GitRef, githubRepo.Url)
 	} else {
 		return fmt.Errorf("The commit sha, tag, and branch name are all empty.")
 	}
