@@ -15,34 +15,40 @@ import (
 )
 
 func TestFetchWithBranchOption(t *testing.T) {
-	t.Parallel()
+	// Note: we don't run these tests in parallel as runFetchCommandWithOutput currently overrides the
+	// stdout and stderr variables which may result in unstable tests.
 
 	tmpDownloadPath := createTempDir(t, "fetch-branch-test")
 
 	cases := []struct {
-		name       string
-		repoUrl    string
-		branchName string
-		sourcePath string
+		name         string
+		repoUrl      string
+		branchName   string
+		sourcePath   string
+		expectedFile string
 	}{
 		// Test on a public repo whose sole purpose is to be a test fixture for this tool
-		{"branch option with public repo", "https://github.com/gruntwork-io/fetch-test-public", "sample-branch", "/"},
+		{"branch option with public repo", "https://github.com/gruntwork-io/fetch-test-public", "sample-branch", "/", "foo.txt"},
 
 		// Private repo equivalent
-		{"branch option with private repo", "https://github.com/gruntwork-io/fetch-test-private", "sample-branch", "/"},
+		{"branch option with private repo", "https://github.com/gruntwork-io/fetch-test-private", "sample-branch", "/", "bar.txt"},
 	}
 
 	for _, tc := range cases {
+		// The following is necessary to make sure tc's values don't
+		// get updated due to concurrency within the scope of t.Run(..) below
 		tc := tc
 
 		t.Run(tc.name, func(t *testing.T) {
 			cmd := fmt.Sprintf("fetch --repo %s --branch %s --source-path %s %s", tc.repoUrl, tc.branchName, tc.sourcePath, tmpDownloadPath)
-			//t.Fatal(cmd)
 			output, _, err := runFetchCommandWithOutput(t, cmd)
 			require.NoError(t, err)
 
 			// When --branch is specified, ensure the latest commit is fetched
 			assert.Contains(t, output, "Downloading latest commit from branch")
+
+			// Ensure the expected file was downloaded
+			assert.FileExists(t, JoinPath(tmpDownloadPath, tc.expectedFile))
 		})
 	}
 }
@@ -50,6 +56,7 @@ func TestFetchWithBranchOption(t *testing.T) {
 func runFetchCommandWithOutput(t *testing.T, command string) (string, string, error) {
 	// Note: As most of fetch writes directly to stdout and stderr using the fmt package, we need to temporarily override
 	// the OS pipes. This is based loosely on https://stackoverflow.com/questions/10473800/in-go-how-do-i-capture-stdout-of-a-function-into-a-string/10476304#10476304
+	// Our goal eventually is to remove this, but we'll need to introduce a logger as mentioned in: https://github.com/gruntwork-io/fetch/issues/89
 	stdout := bytes.Buffer{}
 	stderr := bytes.Buffer{}
 
@@ -76,7 +83,7 @@ func runFetchCommandWithOutput(t *testing.T, command string) (string, string, er
 		return "", "", err
 	}
 
-	// copy the output to the buffers in seperate goroutines so printing can't block indefinitely
+	// copy the output to the buffers in separate goroutines so printing can't block indefinitely
 	stdoutC := make(chan bytes.Buffer)
 	stderrC := make(chan bytes.Buffer)
 	go func() {
