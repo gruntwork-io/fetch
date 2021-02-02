@@ -52,12 +52,19 @@ const optionWithProgress = "progress"
 
 const envVarGithubToken = "GITHUB_OAUTH_TOKEN"
 
-func main() {
+// Create the Fetch CLI App
+func CreateFetchCli(version string) *cli.App {
+	cli.OsExiter = func(exitCode int) {
+		// Do nothing. We just need to override this function, as the default value calls os.Exit, which
+		// kills the app (or any automated test) dead in its tracks.
+	}
+
 	app := cli.NewApp()
 	app.Name = "fetch"
 	app.Usage = "fetch makes it easy to download files, folders, and release assets from a specific git commit, branch, or tag of public and private GitHub repos."
 	app.UsageText = "fetch [global options] <local-download-path>\n   (See https://github.com/gruntwork-io/fetch for examples, argument definitions, and additional docs.)"
-	app.Version = VERSION
+	app.Author = "Gruntwork <www.gruntwork.io>"
+	app.Version = version
 
 	app.Flags = []cli.Flag{
 		cli.StringFlag{
@@ -112,6 +119,11 @@ func main() {
 		},
 	}
 
+	return app
+}
+
+func main() {
+	app := CreateFetchCli(VERSION)
 	app.Action = runFetchWrapper
 
 	// Run the definition of App.Action
