@@ -52,12 +52,19 @@ const optionWithProgress = "progress"
 
 const envVarGithubToken = "GITHUB_OAUTH_TOKEN"
 
-func main() {
+// Create the Fetch CLI App
+func CreateFetchCli(version string) *cli.App {
+	cli.OsExiter = func(exitCode int) {
+		// Do nothing. We just need to override this function, as the default value calls os.Exit, which
+		// kills the app (or any automated test) dead in its tracks.
+	}
+
 	app := cli.NewApp()
 	app.Name = "fetch"
 	app.Usage = "fetch makes it easy to download files, folders, and release assets from a specific git commit, branch, or tag of public and private GitHub repos."
 	app.UsageText = "fetch [global options] <local-download-path>\n   (See https://github.com/gruntwork-io/fetch for examples, argument definitions, and additional docs.)"
-	app.Version = VERSION
+	app.Author = "Gruntwork <www.gruntwork.io>"
+	app.Version = version
 
 	app.Flags = []cli.Flag{
 		cli.StringFlag{
@@ -112,6 +119,11 @@ func main() {
 		},
 	}
 
+	return app
+}
+
+func main() {
+	app := CreateFetchCli(VERSION)
 	app.Action = runFetchWrapper
 
 	// Run the definition of App.Action
@@ -290,14 +302,17 @@ func downloadSourcePaths(sourcePaths []string, destPath string, githubRepo GitHu
 
 	// Download that release as a .zip file
 
-	if gitHubCommit.GitRef != "" {
-		fmt.Printf("Downloading git reference \"%s\" of %s ...\n", gitHubCommit.GitRef, githubRepo.Url)
-	} else if gitHubCommit.CommitSha != "" {
+	// Ordering matters in this conditional
+	// GitRef needs to be the fallback and therefore must be last
+	// See https://github.com/gruntwork-io/fetch/issues/87 for an example
+	if gitHubCommit.CommitSha != "" {
 		fmt.Printf("Downloading git commit \"%s\" of %s ...\n", gitHubCommit.CommitSha, githubRepo.Url)
 	} else if gitHubCommit.BranchName != "" {
 		fmt.Printf("Downloading latest commit from branch \"%s\" of %s ...\n", gitHubCommit.BranchName, githubRepo.Url)
 	} else if gitHubCommit.GitTag != "" {
 		fmt.Printf("Downloading tag \"%s\" of %s ...\n", latestTag, githubRepo.Url)
+	} else if gitHubCommit.GitRef != "" {
+		fmt.Printf("Downloading git reference \"%s\" of %s ...\n", gitHubCommit.GitRef, githubRepo.Url)
 	} else {
 		return fmt.Errorf("The commit sha, tag, and branch name are all empty.")
 	}
