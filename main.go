@@ -10,6 +10,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/sirupsen/logrus"
 	cli "gopkg.in/urfave/cli.v1"
 )
 
@@ -31,6 +32,12 @@ type FetchOptions struct {
 	LocalDownloadPath        string
 	GithubApiVersion         string
 	WithProgress             bool
+
+	// Basic log entry
+	Logger *logrus.Entry
+
+	// Log level
+	LogLevel logrus.Level
 }
 
 type AssetDownloadResult struct {
@@ -135,21 +142,24 @@ func main() {
 
 // We just want to call runFetch(), but app.Action won't permit us to return an error, so call a wrapper function instead.
 func runFetchWrapper(c *cli.Context) {
-	err := runFetch(c)
+	// initialize the logger
+	logger := CreateLogEntryWithWriter(c.App.ErrWriter, "", DEFAULT_LOG_LEVEL)
+
+	err := runFetch(c, logger)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "ERROR: %s\n", err)
+		logger.Errorf("%s\n", err)
 		os.Exit(1)
 	}
 }
 
 // Run the fetch program
-func runFetch(c *cli.Context) error {
-	options := parseOptions(c)
+func runFetch(c *cli.Context, logger *logrus.Entry) error {
+	options := parseOptions(c, logger)
 	if err := validateOptions(options); err != nil {
 		return err
 	}
 
-	instance, fetchErr := ParseUrlIntoGithubInstance(options.RepoUrl, options.GithubApiVersion)
+	instance, fetchErr := ParseUrlIntoGithubInstance(logger, options.RepoUrl, options.GithubApiVersion)
 	if fetchErr != nil {
 		return fetchErr
 	}
@@ -203,12 +213,12 @@ func runFetch(c *cli.Context) error {
 	}
 
 	// Download any requested source files
-	if err := downloadSourcePaths(options.SourcePaths, options.LocalDownloadPath, repo, desiredTag, options.BranchName, options.CommitSha, instance); err != nil {
+	if err := downloadSourcePaths(logger, options.SourcePaths, options.LocalDownloadPath, repo, desiredTag, options.BranchName, options.CommitSha, instance); err != nil {
 		return err
 	}
 
 	// Download the requested release assets
-	assetPaths, err := downloadReleaseAssets(options.ReleaseAsset, options.LocalDownloadPath, repo, desiredTag, options.WithProgress)
+	assetPaths, err := downloadReleaseAssets(logger, options.ReleaseAsset, options.LocalDownloadPath, repo, desiredTag, options.WithProgress)
 	if err != nil {
 		return err
 	}
@@ -216,7 +226,7 @@ func runFetch(c *cli.Context) error {
 	// If applicable, verify the release asset
 	if len(options.ReleaseAssetChecksums) > 0 {
 		for _, assetPath := range assetPaths {
-			fetchErr = verifyChecksumOfReleaseAsset(assetPath, options.ReleaseAssetChecksums, options.ReleaseAssetChecksumAlgo)
+			fetchErr = verifyChecksumOfReleaseAsset(logger, assetPath, options.ReleaseAssetChecksums, options.ReleaseAssetChecksumAlgo)
 			if fetchErr != nil {
 				return fetchErr
 			}
@@ -226,7 +236,7 @@ func runFetch(c *cli.Context) error {
 	return nil
 }
 
-func parseOptions(c *cli.Context) FetchOptions {
+func parseOptions(c *cli.Context, logger *logrus.Entry) FetchOptions {
 	localDownloadPath := c.Args().First()
 	sourcePaths := c.StringSlice(optionSourcePath)
 	assetChecksums := c.StringSlice(optionReleaseAssetChecksum)
@@ -235,7 +245,7 @@ func parseOptions(c *cli.Context) FetchOptions {
 	// Maintain backwards compatibility with older versions of fetch that passed source paths as an optional first
 	// command-line arg
 	if c.NArg() == 2 {
-		fmt.Printf("DEPRECATION WARNING: passing source paths via command-line args is deprecated. Please use the --%s option instead!\n", optionSourcePath)
+		logger.Warnf("DEPRECATION WARNING: passing source paths via command-line args is deprecated. Please use the --%s option instead!\n", optionSourcePath)
 		sourcePaths = []string{c.Args().First()}
 		localDownloadPath = c.Args().Get(1)
 	}
@@ -258,6 +268,8 @@ func parseOptions(c *cli.Context) FetchOptions {
 		LocalDownloadPath:        localDownloadPath,
 		GithubApiVersion:         c.String(optionGithubAPIVersion),
 		WithProgress:             c.IsSet(optionWithProgress),
+		Logger:                   logger,
+		LogLevel:                 DEFAULT_LOG_LEVEL,
 	}
 }
 
@@ -286,7 +298,7 @@ func validateOptions(options FetchOptions) error {
 }
 
 // Download the specified source files from the given repo
-func downloadSourcePaths(sourcePaths []string, destPath string, githubRepo GitHubRepo, latestTag string, branchName string, commitSha string, instance GitHubInstance) error {
+func downloadSourcePaths(logger *logrus.Entry, sourcePaths []string, destPath string, githubRepo GitHubRepo, latestTag string, branchName string, commitSha string, instance GitHubInstance) error {
 	if len(sourcePaths) == 0 {
 		return nil
 	}
@@ -306,15 +318,15 @@ func downloadSourcePaths(sourcePaths []string, destPath string, githubRepo GitHu
 	// Download that release as a .zip file
 
 	if gitHubCommit.CommitSha != "" {
-		fmt.Printf("Downloading git commit \"%s\" of %s ...\n", gitHubCommit.CommitSha, githubRepo.Url)
+		logger.Printf("Downloading git commit \"%s\" of %s ...\n", gitHubCommit.CommitSha, githubRepo.Url)
 	} else if gitHubCommit.BranchName != "" {
-		fmt.Printf("Downloading latest commit from branch \"%s\" of %s ...\n", gitHubCommit.BranchName, githubRepo.Url)
+		logger.Printf("Downloading latest commit from branch \"%s\" of %s ...\n", gitHubCommit.BranchName, githubRepo.Url)
 	} else if gitHubCommit.GitTag != "" {
-		fmt.Printf("Downloading tag \"%s\" of %s ...\n", latestTag, githubRepo.Url)
+		logger.Printf("Downloading tag \"%s\" of %s ...\n", latestTag, githubRepo.Url)
 	} else if gitHubCommit.GitRef != "" {
-		fmt.Printf("Downloading git reference \"%s\" of %s ...\n", gitHubCommit.GitRef, githubRepo.Url)
+		logger.Printf("Downloading git reference \"%s\" of %s ...\n", gitHubCommit.GitRef, githubRepo.Url)
 	} else {
-		return fmt.Errorf("The commit sha, tag, and branch name are all empty.")
+		return fmt.Errorf("The commit sha, tag, and branch name are all empty")
 	}
 
 	localZipFilePath, err := downloadGithubZipFile(gitHubCommit, githubRepo.Token, instance)
@@ -325,20 +337,21 @@ func downloadSourcePaths(sourcePaths []string, destPath string, githubRepo GitHu
 
 	// Unzip and move the files we need to our destination
 	for _, sourcePath := range sourcePaths {
-		fmt.Printf("Extracting files from <repo>%s to %s ... ", sourcePath, destPath)
+		logger.Printf("Extracting files from <repo>%s to %s ...\n", sourcePath, destPath)
+
 		fileCount, err := extractFiles(localZipFilePath, sourcePath, destPath)
 		plural := ""
 		if fileCount != 1 {
 			plural = "s"
 		}
-		fmt.Printf("%d file%s extracted\n", fileCount, plural)
+		logger.Printf("%d file%s extracted\n", fileCount, plural)
 		if err != nil {
 			return fmt.Errorf("Error occurred while extracting files from GitHub zip file: %s", err.Error())
 		}
 
 	}
 
-	fmt.Println("Download and file extraction complete.")
+	logger.Printf("Download and file extraction complete.\n")
 	return nil
 }
 
@@ -348,7 +361,7 @@ func downloadSourcePaths(sourcePaths []string, destPath string, githubRepo GitHu
 // were downloaded. For those that succeeded, the path they were downloaded to will be passed back
 // along with the error.
 // Returns the paths where the release assets were downloaded.
-func downloadReleaseAssets(assetRegex string, destPath string, githubRepo GitHubRepo, tag string, withProgress bool) ([]string, error) {
+func downloadReleaseAssets(logger *logrus.Entry, assetRegex string, destPath string, githubRepo GitHubRepo, tag string, withProgress bool) ([]string, error) {
 	var err error
 	var assetPaths []string
 
@@ -379,12 +392,12 @@ func downloadReleaseAssets(assetRegex string, destPath string, githubRepo GitHub
 			defer wg.Done()
 
 			assetPath := path.Join(destPath, asset.Name)
-			fmt.Printf("Downloading release asset %s to %s\n", asset.Name, assetPath)
+			logger.Printf("Downloading release asset %s to %s\n", asset.Name, assetPath)
 			if downloadErr := DownloadReleaseAsset(githubRepo, asset.Id, assetPath, withProgress); downloadErr == nil {
-				fmt.Printf("Downloaded %s\n", assetPath)
+				logger.Printf("Downloaded %s\n", assetPath)
 				results <- AssetDownloadResult{assetPath, nil}
 			} else {
-				fmt.Printf("Download failed for %s: %s\n", asset.Name, downloadErr)
+				logger.Printf("Download failed for %s: %s\n", asset.Name, downloadErr)
 				results <- AssetDownloadResult{assetPath, downloadErr}
 			}
 		}(asset, results)
@@ -392,7 +405,7 @@ func downloadReleaseAssets(assetRegex string, destPath string, githubRepo GitHub
 
 	wg.Wait()
 	close(results)
-	fmt.Println("Download of release assets complete")
+	logger.Printf("Download of release assets complete\n")
 
 	var errorStrs []string
 	for result := range results {
@@ -404,7 +417,7 @@ func downloadReleaseAssets(assetRegex string, destPath string, githubRepo GitHub
 	}
 
 	if numErrors := len(errorStrs); numErrors > 0 {
-		err = fmt.Errorf("%d errors while downloading assets:\n\t%s", numErrors, strings.Join(errorStrs, "\n\t"))
+		logger.Errorf("%d errors while downloading assets:\n\t%s", numErrors, strings.Join(errorStrs, "\n\t"))
 	}
 
 	return assetPaths, err

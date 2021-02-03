@@ -37,14 +37,14 @@ func TestFetchWithBranchOption(t *testing.T) {
 		tc := tc
 
 		t.Run(tc.name, func(t *testing.T) {
-			// TODO - uncomment t.Parallel()
+			t.Parallel()
 
 			cmd := fmt.Sprintf("fetch --repo %s --branch %s --source-path %s %s", tc.repoUrl, tc.branchName, tc.sourcePath, tmpDownloadPath)
-			output, _, err := runFetchCommandWithOutput(t, cmd)
+			_, erroutput, err := runFetchCommandWithOutput(t, cmd)
 			require.NoError(t, err)
 
 			// When --branch is specified, ensure the latest commit is fetched
-			assert.Contains(t, output, "Downloading latest commit from branch")
+			assert.Contains(t, erroutput, "Downloading latest commit from branch")
 
 			// Ensure the expected file was downloaded
 			assert.FileExists(t, JoinPath(tmpDownloadPath, tc.expectedFile))
@@ -93,8 +93,10 @@ func createTempDir(t *testing.T, prefix string) string {
 	return dir
 }
 
-// We want to call runFetch() using the app.Action wrapper like the main CLI handler, but we don't want to write to strerr
+// We want to call runFetch() using the app.Action wrapper like the main CLI handler, but we don't want to write to stderr
 // and suddenly exit using os.Exit(1), so we use a separate wrapper method in the integration tests.
 func runFetchTestWrapper(c *cli.Context) error {
-	return runFetch(c)
+	// initialize the logger
+	logger := CreateLogEntryWithWriter(c.App.ErrWriter, "", DEFAULT_LOG_LEVEL)
+	return runFetch(c, logger)
 }
