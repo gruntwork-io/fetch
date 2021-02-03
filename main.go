@@ -35,9 +35,6 @@ type FetchOptions struct {
 
 	// Basic log entry
 	Logger *logrus.Entry
-
-	// Log level
-	LogLevel logrus.Level
 }
 
 type AssetDownloadResult struct {
@@ -269,7 +266,6 @@ func parseOptions(c *cli.Context, logger *logrus.Entry) FetchOptions {
 		GithubApiVersion:         c.String(optionGithubAPIVersion),
 		WithProgress:             c.IsSet(optionWithProgress),
 		Logger:                   logger,
-		LogLevel:                 DEFAULT_LOG_LEVEL,
 	}
 }
 

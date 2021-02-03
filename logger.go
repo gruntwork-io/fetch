@@ -10,7 +10,7 @@ import (
 
 const DEFAULT_LOG_LEVEL = logrus.InfoLevel
 
-// CreateLogger creates a logger. If debug is set, we use ErrorLevel to enable verbose output, otherwise - only errors are shown
+// CreateLogger creates a logger.
 func CreateLogger(lvl logrus.Level) *logrus.Logger {
 	logger := logrus.New()
 	logger.SetLevel(lvl)
