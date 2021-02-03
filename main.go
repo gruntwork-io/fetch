@@ -3,6 +3,7 @@ package main
 import (
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"path"
 	"regexp"
@@ -53,7 +54,7 @@ const optionWithProgress = "progress"
 const envVarGithubToken = "GITHUB_OAUTH_TOKEN"
 
 // Create the Fetch CLI App
-func CreateFetchCli(version string) *cli.App {
+func CreateFetchCli(version string, writer io.Writer, errwriter io.Writer) *cli.App {
 	cli.OsExiter = func(exitCode int) {
 		// Do nothing. We just need to override this function, as the default value calls os.Exit, which
 		// kills the app (or any automated test) dead in its tracks.
@@ -65,6 +66,8 @@ func CreateFetchCli(version string) *cli.App {
 	app.UsageText = "fetch [global options] <local-download-path>\n   (See https://github.com/gruntwork-io/fetch for examples, argument definitions, and additional docs.)"
 	app.Author = "Gruntwork <www.gruntwork.io>"
 	app.Version = version
+	app.Writer = writer
+	app.ErrWriter = errwriter
 
 	app.Flags = []cli.Flag{
 		cli.StringFlag{
@@ -123,7 +126,7 @@ func CreateFetchCli(version string) *cli.App {
 }
 
 func main() {
-	app := CreateFetchCli(VERSION)
+	app := CreateFetchCli(VERSION, os.Stdout, os.Stderr)
 	app.Action = runFetchWrapper
 
 	// Run the definition of App.Action
