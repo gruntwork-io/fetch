@@ -151,6 +151,9 @@ func MakeGitHubZipFileRequest(gitHubCommit GitHubCommit, gitHubToken string, ins
 
 	// This represents either a commit, branch, or git tag
 	var gitRef string
+	// Ordering matters in this conditional
+	// GitRef needs to be the fallback and therefore must be last
+	// See https://github.com/gruntwork-io/fetch/issues/87 for an example
 	if gitHubCommit.CommitSha != "" {
 		gitRef = gitHubCommit.CommitSha
 	} else if gitHubCommit.BranchName != "" {

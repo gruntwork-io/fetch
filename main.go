@@ -313,6 +313,9 @@ func downloadSourcePaths(logger *logrus.Entry, sourcePaths []string, destPath st
 
 	// Download that release as a .zip file
 
+	// Ordering matters in this conditional
+	// GitRef needs to be the fallback and therefore must be last
+	// See https://github.com/gruntwork-io/fetch/issues/87 for an example
 	if gitHubCommit.CommitSha != "" {
 		logger.Printf("Downloading git commit \"%s\" of %s ...\n", gitHubCommit.CommitSha, githubRepo.Url)
 	} else if gitHubCommit.BranchName != "" {

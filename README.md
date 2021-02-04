@@ -183,6 +183,13 @@ Download the release asset `foo.exe` from a GitHub release hosted on a GitHub En
 fetch --repo="https://ghe.mycompany.com/foo/bar" --ref="0.1.5" --release-asset="foo.exe" /tmp
 ```
 
+##### Release Instructions
+
+To release a new version of `fetch`, go to the [Releases page](https://github.com/gruntwork-io/fetch/releases) and "Draft a new release".
+On the following page, bump the "Tag version" appropriately, and set the "Release title" to be the same.
+In the "Describe this release" section, log the changes of this release, linking back to issues that were addressed.
+Click the "Publish release" button. CircleCI will pick this up, generate the assets, and attach them to the release.
+
 ## License
 
 This code is released under the MIT License. See [LICENSE.txt](/LICENSE.txt).
