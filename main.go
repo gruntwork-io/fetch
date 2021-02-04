@@ -152,7 +152,6 @@ func initLogger(cliContext *cli.Context) error {
 	logLevel := cliContext.String(optionLogLevel)
 	level, err := logrus.ParseLevel(logLevel)
 	if err != nil {
-		//return errors.WithStackTrace(err)
 		return fmt.Errorf("Error: %s\n", err)
 	}
 	logging.SetGlobalLogLevel(level)
