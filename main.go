@@ -10,6 +10,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/gruntwork-io/gruntwork-cli/logging"
 	"github.com/sirupsen/logrus"
 	cli "gopkg.in/urfave/cli.v1"
 )
@@ -33,8 +34,8 @@ type FetchOptions struct {
 	GithubApiVersion         string
 	WithProgress             bool
 
-	// Basic log entry
-	Logger *logrus.Entry
+	// Project logger
+	Logger *logrus.Logger
 }
 
 type AssetDownloadResult struct {
@@ -54,6 +55,7 @@ const optionReleaseAssetChecksum = "release-asset-checksum"
 const optionReleaseAssetChecksumAlgo = "release-asset-checksum-algo"
 const optionGithubAPIVersion = "github-api-version"
 const optionWithProgress = "progress"
+const optionLogLevel = "log-level"
 
 const envVarGithubToken = "GITHUB_OAUTH_TOKEN"
 
@@ -124,6 +126,11 @@ func CreateFetchCli(version string, writer io.Writer, errwriter io.Writer) *cli.
 			Name:  optionWithProgress,
 			Usage: "Display progress on file downloads, especially useful for large files",
 		},
+		cli.StringFlag{
+			Name:  optionLogLevel,
+			Value: logrus.InfoLevel.String(),
+			Usage: "The logging level of the command. Acceptable values\n\tare \"trace\", \"debug\", \"info\", \"warn\", \"error\", \"fatal\" and \"panic\".",
+		},
 	}
 
 	return app
@@ -131,17 +138,31 @@ func CreateFetchCli(version string, writer io.Writer, errwriter io.Writer) *cli.
 
 func main() {
 	app := CreateFetchCli(VERSION, os.Stdout, os.Stderr)
+	app.Before = initLogger
 	app.Action = runFetchWrapper
 
 	// Run the definition of App.Action
 	app.Run(os.Args)
 }
 
+// initLogger initializes the Logger before any command is actually executed. This function will handle all the setup
+// code, such as setting up the logger with the appropriate log level.
+func initLogger(cliContext *cli.Context) error {
+	// Set logging level
+	logLevel := cliContext.String(optionLogLevel)
+	level, err := logrus.ParseLevel(logLevel)
+	if err != nil {
+		//return errors.WithStackTrace(err)
+		return fmt.Errorf("Error: %s\n", err)
+	}
+	logging.SetGlobalLogLevel(level)
+	return nil
+}
+
 // We just want to call runFetch(), but app.Action won't permit us to return an error, so call a wrapper function instead.
 func runFetchWrapper(c *cli.Context) {
 	// initialize the logger
-	logger := CreateLogEntryWithWriter(c.App.ErrWriter, "", DEFAULT_LOG_LEVEL)
-
+	logger := GetProjectLogger()
 	err := runFetch(c, logger)
 	if err != nil {
 		logger.Errorf("%s\n", err)
@@ -150,7 +171,7 @@ func runFetchWrapper(c *cli.Context) {
 }
 
 // Run the fetch program
-func runFetch(c *cli.Context, logger *logrus.Entry) error {
+func runFetch(c *cli.Context, logger *logrus.Logger) error {
 	options := parseOptions(c, logger)
 	if err := validateOptions(options); err != nil {
 		return err
@@ -233,7 +254,7 @@ func runFetch(c *cli.Context, logger *logrus.Entry) error {
 	return nil
 }
 
-func parseOptions(c *cli.Context, logger *logrus.Entry) FetchOptions {
+func parseOptions(c *cli.Context, logger *logrus.Logger) FetchOptions {
 	localDownloadPath := c.Args().First()
 	sourcePaths := c.StringSlice(optionSourcePath)
 	assetChecksums := c.StringSlice(optionReleaseAssetChecksum)
@@ -294,7 +315,7 @@ func validateOptions(options FetchOptions) error {
 }
 
 // Download the specified source files from the given repo
-func downloadSourcePaths(logger *logrus.Entry, sourcePaths []string, destPath string, githubRepo GitHubRepo, latestTag string, branchName string, commitSha string, instance GitHubInstance) error {
+func downloadSourcePaths(logger *logrus.Logger, sourcePaths []string, destPath string, githubRepo GitHubRepo, latestTag string, branchName string, commitSha string, instance GitHubInstance) error {
 	if len(sourcePaths) == 0 {
 		return nil
 	}
@@ -360,7 +381,7 @@ func downloadSourcePaths(logger *logrus.Entry, sourcePaths []string, destPath st
 // were downloaded. For those that succeeded, the path they were downloaded to will be passed back
 // along with the error.
 // Returns the paths where the release assets were downloaded.
-func downloadReleaseAssets(logger *logrus.Entry, assetRegex string, destPath string, githubRepo GitHubRepo, tag string, withProgress bool) ([]string, error) {
+func downloadReleaseAssets(logger *logrus.Logger, assetRegex string, destPath string, githubRepo GitHubRepo, tag string, withProgress bool) ([]string, error) {
 	var err error
 	var assetPaths []string
 
