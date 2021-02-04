@@ -87,7 +87,7 @@ func ParseUrlIntoGithubInstance(logger *logrus.Entry, repoUrl string, apiv strin
 	baseUrl := u.Host
 	apiUrl := "api.github.com"
 	if baseUrl != "github.com" && baseUrl != "www.github.com" {
-		logger.Printf("Assuming GitHub Enterprise since the provided url (%s) does not appear to be for GitHub.com\n", repoUrl)
+		logger.Infof("Assuming GitHub Enterprise since the provided url (%s) does not appear to be for GitHub.com\n", repoUrl)
 		apiUrl = baseUrl + "/api/" + apiv
 	}
 

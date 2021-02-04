@@ -22,7 +22,7 @@ func verifyChecksumOfReleaseAsset(logger *logrus.Entry, assetPath string, checks
 		keys := reflect.ValueOf(checksumMap).MapKeys()
 		return newError(checksumDoesNotMatch, fmt.Sprintf("Expected to checksum value to be one of %s, but instead got %s for Release Asset at %s. This means that either you are using the wrong checksum value in your call to fetch, (e.g. did you update the version of the module you're installing but not the checksum?) or that someone has replaced the asset with a potentially dangerous one and you should be very careful about proceeding.", keys, computedChecksum, assetPath))
 	}
-	logger.Printf("Release asset checksum verified for %s\n", assetPath)
+	logger.Infof("Release asset checksum verified for %s\n", assetPath)
 
 	return nil
 }

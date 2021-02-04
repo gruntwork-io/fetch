@@ -317,13 +317,13 @@ func downloadSourcePaths(logger *logrus.Entry, sourcePaths []string, destPath st
 	// GitRef needs to be the fallback and therefore must be last
 	// See https://github.com/gruntwork-io/fetch/issues/87 for an example
 	if gitHubCommit.CommitSha != "" {
-		logger.Printf("Downloading git commit \"%s\" of %s ...\n", gitHubCommit.CommitSha, githubRepo.Url)
+		logger.Infof("Downloading git commit \"%s\" of %s ...\n", gitHubCommit.CommitSha, githubRepo.Url)
 	} else if gitHubCommit.BranchName != "" {
-		logger.Printf("Downloading latest commit from branch \"%s\" of %s ...\n", gitHubCommit.BranchName, githubRepo.Url)
+		logger.Infof("Downloading latest commit from branch \"%s\" of %s ...\n", gitHubCommit.BranchName, githubRepo.Url)
 	} else if gitHubCommit.GitTag != "" {
-		logger.Printf("Downloading tag \"%s\" of %s ...\n", latestTag, githubRepo.Url)
+		logger.Infof("Downloading tag \"%s\" of %s ...\n", latestTag, githubRepo.Url)
 	} else if gitHubCommit.GitRef != "" {
-		logger.Printf("Downloading git reference \"%s\" of %s ...\n", gitHubCommit.GitRef, githubRepo.Url)
+		logger.Infof("Downloading git reference \"%s\" of %s ...\n", gitHubCommit.GitRef, githubRepo.Url)
 	} else {
 		return fmt.Errorf("The commit sha, tag, and branch name are all empty")
 	}
@@ -336,21 +336,21 @@ func downloadSourcePaths(logger *logrus.Entry, sourcePaths []string, destPath st
 
 	// Unzip and move the files we need to our destination
 	for _, sourcePath := range sourcePaths {
-		logger.Printf("Extracting files from <repo>%s to %s ...\n", sourcePath, destPath)
+		logger.Infof("Extracting files from <repo>%s to %s ...\n", sourcePath, destPath)
 
 		fileCount, err := extractFiles(localZipFilePath, sourcePath, destPath)
 		plural := ""
 		if fileCount != 1 {
 			plural = "s"
 		}
-		logger.Printf("%d file%s extracted\n", fileCount, plural)
+		logger.Infof("%d file%s extracted\n", fileCount, plural)
 		if err != nil {
 			return fmt.Errorf("Error occurred while extracting files from GitHub zip file: %s", err.Error())
 		}
 
 	}
 
-	logger.Printf("Download and file extraction complete.\n")
+	logger.Infof("Download and file extraction complete.\n")
 	return nil
 }
 
@@ -391,12 +391,12 @@ func downloadReleaseAssets(logger *logrus.Entry, assetRegex string, destPath str
 			defer wg.Done()
 
 			assetPath := path.Join(destPath, asset.Name)
-			logger.Printf("Downloading release asset %s to %s\n", asset.Name, assetPath)
+			logger.Infof("Downloading release asset %s to %s\n", asset.Name, assetPath)
 			if downloadErr := DownloadReleaseAsset(githubRepo, asset.Id, assetPath, withProgress); downloadErr == nil {
-				logger.Printf("Downloaded %s\n", assetPath)
+				logger.Infof("Downloaded %s\n", assetPath)
 				results <- AssetDownloadResult{assetPath, nil}
 			} else {
-				logger.Printf("Download failed for %s: %s\n", asset.Name, downloadErr)
+				logger.Infof("Download failed for %s: %s\n", asset.Name, downloadErr)
 				results <- AssetDownloadResult{assetPath, downloadErr}
 			}
 		}(asset, results)
@@ -404,7 +404,7 @@ func downloadReleaseAssets(logger *logrus.Entry, assetRegex string, destPath str
 
 	wg.Wait()
 	close(results)
-	logger.Printf("Download of release assets complete\n")
+	logger.Infof("Download of release assets complete\n")
 
 	var errorStrs []string
 	for result := range results {
