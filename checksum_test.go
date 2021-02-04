@@ -27,7 +27,7 @@ var SAMPLE_RELEASE_ASSET_CHECKSUMS_SHA256_NO_MATCH = map[string]bool{
 
 func TestVerifyReleaseAsset(t *testing.T) {
 	tmpDir := mkTempDir(t)
-	logger := CreateLogEntry("", DEFAULT_LOG_LEVEL)
+	logger := GetProjectLogger()
 	testInst := GitHubInstance{
 		BaseUrl: "github.com",
 		ApiUrl:  "api.github.com",
@@ -63,7 +63,7 @@ func TestVerifyReleaseAsset(t *testing.T) {
 
 func TestVerifyChecksumOfReleaseAsset(t *testing.T) {
 	tmpDir := mkTempDir(t)
-	logger := CreateLogEntry("", DEFAULT_LOG_LEVEL)
+	logger := GetProjectLogger()
 	testInst := GitHubInstance{
 		BaseUrl: "github.com",
 		ApiUrl:  "api.github.com",

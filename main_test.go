@@ -13,7 +13,7 @@ const SAMPLE_RELEASE_ASSET_REGEX = "health-checker_linux_[a-z0-9]+"
 
 func TestDownloadReleaseAssets(t *testing.T) {
 	tmpDir := mkTempDir(t)
-	logger := CreateLogEntry("", DEFAULT_LOG_LEVEL)
+	logger := GetProjectLogger()
 	testInst := GitHubInstance{
 		BaseUrl: "github.com",
 		ApiUrl:  "api.github.com",
@@ -44,7 +44,7 @@ func TestDownloadReleaseAssets(t *testing.T) {
 
 func TestInvalidReleaseAssetsRegex(t *testing.T) {
 	tmpDir := mkTempDir(t)
-	logger := CreateLogEntry("", DEFAULT_LOG_LEVEL)
+	logger := GetProjectLogger()
 	testInst := GitHubInstance{
 		BaseUrl: "github.com",
 		ApiUrl:  "api.github.com",

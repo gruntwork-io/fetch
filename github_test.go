@@ -147,7 +147,7 @@ func TestParseUrlIntoGithubInstance(t *testing.T) {
 	}
 
 	for _, tc := range cases {
-		logger := CreateLogEntry("", DEFAULT_LOG_LEVEL)
+		logger := GetProjectLogger()
 		inst, err := ParseUrlIntoGithubInstance(logger, tc.repoUrl, tc.apiv)
 		if err != nil {
 			t.Fatalf("error extracting url %s into a GitHubRepo struct: %s", tc.repoUrl, err)

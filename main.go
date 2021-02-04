@@ -349,7 +349,7 @@ func downloadSourcePaths(logger *logrus.Logger, sourcePaths []string, destPath s
 		return fmt.Errorf("The commit sha, tag, and branch name are all empty")
 	}
 
-	localZipFilePath, err := downloadGithubZipFile(gitHubCommit, githubRepo.Token, instance)
+	localZipFilePath, err := downloadGithubZipFile(logger, gitHubCommit, githubRepo.Token, instance)
 	if err != nil {
 		return fmt.Errorf("Error occurred while downloading zip file from GitHub repo: %s", err)
 	}

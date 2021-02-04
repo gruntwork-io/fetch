@@ -97,6 +97,6 @@ func createTempDir(t *testing.T, prefix string) string {
 // and suddenly exit using os.Exit(1), so we use a separate wrapper method in the integration tests.
 func runFetchTestWrapper(c *cli.Context) error {
 	// initialize the logger
-	logger := CreateLogEntryWithWriter(c.App.ErrWriter, "", DEFAULT_LOG_LEVEL)
+	logger := GetProjectLoggerWithWriter(c.App.ErrWriter)
 	return runFetch(c, logger)
 }
