@@ -82,7 +82,7 @@ func CreateFetchCli(version string, writer io.Writer, errwriter io.Writer) *cli.
 		},
 		cli.StringFlag{
 			Name:  optionRef,
-			Usage: "The git reference to download. If specified, will override --commit, --branch, and --tag.",
+			Usage: "The git reference to download. If specified, will take lower precendence than --commit, --branch, and --tag.",
 		},
 		cli.StringFlag{
 			Name:  optionCommit,
