@@ -27,6 +27,7 @@ var SAMPLE_RELEASE_ASSET_CHECKSUMS_SHA256_NO_MATCH = map[string]bool{
 
 func TestVerifyReleaseAsset(t *testing.T) {
 	tmpDir := mkTempDir(t)
+	logger := GetProjectLogger()
 	testInst := GitHubInstance{
 		BaseUrl: "github.com",
 		ApiUrl:  "api.github.com",
@@ -37,7 +38,7 @@ func TestVerifyReleaseAsset(t *testing.T) {
 		t.Fatalf("Failed to parse sample release asset GitHub URL into Fetch GitHubRepo struct: %s", err)
 	}
 
-	assetPaths, fetchErr := downloadReleaseAssets(SAMPLE_RELEASE_ASSET_NAME, tmpDir, githubRepo, SAMPLE_RELEASE_ASSET_VERSION, false)
+	assetPaths, fetchErr := downloadReleaseAssets(logger, SAMPLE_RELEASE_ASSET_NAME, tmpDir, githubRepo, SAMPLE_RELEASE_ASSET_VERSION, false)
 	if fetchErr != nil {
 		t.Fatalf("Failed to download release asset: %s", fetchErr)
 	}
@@ -62,6 +63,7 @@ func TestVerifyReleaseAsset(t *testing.T) {
 
 func TestVerifyChecksumOfReleaseAsset(t *testing.T) {
 	tmpDir := mkTempDir(t)
+	logger := GetProjectLogger()
 	testInst := GitHubInstance{
 		BaseUrl: "github.com",
 		ApiUrl:  "api.github.com",
@@ -72,7 +74,7 @@ func TestVerifyChecksumOfReleaseAsset(t *testing.T) {
 		t.Fatalf("Failed to parse sample release asset GitHub URL into Fetch GitHubRepo struct: %s", err)
 	}
 
-	assetPaths, fetchErr := downloadReleaseAssets(SAMPLE_RELEASE_ASSET_REGEX, tmpDir, githubRepo, SAMPLE_RELEASE_ASSET_VERSION, false)
+	assetPaths, fetchErr := downloadReleaseAssets(logger, SAMPLE_RELEASE_ASSET_REGEX, tmpDir, githubRepo, SAMPLE_RELEASE_ASSET_VERSION, false)
 	if fetchErr != nil {
 		t.Fatalf("Failed to download release asset: %s", fetchErr)
 	}
@@ -82,14 +84,14 @@ func TestVerifyChecksumOfReleaseAsset(t *testing.T) {
 	}
 
 	for _, assetPath := range assetPaths {
-		checksumErr := verifyChecksumOfReleaseAsset(assetPath, SAMPLE_RELEASE_ASSET_CHECKSUMS_SHA256, "sha256")
+		checksumErr := verifyChecksumOfReleaseAsset(logger, assetPath, SAMPLE_RELEASE_ASSET_CHECKSUMS_SHA256, "sha256")
 		if checksumErr != nil {
 			t.Fatalf("Expected downloaded asset to match one of %d checksums: %s", len(SAMPLE_RELEASE_ASSET_CHECKSUMS_SHA256), checksumErr)
 		}
 	}
 
 	for _, assetPath := range assetPaths {
-		checksumErr := verifyChecksumOfReleaseAsset(assetPath, SAMPLE_RELEASE_ASSET_CHECKSUMS_SHA256_NO_MATCH, "sha256")
+		checksumErr := verifyChecksumOfReleaseAsset(logger, assetPath, SAMPLE_RELEASE_ASSET_CHECKSUMS_SHA256_NO_MATCH, "sha256")
 		if checksumErr == nil {
 			t.Fatalf("Expected downloaded asset to not match any checksums")
 		}

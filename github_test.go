@@ -1,11 +1,12 @@
 package main
 
 import (
-	"github.com/stretchr/testify/require"
 	"io/ioutil"
 	"os"
 	"reflect"
 	"testing"
+
+	"github.com/stretchr/testify/require"
 )
 
 func TestGetListOfReleasesFromGitHubRepo(t *testing.T) {
@@ -146,7 +147,8 @@ func TestParseUrlIntoGithubInstance(t *testing.T) {
 	}
 
 	for _, tc := range cases {
-		inst, err := ParseUrlIntoGithubInstance(tc.repoUrl, tc.apiv)
+		logger := GetProjectLogger()
+		inst, err := ParseUrlIntoGithubInstance(logger, tc.repoUrl, tc.apiv)
 		if err != nil {
 			t.Fatalf("error extracting url %s into a GitHubRepo struct: %s", tc.repoUrl, err)
 		}

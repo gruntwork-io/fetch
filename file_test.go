@@ -44,6 +44,7 @@ func TestDownloadGitTagZipFile(t *testing.T) {
 	}
 
 	for _, tc := range cases {
+		logger := GetProjectLogger()
 		gitHubCommits := []GitHubCommit{
 			// Test as a GitTag
 			GitHubCommit{
@@ -63,7 +64,7 @@ func TestDownloadGitTagZipFile(t *testing.T) {
 			},
 		}
 		for _, gitHubCommit := range gitHubCommits {
-			zipFilePath, err := downloadGithubZipFile(gitHubCommit, tc.githubToken, tc.instance)
+			zipFilePath, err := downloadGithubZipFile(logger, gitHubCommit, tc.githubToken, tc.instance)
 
 			defer os.RemoveAll(zipFilePath)
 
@@ -118,6 +119,7 @@ func TestDownloadGitBranchZipFile(t *testing.T) {
 	}
 
 	for _, tc := range cases {
+		logger := GetProjectLogger()
 		gitHubCommits := []GitHubCommit{
 			GitHubCommit{
 				Repo: GitHubRepo{
@@ -135,7 +137,7 @@ func TestDownloadGitBranchZipFile(t *testing.T) {
 			},
 		}
 		for _, gitHubCommit := range gitHubCommits {
-			zipFilePath, err := downloadGithubZipFile(gitHubCommit, tc.githubToken, tc.instance)
+			zipFilePath, err := downloadGithubZipFile(logger, gitHubCommit, tc.githubToken, tc.instance)
 			defer os.RemoveAll(zipFilePath)
 			if err != nil {
 				t.Fatalf("Failed to download file: %s", err)
@@ -167,6 +169,7 @@ func TestDownloadBadGitBranchZipFile(t *testing.T) {
 	}
 
 	for _, tc := range cases {
+		logger := GetProjectLogger()
 		gitHubCommits := []GitHubCommit{
 			GitHubCommit{
 				Repo: GitHubRepo{
@@ -184,7 +187,7 @@ func TestDownloadBadGitBranchZipFile(t *testing.T) {
 			},
 		}
 		for _, gitHubCommit := range gitHubCommits {
-			zipFilePath, err := downloadGithubZipFile(gitHubCommit, tc.githubToken, tc.instance)
+			zipFilePath, err := downloadGithubZipFile(logger, gitHubCommit, tc.githubToken, tc.instance)
 			defer os.RemoveAll(zipFilePath)
 			if err == nil {
 				t.Fatalf("Expected that attempt to download repo %s/%s for branch \"%s\" would fail, but received no error.", tc.repoOwner, tc.repoName, tc.branchName)
@@ -215,6 +218,7 @@ func TestDownloadGitCommitFile(t *testing.T) {
 	}
 
 	for _, tc := range cases {
+		logger := GetProjectLogger()
 		GitHubCommits := []GitHubCommit{
 			GitHubCommit{
 				Repo: GitHubRepo{
@@ -232,7 +236,7 @@ func TestDownloadGitCommitFile(t *testing.T) {
 			},
 		}
 		for _, gitHubCommit := range GitHubCommits {
-			zipFilePath, err := downloadGithubZipFile(gitHubCommit, tc.githubToken, tc.instance)
+			zipFilePath, err := downloadGithubZipFile(logger, gitHubCommit, tc.githubToken, tc.instance)
 			defer os.RemoveAll(zipFilePath)
 			if err != nil {
 				t.Fatalf("Failed to download file: %s", err)
@@ -269,7 +273,7 @@ func TestDownloadBadGitCommitFile(t *testing.T) {
 	}
 
 	for _, tc := range cases {
-
+		logger := GetProjectLogger()
 		gitHubCommits := []GitHubCommit{
 			GitHubCommit{
 				Repo: GitHubRepo{
@@ -287,7 +291,7 @@ func TestDownloadBadGitCommitFile(t *testing.T) {
 			},
 		}
 		for _, gitHubCommit := range gitHubCommits {
-			zipFilePath, err := downloadGithubZipFile(gitHubCommit, tc.githubToken, tc.instance)
+			zipFilePath, err := downloadGithubZipFile(logger, gitHubCommit, tc.githubToken, tc.instance)
 			defer os.RemoveAll(zipFilePath)
 			if err == nil {
 				t.Fatalf("Expected that attempt to download repo %s/%s at commmit sha \"%s\" would fail, but received no error.", tc.repoOwner, tc.repoName, tc.commitSha)
@@ -315,6 +319,7 @@ func TestDownloadZipFileWithBadRepoValues(t *testing.T) {
 	}
 
 	for _, tc := range cases {
+		logger := GetProjectLogger()
 		gitHubCommits := []GitHubCommit{
 			GitHubCommit{
 				Repo: GitHubRepo{
@@ -333,7 +338,7 @@ func TestDownloadZipFileWithBadRepoValues(t *testing.T) {
 		}
 		for _, gitHubCommit := range gitHubCommits {
 
-			_, err := downloadGithubZipFile(gitHubCommit, tc.githubToken, tc.instance)
+			_, err := downloadGithubZipFile(logger, gitHubCommit, tc.githubToken, tc.instance)
 			if err == nil && err.errorCode != 500 {
 				t.Fatalf("Expected error for bad repo values: %s/%s:%s", tc.repoOwner, tc.repoName, tc.gitTag)
 			}

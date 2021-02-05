@@ -13,6 +13,7 @@ const SAMPLE_RELEASE_ASSET_REGEX = "health-checker_linux_[a-z0-9]+"
 
 func TestDownloadReleaseAssets(t *testing.T) {
 	tmpDir := mkTempDir(t)
+	logger := GetProjectLogger()
 	testInst := GitHubInstance{
 		BaseUrl: "github.com",
 		ApiUrl:  "api.github.com",
@@ -23,7 +24,7 @@ func TestDownloadReleaseAssets(t *testing.T) {
 		t.Fatalf("Failed to parse sample release asset GitHub URL into Fetch GitHubRepo struct: %s", err)
 	}
 
-	assetPaths, fetchErr := downloadReleaseAssets(SAMPLE_RELEASE_ASSET_REGEX, tmpDir, githubRepo, SAMPLE_RELEASE_ASSET_VERSION, false)
+	assetPaths, fetchErr := downloadReleaseAssets(logger, SAMPLE_RELEASE_ASSET_REGEX, tmpDir, githubRepo, SAMPLE_RELEASE_ASSET_VERSION, false)
 	if fetchErr != nil {
 		t.Fatalf("Failed to download release asset: %s", fetchErr)
 	}
@@ -43,6 +44,7 @@ func TestDownloadReleaseAssets(t *testing.T) {
 
 func TestInvalidReleaseAssetsRegex(t *testing.T) {
 	tmpDir := mkTempDir(t)
+	logger := GetProjectLogger()
 	testInst := GitHubInstance{
 		BaseUrl: "github.com",
 		ApiUrl:  "api.github.com",
@@ -53,7 +55,7 @@ func TestInvalidReleaseAssetsRegex(t *testing.T) {
 		t.Fatalf("Failed to parse sample release asset GitHub URL into Fetch GitHubRepo struct: %s", err)
 	}
 
-	_, fetchErr := downloadReleaseAssets("*", tmpDir, githubRepo, SAMPLE_RELEASE_ASSET_VERSION, false)
+	_, fetchErr := downloadReleaseAssets(logger, "*", tmpDir, githubRepo, SAMPLE_RELEASE_ASSET_VERSION, false)
 	if fetchErr == nil {
 		t.Fatalf("Expected error for invalid regex")
 	}

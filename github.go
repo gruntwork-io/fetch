@@ -13,6 +13,7 @@ import (
 
 	"github.com/dustin/go-humanize"
 	"github.com/hashicorp/go-version"
+	"github.com/sirupsen/logrus"
 )
 
 type GitHubRepo struct {
@@ -75,7 +76,7 @@ type GitHubReleaseAsset struct {
 	Name string
 }
 
-func ParseUrlIntoGithubInstance(repoUrl string, apiv string) (GitHubInstance, *FetchError) {
+func ParseUrlIntoGithubInstance(logger *logrus.Logger, repoUrl string, apiv string) (GitHubInstance, *FetchError) {
 	var instance GitHubInstance
 
 	u, err := url.Parse(repoUrl)
@@ -86,7 +87,7 @@ func ParseUrlIntoGithubInstance(repoUrl string, apiv string) (GitHubInstance, *F
 	baseUrl := u.Host
 	apiUrl := "api.github.com"
 	if baseUrl != "github.com" && baseUrl != "www.github.com" {
-		fmt.Printf("Assuming GitHub Enterprise since the provided url (%s) does not appear to be for GitHub.com\n", repoUrl)
+		logger.Infof("Assuming GitHub Enterprise since the provided url (%s) does not appear to be for GitHub.com\n", repoUrl)
 		apiUrl = baseUrl + "/api/" + apiv
 	}
 
