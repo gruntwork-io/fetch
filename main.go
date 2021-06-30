@@ -10,7 +10,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/gruntwork-io/gruntwork-cli/logging"
+	"github.com/gruntwork-io/go-commons/logging"
 	"github.com/sirupsen/logrus"
 	cli "gopkg.in/urfave/cli.v1"
 )
