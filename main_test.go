@@ -52,7 +52,7 @@ func TestDownloadReleaseAssetsWithRegexCharacters(t *testing.T) {
 
 	const githubRepoUrl = "https://github.com/gruntwork-io/fetch-test-public"
 	const releaseAsset = "hello+world.txt"
-	const assetVersion = "v0.0.4"
+	const assetVersion = "v0.0.3"
 
 	githubRepo, err := ParseUrlIntoGitHubRepo(githubRepoUrl, "", testInst)
 	if err != nil {
