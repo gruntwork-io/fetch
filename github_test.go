@@ -25,7 +25,7 @@ func TestGetListOfReleasesFromGitHubRepo(t *testing.T) {
 		testInst         GitHubInstance
 	}{
 		// Test on a public repo whose sole purpose is to be a test fixture for this tool
-		{"https://github.com/gruntwork-io/fetch-test-public", "v0.0.1", "v0.0.3", 3, "", testInst},
+		{"https://github.com/gruntwork-io/fetch-test-public", "v0.0.1", "v0.0.4", 4, "", testInst},
 
 		// Private repo equivalent
 		{"https://github.com/gruntwork-io/fetch-test-private", "v0.0.2", "v0.0.2", 1, os.Getenv("GITHUB_OAUTH_TOKEN"), testInst},
