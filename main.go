@@ -455,6 +455,11 @@ func findAssetsInRelease(assetRegex string, release GitHubReleaseApiResponse) ([
 		if matched {
 			assetRef := asset
 			matches = append(matches, &assetRef)
+		} else if asset.Name == assetRegex {
+			// Sometimes the actual asset name contains regex symbols that could mess up matching.
+			// Perform a direct comparison as a last resort.
+			assetRef := asset
+			matches = append(matches, &assetRef)
 		}
 	}
 
