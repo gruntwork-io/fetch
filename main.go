@@ -265,7 +265,13 @@ func runFetch(c *cli.Context, logger *logrus.Logger) error {
 			}
 			os.Stdout.Write(dat)
 		} else {
-			logger.Warn("Multiple assets were downloaded. Ignoring --stdout")
+
+			if len(assetPaths) > 1 {
+				logger.Warn("Multiple assets were downloaded. Ignoring --stdout")
+			} else {
+				logger.Warn("No assets were downloaded. Ignoring --stdout")
+			}
+
 		}
 	}
 
