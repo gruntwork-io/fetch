@@ -263,7 +263,7 @@ func runFetch(c *cli.Context, logger *logrus.Logger) error {
 			if err != nil {
 				return err
 			}
-			os.Stdout.Write(dat)
+			c.App.Writer.Write(dat) // This should be stdout
 		} else {
 
 			if len(assetPaths) > 1 {
