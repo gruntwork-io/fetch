@@ -30,6 +30,7 @@ type FetchOptions struct {
 	ReleaseAsset             string
 	ReleaseAssetChecksums    map[string]bool
 	ReleaseAssetChecksumAlgo string
+	Stdout                   bool
 	LocalDownloadPath        string
 	GithubApiVersion         string
 	WithProgress             bool
@@ -53,6 +54,7 @@ const optionSourcePath = "source-path"
 const optionReleaseAsset = "release-asset"
 const optionReleaseAssetChecksum = "release-asset-checksum"
 const optionReleaseAssetChecksumAlgo = "release-asset-checksum-algo"
+const optionStdout = "stdout"
 const optionGithubAPIVersion = "github-api-version"
 const optionWithProgress = "progress"
 const optionLogLevel = "log-level"
@@ -116,6 +118,10 @@ func CreateFetchCli(version string, writer io.Writer, errwriter io.Writer) *cli.
 		cli.StringFlag{
 			Name:  optionReleaseAssetChecksumAlgo,
 			Usage: "The algorithm Fetch will use to compute a checksum of the release asset. Acceptable values\n\tare \"sha256\" and \"sha512\".",
+		},
+		cli.StringFlag{
+			Name:  optionStdout,
+			Usage: "If \"true\", the contents of the release asset is sent to standard output so it can be piped to another command.",
 		},
 		cli.StringFlag{
 			Name:  optionGithubAPIVersion,
@@ -250,6 +256,25 @@ func runFetch(c *cli.Context, logger *logrus.Logger) error {
 		}
 	}
 
+	if options.Stdout {
+		// Print to stdout only if a single asset was downloaded
+		if len(assetPaths) == 1 {
+			dat, err := os.ReadFile(assetPaths[0])
+			if err != nil {
+				return err
+			}
+			c.App.Writer.Write(dat) // This should be stdout
+		} else {
+
+			if len(assetPaths) > 1 {
+				logger.Warn("Multiple assets were downloaded. Ignoring --stdout")
+			} else {
+				logger.Warn("No assets were downloaded. Ignoring --stdout")
+			}
+
+		}
+	}
+
 	return nil
 }
 
@@ -282,6 +307,7 @@ func parseOptions(c *cli.Context, logger *logrus.Logger) FetchOptions {
 		ReleaseAsset:             c.String(optionReleaseAsset),
 		ReleaseAssetChecksums:    assetChecksumMap,
 		ReleaseAssetChecksumAlgo: c.String(optionReleaseAssetChecksumAlgo),
+		Stdout:                   c.String(optionStdout) == "true",
 		LocalDownloadPath:        localDownloadPath,
 		GithubApiVersion:         c.String(optionGithubAPIVersion),
 		WithProgress:             c.IsSet(optionWithProgress),
