@@ -416,7 +416,7 @@ func downloadReleaseAssets(logger *logrus.Logger, assetRegex string, destPath st
 
 	release, releaseInfoErr := GetGitHubReleaseInfo(githubRepo, tag)
 	if releaseInfoErr != nil {
-		return nil, err
+		return nil, releaseInfoErr
 	}
 
 	assets, err := findAssetsInRelease(assetRegex, release)

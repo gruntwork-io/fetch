@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"github.com/stretchr/testify/assert"
 	"os"
 	"testing"
 )
@@ -94,4 +95,21 @@ func TestInvalidReleaseAssetsRegex(t *testing.T) {
 	if fetchErr == nil {
 		t.Fatalf("Expected error for invalid regex")
 	}
+}
+
+func TestInvalidReleaseAssetTag(t *testing.T) {
+	tmpDir := mkTempDir(t)
+	logger := GetProjectLogger()
+	testInst := GitHubInstance{
+		BaseUrl: "github.com",
+		ApiUrl:  "api.github.com",
+	}
+
+	githubRepo, err := ParseUrlIntoGitHubRepo(SAMPLE_RELEASE_ASSET_GITHUB_REPO_URL, "", testInst)
+	if err != nil {
+		t.Fatalf("Failed to parse sample release asset GitHub URL into Fetch GitHubRepo struct: %s", err)
+	}
+
+	_, fetchErr := downloadReleaseAssets(logger, SAMPLE_RELEASE_ASSET_REGEX, tmpDir, githubRepo, "6.6.6", false)
+	assert.Error(t, fetchErr)
 }
