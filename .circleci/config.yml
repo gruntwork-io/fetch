@@ -34,13 +34,15 @@ workflows:
     jobs:
       - test:
           context:
-            - Gruntwork Admin
+            - AWS__PHXDEVOPS__circle-ci-test
+            - GITHUB__PAT__gruntwork-ci
           filters:
             tags:
               only: /^v.*/
       - build:
           context:
-            - Gruntwork Admin
+            - AWS__PHXDEVOPS__circle-ci-test
+            - GITHUB__PAT__gruntwork-ci
           requires:
             - test
           filters:
@@ -49,7 +51,8 @@ workflows:
 
       - deploy:
           context:
-            - Gruntwork Admin
+            - AWS__PHXDEVOPS__circle-ci-test
+            - GITHUB__PAT__gruntwork-ci
           requires:
             - build
           filters:
