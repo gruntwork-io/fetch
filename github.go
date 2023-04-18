@@ -76,7 +76,7 @@ type GitHubReleaseAsset struct {
 	Name string
 }
 
-func ParseUrlIntoGithubInstance(logger *logrus.Logger, repoUrl string, apiv string) (GitHubInstance, *FetchError) {
+func ParseUrlIntoGithubInstance(logger *logrus.Entry, repoUrl string, apiv string) (GitHubInstance, *FetchError) {
 	var instance GitHubInstance
 
 	u, err := url.Parse(repoUrl)
@@ -216,7 +216,6 @@ var nextLinkRegex = regexp.MustCompile(`<(.+?)>;\s*rel="next"`)
 // empty string. The link header is expected to be of the form:
 //
 // <url>; rel="next", <url>; rel="last"
-//
 func getNextUrl(links string) string {
 	if len(links) == 0 {
 		return ""

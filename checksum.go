@@ -13,7 +13,7 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-func verifyChecksumOfReleaseAsset(logger *logrus.Logger, assetPath string, checksumMap map[string]bool, algorithm string) *FetchError {
+func verifyChecksumOfReleaseAsset(logger *logrus.Entry, assetPath string, checksumMap map[string]bool, algorithm string) *FetchError {
 	computedChecksum, err := computeChecksum(assetPath, algorithm)
 	if err != nil {
 		return newError(errorWhileComputingChecksum, err.Error())

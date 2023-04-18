@@ -10,13 +10,13 @@ import (
 const DEFAULT_LOG_LEVEL = logrus.InfoLevel
 
 // GetProjectLogger returns a logging instance for this project
-func GetProjectLogger() *logrus.Logger {
-	return logging.GetLogger("fetch")
+func GetProjectLogger() *logrus.Entry {
+	return logging.GetLogger("fetch", "")
 }
 
 // GetProjectLoggerWithWriter creates a logger around the given output stream
-func GetProjectLoggerWithWriter(writer io.Writer) *logrus.Logger {
+func GetProjectLoggerWithWriter(writer io.Writer) *logrus.Entry {
 	logger := GetProjectLogger()
-	logger.SetOutput(writer)
+	logger.Logger.Out = writer
 	return logger
 }
