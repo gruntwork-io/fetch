@@ -36,7 +36,7 @@ type FetchOptions struct {
 	WithProgress             bool
 
 	// Project logger
-	Logger *logrus.Logger
+	Logger *logrus.Entry
 }
 
 type AssetDownloadResult struct {
@@ -176,7 +176,7 @@ func runFetchWrapper(c *cli.Context) {
 }
 
 // Run the fetch program
-func runFetch(c *cli.Context, logger *logrus.Logger) error {
+func runFetch(c *cli.Context, logger *logrus.Entry) error {
 	options := parseOptions(c, logger)
 	if err := validateOptions(options); err != nil {
 		return err
@@ -278,7 +278,7 @@ func runFetch(c *cli.Context, logger *logrus.Logger) error {
 	return nil
 }
 
-func parseOptions(c *cli.Context, logger *logrus.Logger) FetchOptions {
+func parseOptions(c *cli.Context, logger *logrus.Entry) FetchOptions {
 	localDownloadPath := c.Args().First()
 	sourcePaths := c.StringSlice(optionSourcePath)
 	assetChecksums := c.StringSlice(optionReleaseAssetChecksum)
@@ -340,7 +340,7 @@ func validateOptions(options FetchOptions) error {
 }
 
 // Download the specified source files from the given repo
-func downloadSourcePaths(logger *logrus.Logger, sourcePaths []string, destPath string, githubRepo GitHubRepo, latestTag string, branchName string, commitSha string, instance GitHubInstance) error {
+func downloadSourcePaths(logger *logrus.Entry, sourcePaths []string, destPath string, githubRepo GitHubRepo, latestTag string, branchName string, commitSha string, instance GitHubInstance) error {
 	if len(sourcePaths) == 0 {
 		return nil
 	}
@@ -406,7 +406,7 @@ func downloadSourcePaths(logger *logrus.Logger, sourcePaths []string, destPath s
 // were downloaded. For those that succeeded, the path they were downloaded to will be passed back
 // along with the error.
 // Returns the paths where the release assets were downloaded.
-func downloadReleaseAssets(logger *logrus.Logger, assetRegex string, destPath string, githubRepo GitHubRepo, tag string, withProgress bool) ([]string, error) {
+func downloadReleaseAssets(logger *logrus.Entry, assetRegex string, destPath string, githubRepo GitHubRepo, tag string, withProgress bool) ([]string, error) {
 	var err error
 	var assetPaths []string
 

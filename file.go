@@ -16,7 +16,7 @@ import (
 // Download the zip file at the given URL to a temporary local directory.
 // Returns the absolute path to the downloaded zip file.
 // IMPORTANT: You must call "defer os.RemoveAll(dir)" in the calling function when done with the downloaded zip file!
-func downloadGithubZipFile(logger *logrus.Logger, gitHubCommit GitHubCommit, gitHubToken string, instance GitHubInstance) (string, *FetchError) {
+func downloadGithubZipFile(logger *logrus.Entry, gitHubCommit GitHubCommit, gitHubToken string, instance GitHubInstance) (string, *FetchError) {
 
 	var zipFilePath string
 
