@@ -4,7 +4,7 @@ import (
 	"archive/zip"
 	"bytes"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -21,9 +21,7 @@ func downloadGithubZipFile(logger *logrus.Entry, gitHubCommit GitHubCommit, gitH
 	var zipFilePath string
 
 	// Create a temp directory
-	// Note that ioutil.TempDir has a peculiar interface. We need not specify any meaningful values to achieve our
-	// goal of getting a temporary directory.
-	tempDir, err := ioutil.TempDir("", "")
+	tempDir, err := os.MkdirTemp("", "")
 	if err != nil {
 		return zipFilePath, wrapError(err)
 	}
@@ -55,7 +53,7 @@ func downloadGithubZipFile(logger *logrus.Entry, gitHubCommit GitHubCommit, gitH
 	}
 
 	logger.Debugf("Writing ZIP Archive to temporary path: %s", tempDir)
-	err = ioutil.WriteFile(filepath.Join(tempDir, "repo.zip"), respBodyBuffer.Bytes(), 0644)
+	err = os.WriteFile(filepath.Join(tempDir, "repo.zip"), respBodyBuffer.Bytes(), 0644)
 	if err != nil {
 		return zipFilePath, wrapError(err)
 	}
@@ -130,13 +128,13 @@ func extractFiles(zipFilePath, filesToExtractFromZipPath, localPath string) (int
 					return fileCount, fmt.Errorf("Failed to open file %s: %s", f.Name, err)
 				}
 
-				byteArray, err := ioutil.ReadAll(readCloser)
+				byteArray, err := io.ReadAll(readCloser)
 				if err != nil {
 					return fileCount, fmt.Errorf("Failed to read file %s: %s", f.Name, err)
 				}
 
 				// Write the file
-				err = ioutil.WriteFile(filepath.Join(localPath, strings.TrimPrefix(f.Name, pathPrefix)), byteArray, 0644)
+				err = os.WriteFile(filepath.Join(localPath, strings.TrimPrefix(f.Name, pathPrefix)), byteArray, 0644)
 				if err != nil {
 					return fileCount, fmt.Errorf("Failed to write file: %s", err)
 				}

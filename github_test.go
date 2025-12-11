@@ -1,7 +1,6 @@
 package main
 
 import (
-	"io/ioutil"
 	"os"
 	"reflect"
 	"testing"
@@ -328,7 +327,7 @@ func TestDownloadGitHubPulicReleaseAsset(t *testing.T) {
 			t.Fatalf("Failed to parse %s into GitHub URL due to error: %s", tc.repoUrl, err.Error())
 		}
 
-		tmpFile, tmpErr := ioutil.TempFile("", "test-download-release-asset")
+		tmpFile, tmpErr := os.CreateTemp("", "test-download-release-asset")
 		if tmpErr != nil {
 			t.Fatalf("Failed to create temp file due to error: %s", tmpErr.Error())
 		}
