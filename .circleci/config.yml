@@ -1,26 +1,91 @@
 version: 2.1
 
+env: &env
+  environment:
+    GO_VERSION: 1.25.5
+
+install_go: &install_go
+  name: Install Go
+  command: |
+    curl -LO https://go.dev/dl/go${GO_VERSION}.linux-amd64.tar.gz
+    sudo rm -rf /usr/local/go
+    sudo tar -C /usr/local -xzf go${GO_VERSION}.linux-amd64.tar.gz
+    echo 'export PATH=$PATH:/usr/local/go/bin' >> $BASH_ENV
+
 jobs:
   test:
+    <<: *env
     machine:
       image: ubuntu-2204:current
     steps:
       - checkout
       - run:
-          name: Install Go
-          command: |
-            GO_VERSION=1.25.5
-            curl -LO https://go.dev/dl/go${GO_VERSION}.linux-amd64.tar.gz
-            sudo rm -rf /usr/local/go
-            sudo tar -C /usr/local -xzf go${GO_VERSION}.linux-amd64.tar.gz
-            echo 'export PATH=$PATH:/usr/local/go/bin' >> $BASH_ENV
+          <<: *install_go
       - run:
           name: Run Go tests
           command: go test -v -timeout 15m ./...
 
+  build:
+    <<: *env
+    machine:
+      image: ubuntu-2204:current
+    steps:
+      - checkout
+      - run:
+          <<: *install_go
+      - run:
+          name: Build binaries
+          command: |
+            mkdir -p bin
+            CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o bin/fetch_linux_amd64 -ldflags "-X main.VERSION=$CIRCLE_TAG" .
+            CGO_ENABLED=0 GOOS=linux GOARCH=386 go build -o bin/fetch_linux_386 -ldflags "-X main.VERSION=$CIRCLE_TAG" .
+            CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -o bin/fetch_linux_arm64 -ldflags "-X main.VERSION=$CIRCLE_TAG" .
+            CGO_ENABLED=0 GOOS=darwin GOARCH=amd64 go build -o bin/fetch_darwin_amd64 -ldflags "-X main.VERSION=$CIRCLE_TAG" .
+            CGO_ENABLED=0 GOOS=darwin GOARCH=arm64 go build -o bin/fetch_darwin_arm64 -ldflags "-X main.VERSION=$CIRCLE_TAG" .
+            CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -o bin/fetch_windows_amd64.exe -ldflags "-X main.VERSION=$CIRCLE_TAG" .
+      - persist_to_workspace:
+          root: .
+          paths: bin
+
+  deploy:
+    machine:
+      image: ubuntu-2204:current
+    steps:
+      - checkout
+      - attach_workspace:
+          at: .
+      - run:
+          name: Generate checksums
+          command: cd bin && sha256sum * > SHA256SUMS
+      - run:
+          name: Upload release assets
+          command: |
+            gh release upload $CIRCLE_TAG bin/* --clobber
+
 workflows:
-  test:
+  build-and-test:
     jobs:
       - test:
           context:
             - GITHUB__PAT__gruntwork-ci
+          filters:
+            tags:
+              only: /^v.*/
+      - build:
+          context:
+            - GITHUB__PAT__gruntwork-ci
+          requires:
+            - test
+          filters:
+            tags:
+              only: /^v.*/
+      - deploy:
+          context:
+            - GITHUB__PAT__gruntwork-ci
+          requires:
+            - build
+          filters:
+            tags:
+              only: /^v.*/
+            branches:
+              ignore: /.*/
