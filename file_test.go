@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
@@ -370,7 +369,7 @@ func TestExtractFiles(t *testing.T) {
 
 	for _, tc := range cases {
 		// Create a temp directory
-		tempDir, err := ioutil.TempDir("", "")
+		tempDir, err := os.MkdirTemp("", "")
 		if err != nil {
 			t.Fatalf("Failed to create temp directory: %s", err)
 		}
@@ -415,7 +414,7 @@ func TestExtractFiles(t *testing.T) {
 
 func TestExtractFilesExtractFile(t *testing.T) {
 	// Create a temp directory
-	tempDir, err := ioutil.TempDir("", "")
+	tempDir, err := os.MkdirTemp("", "")
 	if err != nil {
 		t.Fatalf("Failed to create temp directory: %s", err)
 	}

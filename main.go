@@ -12,7 +12,7 @@ import (
 
 	"github.com/gruntwork-io/go-commons/logging"
 	"github.com/sirupsen/logrus"
-	cli "gopkg.in/urfave/cli.v1"
+	"github.com/urfave/cli/v2"
 )
 
 // This variable is set at build time using -ldflags parameters. For more info, see:
@@ -63,80 +63,77 @@ const envVarGithubToken = "GITHUB_OAUTH_TOKEN"
 
 // Create the Fetch CLI App
 func CreateFetchCli(version string, writer io.Writer, errwriter io.Writer) *cli.App {
-	cli.OsExiter = func(exitCode int) {
-		// Do nothing. We just need to override this function, as the default value calls os.Exit, which
-		// kills the app (or any automated test) dead in its tracks.
-	}
-
-	app := cli.NewApp()
-	app.Name = "fetch"
-	app.Usage = "fetch makes it easy to download files, folders, and release assets from a specific git commit, branch, or tag of public and private GitHub repos."
-	app.UsageText = "fetch [global options] <local-download-path>\n   (See https://github.com/gruntwork-io/fetch for examples, argument definitions, and additional docs.)"
-	app.Author = "Gruntwork <www.gruntwork.io>"
-	app.Version = version
-	app.Writer = writer
-	app.ErrWriter = errwriter
-
-	app.Flags = []cli.Flag{
-		cli.StringFlag{
-			Name:  optionRepo,
-			Usage: "Required. Fully qualified URL of the GitHub repo.",
+	app := &cli.App{
+		Name:      "fetch",
+		Usage:     "fetch makes it easy to download files, folders, and release assets from a specific git commit, branch, or tag of public and private GitHub repos.",
+		UsageText: "fetch [global options] <local-download-path>\n   (See https://github.com/gruntwork-io/fetch for examples, argument definitions, and additional docs.)",
+		Authors:   []*cli.Author{{Name: "Gruntwork", Email: "www.gruntwork.io"}},
+		Version:   version,
+		Writer:    writer,
+		ErrWriter: errwriter,
+		Flags: []cli.Flag{
+			&cli.StringFlag{
+				Name:  optionRepo,
+				Usage: "Required. Fully qualified URL of the GitHub repo.",
+			},
+			&cli.StringFlag{
+				Name:  optionRef,
+				Usage: "The git reference to download. If specified, will take lower precendence than --commit, --branch, and --tag.",
+			},
+			&cli.StringFlag{
+				Name:  optionCommit,
+				Usage: "The specific git commit SHA to download. If specified, will override --branch and --tag.",
+			},
+			&cli.StringFlag{
+				Name:  optionBranch,
+				Usage: "The git branch from which to download the commit; the latest commit in the branch\n\twill be used.\n\tIf specified, will override --tag.",
+			},
+			&cli.StringFlag{
+				Name:  optionTag,
+				Usage: "The specific git tag to download, expressed with Version Constraint Operators.\n\tIf left blank, fetch will download the latest git tag.\n\tSee https://github.com/gruntwork-io/fetch#version-constraint-operators for examples.",
+			},
+			&cli.StringFlag{
+				Name:    optionGithubToken,
+				Usage:   "A GitHub Personal Access Token, which is required for downloading from private\n\trepos. Populate by setting env var",
+				EnvVars: []string{envVarGithubToken},
+			},
+			&cli.StringSliceFlag{
+				Name:  optionSourcePath,
+				Usage: "The source path to download from the repo. If this or --release-asset aren't specified,\n\tall files are downloaded. Can be specified more than once.",
+			},
+			&cli.StringFlag{
+				Name:  optionReleaseAsset,
+				Usage: "The name of a release asset--that is, a binary uploaded to a GitHub Release--to download.\n\tOnly works with --tag.",
+			},
+			&cli.StringSliceFlag{
+				Name:  optionReleaseAssetChecksum,
+				Usage: "The checksum that a release asset should have. Fetch will fail if this value is non-empty\n\tand does not match any of the checksums computed by Fetch.\n\tCan be specified more than once. If more than one\n\trelease asset is downloaded and one or more checksums are provided,\n\tthe asset's checksum must match one.",
+			},
+			&cli.StringFlag{
+				Name:  optionReleaseAssetChecksumAlgo,
+				Usage: "The algorithm Fetch will use to compute a checksum of the release asset. Acceptable values\n\tare \"sha256\" and \"sha512\".",
+			},
+			&cli.StringFlag{
+				Name:  optionStdout,
+				Usage: "If \"true\", the contents of the release asset is sent to standard output so it can be piped to another command.",
+			},
+			&cli.StringFlag{
+				Name:  optionGithubAPIVersion,
+				Value: "v3",
+				Usage: "The api version of the GitHub instance. If left blank, v3 will be used.\n\tThis will only be used if the repo url is not a github.com url.",
+			},
+			&cli.BoolFlag{
+				Name:  optionWithProgress,
+				Usage: "Display progress on file downloads, especially useful for large files",
+			},
+			&cli.StringFlag{
+				Name:  optionLogLevel,
+				Value: logrus.InfoLevel.String(),
+				Usage: "The logging level of the command. Acceptable values\n\tare \"trace\", \"debug\", \"info\", \"warn\", \"error\", \"fatal\" and \"panic\".",
+			},
 		},
-		cli.StringFlag{
-			Name:  optionRef,
-			Usage: "The git reference to download. If specified, will take lower precendence than --commit, --branch, and --tag.",
-		},
-		cli.StringFlag{
-			Name:  optionCommit,
-			Usage: "The specific git commit SHA to download. If specified, will override --branch and --tag.",
-		},
-		cli.StringFlag{
-			Name:  optionBranch,
-			Usage: "The git branch from which to download the commit; the latest commit in the branch\n\twill be used.\n\tIf specified, will override --tag.",
-		},
-		cli.StringFlag{
-			Name:  optionTag,
-			Usage: "The specific git tag to download, expressed with Version Constraint Operators.\n\tIf left blank, fetch will download the latest git tag.\n\tSee https://github.com/gruntwork-io/fetch#version-constraint-operators for examples.",
-		},
-		cli.StringFlag{
-			Name:   optionGithubToken,
-			Usage:  "A GitHub Personal Access Token, which is required for downloading from private\n\trepos. Populate by setting env var",
-			EnvVar: envVarGithubToken,
-		},
-		cli.StringSliceFlag{
-			Name:  optionSourcePath,
-			Usage: "The source path to download from the repo. If this or --release-asset aren't specified,\n\tall files are downloaded. Can be specified more than once.",
-		},
-		cli.StringFlag{
-			Name:  optionReleaseAsset,
-			Usage: "The name of a release asset--that is, a binary uploaded to a GitHub Release--to download.\n\tOnly works with --tag.",
-		},
-		cli.StringSliceFlag{
-			Name:  optionReleaseAssetChecksum,
-			Usage: "The checksum that a release asset should have. Fetch will fail if this value is non-empty\n\tand does not match any of the checksums computed by Fetch.\n\tCan be specified more than once. If more than one\n\trelease asset is downloaded and one or more checksums are provided,\n\tthe asset's checksum must match one.",
-		},
-		cli.StringFlag{
-			Name:  optionReleaseAssetChecksumAlgo,
-			Usage: "The algorithm Fetch will use to compute a checksum of the release asset. Acceptable values\n\tare \"sha256\" and \"sha512\".",
-		},
-		cli.StringFlag{
-			Name:  optionStdout,
-			Usage: "If \"true\", the contents of the release asset is sent to standard output so it can be piped to another command.",
-		},
-		cli.StringFlag{
-			Name:  optionGithubAPIVersion,
-			Value: "v3",
-			Usage: "The api version of the GitHub instance. If left blank, v3 will be used.\n\tThis will only be used if the repo url is not a github.com url.",
-		},
-		cli.BoolFlag{
-			Name:  optionWithProgress,
-			Usage: "Display progress on file downloads, especially useful for large files",
-		},
-		cli.StringFlag{
-			Name:  optionLogLevel,
-			Value: logrus.InfoLevel.String(),
-			Usage: "The logging level of the command. Acceptable values\n\tare \"trace\", \"debug\", \"info\", \"warn\", \"error\", \"fatal\" and \"panic\".",
-		},
+		Before: initLogger,
+		Action: runFetchWrapper,
 	}
 
 	return app
@@ -144,8 +141,6 @@ func CreateFetchCli(version string, writer io.Writer, errwriter io.Writer) *cli.
 
 func main() {
 	app := CreateFetchCli(VERSION, os.Stdout, os.Stderr)
-	app.Before = initLogger
-	app.Action = runFetchWrapper
 
 	// Run the definition of App.Action
 	app.Run(os.Args)
@@ -158,14 +153,14 @@ func initLogger(cliContext *cli.Context) error {
 	logLevel := cliContext.String(optionLogLevel)
 	level, err := logrus.ParseLevel(logLevel)
 	if err != nil {
-		return fmt.Errorf("Error: %s\n", err)
+		return fmt.Errorf("Error: %s", err)
 	}
 	logging.SetGlobalLogLevel(level)
 	return nil
 }
 
 // We just want to call runFetch(), but app.Action won't permit us to return an error, so call a wrapper function instead.
-func runFetchWrapper(c *cli.Context) {
+func runFetchWrapper(c *cli.Context) error {
 	// initialize the logger
 	logger := GetProjectLogger()
 	err := runFetch(c, logger)
@@ -173,6 +168,7 @@ func runFetchWrapper(c *cli.Context) {
 		logger.Errorf("%s\n", err)
 		os.Exit(1)
 	}
+	return nil
 }
 
 // Run the fetch program

@@ -4,14 +4,13 @@ import (
 	"bytes"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	cli "gopkg.in/urfave/cli.v1"
+	"github.com/urfave/cli/v2"
 )
 
 func TestFetchWithBranchOption(t *testing.T) {
@@ -53,7 +52,7 @@ func TestFetchWithBranchOption(t *testing.T) {
 }
 
 func TestFetchWithStdoutOption(t *testing.T) {
-	tmpDownloadPath, err := ioutil.TempDir("", "fetch-stdout-test")
+	tmpDownloadPath, err := os.MkdirTemp("", "fetch-stdout-test")
 	require.NoError(t, err)
 
 	repoUrl := "https://github.com/gruntwork-io/fetch-test-public"
@@ -73,7 +72,7 @@ func TestFetchWithStdoutOption(t *testing.T) {
 }
 
 func TestFetchWithStdoutOptionMultipleAssets(t *testing.T) {
-	tmpDownloadPath, err := ioutil.TempDir("", "fetch-stdout-test")
+	tmpDownloadPath, err := os.MkdirTemp("", "fetch-stdout-test")
 	require.NoError(t, err)
 
 	repoUrl := SAMPLE_RELEASE_ASSET_GITHUB_REPO_URL
@@ -122,7 +121,7 @@ func logBufferContentsLineByLine(t *testing.T, out bytes.Buffer, label string) {
 }
 
 func createTempDir(t *testing.T, prefix string) string {
-	dir, err := ioutil.TempDir(os.TempDir(), prefix)
+	dir, err := os.MkdirTemp(os.TempDir(), prefix)
 	if err != nil {
 		t.Fatalf("Could not create temporary directory due to error: %v", err)
 	}

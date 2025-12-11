@@ -1,7 +1,7 @@
 package main
 
 import (
-	"io/ioutil"
+	"os"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -99,7 +99,7 @@ func TestVerifyChecksumOfReleaseAsset(t *testing.T) {
 }
 
 func mkTempDir(t *testing.T) string {
-	tmpDir, err := ioutil.TempDir("", "")
+	tmpDir, err := os.MkdirTemp("", "")
 	if err != nil {
 		t.Fatalf("Failed to create temp directory: %s", err)
 	}
