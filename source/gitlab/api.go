@@ -47,6 +47,7 @@ func callGitLabApiRaw(reqUrl, method, token string, customHeaders map[string]str
 	if resp.StatusCode != http.StatusOK {
 		buf := new(bytes.Buffer)
 		_, goErr := buf.ReadFrom(resp.Body)
+		resp.Body.Close()
 		if goErr != nil {
 			return nil, goErr
 		}

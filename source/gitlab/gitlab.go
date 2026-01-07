@@ -198,6 +198,7 @@ func (s *GitLabSource) DownloadReleaseAsset(repo source.Repo, asset source.Relea
 	if resp.StatusCode != http.StatusOK {
 		buf := new(bytes.Buffer)
 		buf.ReadFrom(resp.Body)
+		resp.Body.Close()
 		return fmt.Errorf("HTTP %d downloading asset: %s", resp.StatusCode, buf.String())
 	}
 

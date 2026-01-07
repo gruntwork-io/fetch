@@ -314,7 +314,7 @@ func runFetchWithSource(c *cli.Context, logger *logrus.Entry, options FetchOptio
 			}
 			c.App.Writer.Write(dat)
 		} else if len(assetPaths) > 1 {
-			logger.Warn("Multiple assets downloaded. Ignoring --stdout")
+			logger.Warn("Multiple assets were downloaded. Ignoring --stdout")
 		} else {
 			logger.Warn("No assets downloaded. Ignoring --stdout")
 		}
@@ -341,7 +341,7 @@ func downloadSourcePathsWithSource(logger *logrus.Entry, src source.Source, sour
 	if commit.CommitSha != "" {
 		logger.Infof("Downloading commit \"%s\" of %s ...\n", commit.CommitSha, repo.Url)
 	} else if commit.BranchName != "" {
-		logger.Infof("Downloading latest from branch \"%s\" of %s ...\n", commit.BranchName, repo.Url)
+		logger.Infof("Downloading latest commit from branch \"%s\" of %s ...\n", commit.BranchName, repo.Url)
 	} else if commit.GitTag != "" {
 		logger.Infof("Downloading tag \"%s\" of %s ...\n", latestTag, repo.Url)
 	} else if commit.GitRef != "" {
