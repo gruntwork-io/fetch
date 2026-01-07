@@ -102,6 +102,36 @@ func TestParseUrlMalformed(t *testing.T) {
 	}
 }
 
+func TestParseUrlWwwPrefix(t *testing.T) {
+	t.Parallel()
+
+	config := source.Config{
+		ApiVersion: "v4",
+		Logger:     nil,
+	}
+
+	src := NewGitLabSource(config)
+
+	// www.gitlab.com URLs should have www. stripped from apiUrl
+	cases := []struct {
+		repoUrl string
+		apiUrl  string
+	}{
+		{"https://www.gitlab.com/owner/project", "gitlab.com"},
+		{"https://WWW.gitlab.com/owner/project", "gitlab.com"},
+		{"https://gitlab.com/owner/project", "gitlab.com"},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.repoUrl, func(t *testing.T) {
+			repo, err := src.ParseUrl(tc.repoUrl, "")
+			require.NoError(t, err)
+
+			assert.Equal(t, tc.apiUrl, repo.ApiUrl, "apiUrl should have www. stripped")
+		})
+	}
+}
+
 func TestParseUrlSelfHosted(t *testing.T) {
 	t.Parallel()
 

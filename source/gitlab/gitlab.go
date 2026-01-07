@@ -44,7 +44,11 @@ func (s *GitLabSource) ParseUrl(repoUrl, token string) (source.Repo, error) {
 	}
 
 	baseUrl := u.Host
-	apiUrl := baseUrl // GitLab API is at same host with /api/v4 path
+	apiUrl := baseUrl
+	// Strip www. prefix for API calls - GitLab API is at gitlab.com, not www.gitlab.com
+	if strings.HasPrefix(strings.ToLower(apiUrl), "www.") {
+		apiUrl = apiUrl[4:]
+	}
 
 	// Parse path to extract owner (namespace) and project name
 	// Path format: /group/subgroup/.../project or /user/project

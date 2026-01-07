@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"path"
+	"path/filepath"
 	"regexp"
 	"strings"
 	"sync"
@@ -558,13 +559,14 @@ func validateOptions(options FetchOptions) error {
 	return nil
 }
 
-// Delete the given zip file.
+// Delete the temp directory containing the zip file.
 func cleanupZipFile(localZipFilePath string) error {
-	err := os.Remove(localZipFilePath)
+	// Remove the entire temp directory containing the zip
+	tempDir := filepath.Dir(localZipFilePath)
+	err := os.RemoveAll(tempDir)
 	if err != nil {
-		return fmt.Errorf("Failed to delete local zip file at %s", localZipFilePath)
+		return fmt.Errorf("Failed to delete temp directory at %s", tempDir)
 	}
-
 	return nil
 }
 

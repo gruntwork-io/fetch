@@ -188,6 +188,14 @@ fetch --repo="https://ghe.mycompany.com/foo/bar" --ref="0.1.5" --release-asset="
 
 Fetch supports GitLab repositories in addition to GitHub. GitLab is auto-detected for `gitlab.com` URLs.
 
+#### Real-World Example
+
+Download a release asset from GitLab Runner (a well-known public GitLab project):
+
+```
+fetch --repo="https://gitlab.com/gitlab-org/gitlab-runner" --tag="v17.0.0" --release-asset="gitlab-runner-linux-amd64" /tmp
+```
+
 #### Public GitLab
 
 Download from a public GitLab repository:
