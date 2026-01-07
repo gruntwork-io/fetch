@@ -206,6 +206,31 @@ func (s *GitHubSource) MakeArchiveRequest(commit source.Commit, token string) (*
 	return request, nil
 }
 
+// DownloadSourceZip downloads repo archive for a git ref and returns temp file path
+func (s *GitHubSource) DownloadSourceZip(repo source.Repo, gitRef string) (string, error) {
+	commit := source.Commit{
+		Repo:   repo,
+		GitRef: gitRef,
+	}
+
+	req, err := s.MakeArchiveRequest(commit, repo.Token)
+	if err != nil {
+		return "", err
+	}
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return "", fmt.Errorf("error downloading source zip from %s: %v", req.URL.String(), err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return "", fmt.Errorf("received HTTP %d from %s", resp.StatusCode, req.URL.String())
+	}
+
+	return writeResponseToTempFile(resp)
+}
+
 func init() {
 	// Register the factory function
 	source.NewGitHubSource = NewGitHubSource

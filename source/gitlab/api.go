@@ -126,3 +126,20 @@ func writeResponseToDisk(resp *http.Response, destPath string, withProgress bool
 	_, err = io.Copy(out, reader)
 	return err
 }
+
+// writeResponseToTempFile writes HTTP response body to a temp file and returns the file path
+func writeResponseToTempFile(resp *http.Response) (string, error) {
+	tmpFile, err := os.CreateTemp("", "source-archive-*.zip")
+	if err != nil {
+		return "", fmt.Errorf("failed to create temp file: %v", err)
+	}
+	defer tmpFile.Close()
+
+	_, err = io.Copy(tmpFile, resp.Body)
+	if err != nil {
+		os.Remove(tmpFile.Name())
+		return "", fmt.Errorf("failed to write to temp file: %v", err)
+	}
+
+	return tmpFile.Name(), nil
+}

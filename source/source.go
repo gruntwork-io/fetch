@@ -75,4 +75,7 @@ type Source interface {
 
 	// MakeArchiveRequest creates HTTP request to download repo archive
 	MakeArchiveRequest(commit Commit, token string) (*http.Request, error)
+
+	// DownloadSourceZip downloads repo archive for a git ref and returns temp file path
+	DownloadSourceZip(repo Repo, gitRef string) (string, error)
 }

@@ -2,66 +2,12 @@ package main
 
 import (
 	"archive/zip"
-	"bytes"
 	"fmt"
 	"io"
-	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
-
-	"github.com/sirupsen/logrus"
 )
-
-// Download the zip file at the given URL to a temporary local directory.
-// Returns the absolute path to the downloaded zip file.
-// IMPORTANT: You must call "defer os.RemoveAll(dir)" in the calling function when done with the downloaded zip file!
-func downloadGithubZipFile(logger *logrus.Entry, gitHubCommit GitHubCommit, gitHubToken string, instance GitHubInstance) (string, *FetchError) {
-
-	var zipFilePath string
-
-	// Create a temp directory
-	tempDir, err := os.MkdirTemp("", "")
-	if err != nil {
-		return zipFilePath, wrapError(err)
-	}
-
-	// Download the zip file, possibly using the GitHub oAuth Token
-	httpClient := &http.Client{}
-	req, err := MakeGitHubZipFileRequest(gitHubCommit, gitHubToken, instance)
-	if err != nil {
-		return zipFilePath, wrapError(err)
-	}
-
-	logger.Debugf("Performing HTTP request to download GitHub ZIP Archive: %s", req.URL)
-	resp, err := httpClient.Do(req)
-	if err != nil {
-		return zipFilePath, wrapError(err)
-	}
-	if resp.StatusCode != http.StatusOK {
-		return zipFilePath, newError(failedToDownloadFile, fmt.Sprintf("Failed to download file at the url %s. Received HTTP Response %d.", req.URL.String(), resp.StatusCode))
-	}
-	if resp.Header.Get("Content-Type") != "application/zip" {
-		return zipFilePath, newError(failedToDownloadFile, fmt.Sprintf("Failed to download file at the url %s. Expected HTTP Response's \"Content-Type\" header to be \"application/zip\", but was \"%s\"", req.URL.String(), resp.Header.Get("Content-Type")))
-	}
-
-	// Copy the contents of the downloaded file to our empty file
-	respBodyBuffer := new(bytes.Buffer)
-	_, err = respBodyBuffer.ReadFrom(resp.Body)
-	if err != nil {
-		return zipFilePath, wrapError(err)
-	}
-
-	logger.Debugf("Writing ZIP Archive to temporary path: %s", tempDir)
-	err = os.WriteFile(filepath.Join(tempDir, "repo.zip"), respBodyBuffer.Bytes(), 0644)
-	if err != nil {
-		return zipFilePath, wrapError(err)
-	}
-
-	zipFilePath = filepath.Join(tempDir, "repo.zip")
-
-	return zipFilePath, nil
-}
 
 func shouldExtractPathInZip(pathPrefix string, zipPath *zip.File) bool {
 	//
@@ -144,40 +90,4 @@ func extractFiles(zipFilePath, filesToExtractFromZipPath, localPath string) (int
 	}
 
 	return fileCount, nil
-}
-
-// Return an HTTP request that will fetch the given GitHub repo's zip file for the given tag, possibly with the gitHubOAuthToken in the header
-// Respects the GitHubCommit hierachy as defined in the code comments for GitHubCommit (e.g. GitTag > CommitSha)
-func MakeGitHubZipFileRequest(gitHubCommit GitHubCommit, gitHubToken string, instance GitHubInstance) (*http.Request, error) {
-	var request *http.Request
-
-	// This represents either a commit, branch, or git tag
-	var gitRef string
-	// Ordering matters in this conditional
-	// GitRef needs to be the fallback and therefore must be last
-	// See https://github.com/gruntwork-io/fetch/issues/87 for an example
-	if gitHubCommit.CommitSha != "" {
-		gitRef = gitHubCommit.CommitSha
-	} else if gitHubCommit.BranchName != "" {
-		gitRef = gitHubCommit.BranchName
-	} else if gitHubCommit.GitTag != "" {
-		gitRef = gitHubCommit.GitTag
-	} else if gitHubCommit.GitRef != "" {
-		gitRef = gitHubCommit.GitRef
-	} else {
-		return request, fmt.Errorf("Neither a GitCommitSha nor a GitTag nor a BranchName were specified so impossible to identify a specific commit to download.")
-	}
-
-	url := fmt.Sprintf("https://%s/repos/%s/%s/zipball/%s", instance.ApiUrl, gitHubCommit.Repo.Owner, gitHubCommit.Repo.Name, gitRef)
-
-	request, err := http.NewRequest("GET", url, nil)
-	if err != nil {
-		return request, wrapError(err)
-	}
-
-	if gitHubToken != "" {
-		request.Header.Set("Authorization", fmt.Sprintf("token %s", gitHubToken))
-	}
-
-	return request, nil
 }
