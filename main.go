@@ -4,12 +4,16 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net/http"
 	"os"
 	"path"
 	"regexp"
 	"strings"
 	"sync"
 
+	"github.com/gruntwork-io/fetch/source"
+	_ "github.com/gruntwork-io/fetch/source/github" // Register GitHub source
+	_ "github.com/gruntwork-io/fetch/source/gitlab" // Register GitLab source
 	"github.com/gruntwork-io/go-commons/logging"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
@@ -26,6 +30,8 @@ type FetchOptions struct {
 	BranchName               string
 	TagConstraint            string
 	GithubToken              string
+	GitlabToken              string
+	SourceType               string // "github", "gitlab", or "auto"
 	SourcePaths              []string
 	ReleaseAsset             string
 	ReleaseAssetChecksums    map[string]bool
@@ -58,8 +64,11 @@ const optionStdout = "stdout"
 const optionGithubAPIVersion = "github-api-version"
 const optionWithProgress = "progress"
 const optionLogLevel = "log-level"
+const optionSource = "source"
+const optionGitlabToken = "gitlab-token"
 
 const envVarGithubToken = "GITHUB_OAUTH_TOKEN"
+const envVarGitlabToken = "GITLAB_TOKEN"
 
 // Create the Fetch CLI App
 func CreateFetchCli(version string, writer io.Writer, errwriter io.Writer) *cli.App {
@@ -131,6 +140,17 @@ func CreateFetchCli(version string, writer io.Writer, errwriter io.Writer) *cli.
 				Value: logrus.InfoLevel.String(),
 				Usage: "The logging level of the command. Acceptable values\n\tare \"trace\", \"debug\", \"info\", \"warn\", \"error\", \"fatal\" and \"panic\".",
 			},
+			&cli.StringFlag{
+				Name:    optionSource,
+				Aliases: []string{"s"},
+				Value:   "auto",
+				Usage:   "The source type to use: \"github\", \"gitlab\", or \"auto\" (auto-detect from URL).",
+			},
+			&cli.StringFlag{
+				Name:    optionGitlabToken,
+				Usage:   "A GitLab Personal Access Token for downloading from private GitLab repos.",
+				EnvVars: []string{envVarGitlabToken},
+			},
 		},
 		Before: initLogger,
 		Action: runFetchWrapper,
@@ -178,6 +198,26 @@ func runFetch(c *cli.Context, logger *logrus.Entry) error {
 		return err
 	}
 
+	// Determine which source to use
+	sourceType, err := source.ParseSourceType(options.SourceType)
+	if err != nil {
+		return err
+	}
+
+	// Auto-detect source type from URL if needed
+	if sourceType == source.SourceTypeAuto {
+		sourceType, err = source.DetectSourceType(options.RepoUrl)
+		if err != nil {
+			return err
+		}
+	}
+
+	// Use new source package for GitLab
+	if sourceType == source.SourceTypeGitLab {
+		return runFetchWithSource(c, logger, options, sourceType)
+	}
+
+	// For GitHub, use existing implementation for backward compatibility
 	instance, fetchErr := ParseUrlIntoGithubInstance(logger, options.RepoUrl, options.GithubApiVersion)
 	if fetchErr != nil {
 		return fetchErr
@@ -274,6 +314,279 @@ func runFetch(c *cli.Context, logger *logrus.Entry) error {
 	return nil
 }
 
+// runFetchWithSource runs fetch using the new source package (for GitLab and future sources)
+func runFetchWithSource(c *cli.Context, logger *logrus.Entry, options FetchOptions, sourceType source.SourceType) error {
+	// Get the appropriate token
+	token := options.GithubToken
+	if sourceType == source.SourceTypeGitLab && options.GitlabToken != "" {
+		token = options.GitlabToken
+	}
+
+	// Create the source
+	config := source.Config{
+		ApiVersion: options.GithubApiVersion,
+		Logger:     logger,
+	}
+
+	src, err := source.NewSource(sourceType, config)
+	if err != nil {
+		return fmt.Errorf("Failed to create source: %s", err)
+	}
+
+	logger.Infof("Using %s source for %s\n", src.Type(), options.RepoUrl)
+
+	// Parse the repo URL
+	repo, err := src.ParseUrl(options.RepoUrl, token)
+	if err != nil {
+		return fmt.Errorf("Error parsing repo URL: %s", err)
+	}
+
+	// Get tags from repo
+	tags, err := src.FetchTags(options.RepoUrl, token)
+	if err != nil {
+		return fmt.Errorf("Error fetching tags: %s", err)
+	}
+
+	// Resolve tag constraint
+	var specific bool
+	var desiredTag string
+	var tagConstraint string
+
+	if options.GitRef != "" {
+		specific, desiredTag = isTagConstraintSpecificTag(options.GitRef)
+		tagConstraint = options.GitRef
+	} else {
+		specific, desiredTag = isTagConstraintSpecificTag(options.TagConstraint)
+		tagConstraint = options.TagConstraint
+	}
+
+	if !specific {
+		latestTag, err := getLatestAcceptableTag(tagConstraint, tags)
+		if err != nil {
+			if err.errorCode == invalidTagConstraintExpression {
+				return errors.New(getErrorMessage(invalidTagConstraintExpression, err.details))
+			}
+			return fmt.Errorf("Error computing latest tag: %s", err)
+		}
+		desiredTag = latestTag
+	}
+
+	// If no release asset and no source paths, download all files
+	if len(options.SourcePaths) == 0 && options.ReleaseAsset == "" {
+		options.SourcePaths = []string{"/"}
+	}
+
+	// Download source paths
+	if len(options.SourcePaths) > 0 {
+		if err := downloadSourcePathsWithSource(logger, src, options.SourcePaths, options.LocalDownloadPath, repo, desiredTag, options.BranchName, options.CommitSha, token); err != nil {
+			return err
+		}
+	}
+
+	// Download release assets
+	var assetPaths []string
+	if options.ReleaseAsset != "" {
+		assetPaths, err = downloadReleaseAssetsWithSource(logger, src, options.ReleaseAsset, options.LocalDownloadPath, repo, desiredTag, options.WithProgress)
+		if err != nil {
+			return err
+		}
+	}
+
+	// Verify checksums
+	if len(options.ReleaseAssetChecksums) > 0 {
+		for _, assetPath := range assetPaths {
+			fetchErr := verifyChecksumOfReleaseAsset(logger, assetPath, options.ReleaseAssetChecksums, options.ReleaseAssetChecksumAlgo)
+			if fetchErr != nil {
+				return fetchErr
+			}
+		}
+	}
+
+	// Output to stdout if requested
+	if options.Stdout {
+		if len(assetPaths) == 1 {
+			dat, err := os.ReadFile(assetPaths[0])
+			if err != nil {
+				return err
+			}
+			c.App.Writer.Write(dat)
+		} else if len(assetPaths) > 1 {
+			logger.Warn("Multiple assets downloaded. Ignoring --stdout")
+		} else {
+			logger.Warn("No assets downloaded. Ignoring --stdout")
+		}
+	}
+
+	return nil
+}
+
+// downloadSourcePathsWithSource downloads source files using the source package
+func downloadSourcePathsWithSource(logger *logrus.Entry, src source.Source, sourcePaths []string, destPath string, repo source.Repo, latestTag, branchName, commitSha, token string) error {
+	if len(sourcePaths) == 0 {
+		return nil
+	}
+
+	commit := source.Commit{
+		Repo:       repo,
+		GitRef:     latestTag,
+		GitTag:     latestTag,
+		BranchName: branchName,
+		CommitSha:  commitSha,
+	}
+
+	// Log what we're downloading
+	if commit.CommitSha != "" {
+		logger.Infof("Downloading commit \"%s\" of %s ...\n", commit.CommitSha, repo.Url)
+	} else if commit.BranchName != "" {
+		logger.Infof("Downloading latest from branch \"%s\" of %s ...\n", commit.BranchName, repo.Url)
+	} else if commit.GitTag != "" {
+		logger.Infof("Downloading tag \"%s\" of %s ...\n", latestTag, repo.Url)
+	} else if commit.GitRef != "" {
+		logger.Infof("Downloading ref \"%s\" of %s ...\n", commit.GitRef, repo.Url)
+	} else {
+		return fmt.Errorf("No commit, tag, branch, or ref specified")
+	}
+
+	// Download zip file
+	localZipFilePath, err := downloadZipFileWithSource(logger, src, commit, token)
+	if err != nil {
+		return fmt.Errorf("Error downloading zip: %s", err)
+	}
+	defer cleanupZipFile(localZipFilePath)
+
+	// Extract files
+	for _, sourcePath := range sourcePaths {
+		logger.Infof("Extracting files from <repo>%s to %s ...\n", sourcePath, destPath)
+		fileCount, err := extractFiles(localZipFilePath, sourcePath, destPath)
+		plural := ""
+		if fileCount != 1 {
+			plural = "s"
+		}
+		logger.Infof("%d file%s extracted\n", fileCount, plural)
+		if err != nil {
+			return fmt.Errorf("Error extracting files: %s", err)
+		}
+	}
+
+	logger.Infof("Download and extraction complete.\n")
+	return nil
+}
+
+// downloadZipFileWithSource downloads a zip file using the source package
+func downloadZipFileWithSource(logger *logrus.Entry, src source.Source, commit source.Commit, token string) (string, error) {
+	// Create temp directory
+	tempDir, err := os.MkdirTemp("", "")
+	if err != nil {
+		return "", err
+	}
+
+	// Create HTTP request
+	req, err := src.MakeArchiveRequest(commit, token)
+	if err != nil {
+		return "", err
+	}
+
+	logger.Debugf("Downloading ZIP archive: %s", req.URL)
+
+	// Execute request
+	httpClient := &http.Client{}
+	resp, err := httpClient.Do(req)
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return "", fmt.Errorf("Failed to download: HTTP %d", resp.StatusCode)
+	}
+
+	// Write to temp file
+	zipPath := path.Join(tempDir, "repo.zip")
+	out, err := os.Create(zipPath)
+	if err != nil {
+		return "", err
+	}
+	defer out.Close()
+
+	_, err = io.Copy(out, resp.Body)
+	if err != nil {
+		return "", err
+	}
+
+	return zipPath, nil
+}
+
+// downloadReleaseAssetsWithSource downloads release assets using the source package
+func downloadReleaseAssetsWithSource(logger *logrus.Entry, src source.Source, assetRegex, destPath string, repo source.Repo, tag string, withProgress bool) ([]string, error) {
+	var assetPaths []string
+
+	if assetRegex == "" {
+		return assetPaths, nil
+	}
+
+	// Get release info
+	release, err := src.GetReleaseInfo(repo, tag)
+	if err != nil {
+		return nil, fmt.Errorf("Error getting release info: %s", err)
+	}
+
+	// Find matching assets
+	pattern, err := regexp.Compile(assetRegex)
+	if err != nil {
+		return nil, fmt.Errorf("Invalid asset regex: %s", err)
+	}
+
+	var matchingAssets []source.ReleaseAsset
+	for _, asset := range release.Assets {
+		if pattern.MatchString(asset.Name) || asset.Name == assetRegex {
+			matchingAssets = append(matchingAssets, asset)
+		}
+	}
+
+	if len(matchingAssets) == 0 {
+		return nil, fmt.Errorf("No assets matching %s in release %s", assetRegex, tag)
+	}
+
+	// Download assets concurrently
+	var wg sync.WaitGroup
+	results := make(chan AssetDownloadResult, len(matchingAssets))
+
+	for _, asset := range matchingAssets {
+		wg.Add(1)
+		go func(asset source.ReleaseAsset) {
+			defer wg.Done()
+			assetPath := path.Join(destPath, asset.Name)
+			logger.Infof("Downloading asset %s to %s\n", asset.Name, assetPath)
+			if err := src.DownloadReleaseAsset(repo, asset, assetPath, withProgress); err == nil {
+				logger.Infof("Downloaded %s\n", assetPath)
+				results <- AssetDownloadResult{assetPath, nil}
+			} else {
+				logger.Errorf("Download failed for %s: %s\n", asset.Name, err)
+				results <- AssetDownloadResult{assetPath, err}
+			}
+		}(asset)
+	}
+
+	wg.Wait()
+	close(results)
+	logger.Infof("Download of release assets complete\n")
+
+	var errorStrs []string
+	for result := range results {
+		if result.err != nil {
+			errorStrs = append(errorStrs, fmt.Sprintf("%s: %s", result.assetPath, result.err))
+		} else {
+			assetPaths = append(assetPaths, result.assetPath)
+		}
+	}
+
+	if len(errorStrs) > 0 {
+		logger.Errorf("%d errors downloading assets:\n\t%s", len(errorStrs), strings.Join(errorStrs, "\n\t"))
+	}
+
+	return assetPaths, nil
+}
+
 func parseOptions(c *cli.Context, logger *logrus.Entry) FetchOptions {
 	localDownloadPath := c.Args().First()
 	sourcePaths := c.StringSlice(optionSourcePath)
@@ -299,6 +612,8 @@ func parseOptions(c *cli.Context, logger *logrus.Entry) FetchOptions {
 		BranchName:               c.String(optionBranch),
 		TagConstraint:            c.String(optionTag),
 		GithubToken:              c.String(optionGithubToken),
+		GitlabToken:              c.String(optionGitlabToken),
+		SourceType:               c.String(optionSource),
 		SourcePaths:              sourcePaths,
 		ReleaseAsset:             c.String(optionReleaseAsset),
 		ReleaseAssetChecksums:    assetChecksumMap,
@@ -330,6 +645,12 @@ func validateOptions(options FetchOptions) error {
 
 	if len(options.ReleaseAssetChecksums) > 0 && options.ReleaseAssetChecksumAlgo == "" {
 		return fmt.Errorf("If the %s flag is set, you must also enter a value for the %s flag.", optionReleaseAssetChecksum, optionReleaseAssetChecksumAlgo)
+	}
+
+	// Validate source type
+	validSourceTypes := map[string]bool{"auto": true, "github": true, "gitlab": true}
+	if !validSourceTypes[options.SourceType] {
+		return fmt.Errorf("Invalid --%s value: %s. Valid values are: auto, github, gitlab", optionSource, options.SourceType)
 	}
 
 	return nil
