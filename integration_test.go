@@ -14,8 +14,6 @@ import (
 )
 
 func TestFetchWithBranchOption(t *testing.T) {
-	tmpDownloadPath := createTempDir(t, "fetch-branch-test")
-
 	cases := []struct {
 		name         string
 		repoUrl      string
@@ -37,6 +35,10 @@ func TestFetchWithBranchOption(t *testing.T) {
 
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
+
+			// Each parallel subtest gets its own temp directory to avoid race conditions
+			tmpDownloadPath := createTempDir(t, "fetch-branch-test")
+			t.Cleanup(func() { os.RemoveAll(tmpDownloadPath) })
 
 			cmd := fmt.Sprintf("fetch --repo %s --branch %s --source-path %s %s", tc.repoUrl, tc.branchName, tc.sourcePath, tmpDownloadPath)
 			_, erroutput, err := runFetchCommandWithOutput(t, cmd)
@@ -125,7 +127,6 @@ func createTempDir(t *testing.T, prefix string) string {
 	if err != nil {
 		t.Fatalf("Could not create temporary directory due to error: %v", err)
 	}
-	defer os.RemoveAll(dir)
 	return dir
 }
 
