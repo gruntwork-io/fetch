@@ -14,6 +14,11 @@ import (
 )
 
 func TestFetchWithBranchOption(t *testing.T) {
+	// Use shared directory - public repo has both foo.txt and bar.txt
+	tmpDownloadPath, err := os.MkdirTemp("", "fetch-branch-test")
+	require.NoError(t, err)
+	t.Cleanup(func() { os.RemoveAll(tmpDownloadPath) })
+
 	cases := []struct {
 		name         string
 		repoUrl      string
@@ -34,12 +39,6 @@ func TestFetchWithBranchOption(t *testing.T) {
 		tc := tc
 
 		t.Run(tc.name, func(t *testing.T) {
-			t.Parallel()
-
-			// Each parallel subtest gets its own temp directory to avoid race conditions
-			tmpDownloadPath := createTempDir(t, "fetch-branch-test")
-			t.Cleanup(func() { os.RemoveAll(tmpDownloadPath) })
-
 			cmd := fmt.Sprintf("fetch --repo %s --branch %s --source-path %s %s", tc.repoUrl, tc.branchName, tc.sourcePath, tmpDownloadPath)
 			_, erroutput, err := runFetchCommandWithOutput(t, cmd)
 			require.NoError(t, err)
