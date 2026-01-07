@@ -20,28 +20,28 @@ func DetectSourceType(repoUrl string) (SourceType, error) {
 
 	// Exact match for public GitLab only
 	if host == "gitlab.com" || host == "www.gitlab.com" {
-		return SourceTypeGitLab, nil
+		return TypeGitLab, nil
 	}
 
 	// Exact match for public GitHub
 	if host == "github.com" || host == "www.github.com" {
-		return SourceTypeGitHub, nil
+		return TypeGitHub, nil
 	}
 
 	// Default to GitHub for unknown domains (backward compatibility)
 	// Users with custom GitLab domains should use --source gitlab
-	return SourceTypeGitHub, nil
+	return TypeGitHub, nil
 }
 
 // ParseSourceType converts string to SourceType
 func ParseSourceType(s string) (SourceType, error) {
 	switch strings.ToLower(s) {
 	case "github":
-		return SourceTypeGitHub, nil
+		return TypeGitHub, nil
 	case "gitlab":
-		return SourceTypeGitLab, nil
+		return TypeGitLab, nil
 	case "auto", "":
-		return SourceTypeAuto, nil
+		return TypeAuto, nil
 	default:
 		return "", fmt.Errorf("unknown source type: %s (valid: github, gitlab, auto)", s)
 	}
@@ -52,7 +52,7 @@ func GetSource(repoUrl string, explicitType SourceType, config Config) (Source, 
 	var srcType SourceType
 	var err error
 
-	if explicitType != "" && explicitType != SourceTypeAuto {
+	if explicitType != "" && explicitType != TypeAuto {
 		srcType = explicitType
 	} else {
 		srcType, err = DetectSourceType(repoUrl)
@@ -67,9 +67,9 @@ func GetSource(repoUrl string, explicitType SourceType, config Config) (Source, 
 // NewSource creates a Source implementation based on type
 func NewSource(sourceType SourceType, config Config) (Source, error) {
 	switch sourceType {
-	case SourceTypeGitHub:
+	case TypeGitHub:
 		return NewGitHubSource(config), nil
-	case SourceTypeGitLab:
+	case TypeGitLab:
 		return NewGitLabSource(config), nil
 	default:
 		return nil, fmt.Errorf("unsupported source type: %s", sourceType)

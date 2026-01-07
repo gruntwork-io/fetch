@@ -10,9 +10,9 @@ import (
 type SourceType string
 
 const (
-	SourceTypeGitHub SourceType = "github"
-	SourceTypeGitLab SourceType = "gitlab"
-	SourceTypeAuto   SourceType = "auto"
+	TypeGitHub SourceType = "github"
+	TypeGitLab SourceType = "gitlab"
+	TypeAuto   SourceType = "auto"
 )
 
 // Repo represents a repository on any source

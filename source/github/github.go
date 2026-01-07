@@ -29,7 +29,7 @@ func NewGitHubSource(config source.Config) source.Source {
 
 // Type returns the source type
 func (s *GitHubSource) Type() source.SourceType {
-	return source.SourceTypeGitHub
+	return source.TypeGitHub
 }
 
 // ParseUrl parses a GitHub repo URL into a Repo struct
@@ -73,7 +73,7 @@ func (s *GitHubSource) ParseUrl(repoUrl, token string) (source.Repo, error) {
 		Owner:   matches[1],
 		Name:    matches[2],
 		Token:   token,
-		Type:    source.SourceTypeGitHub,
+		Type:    source.TypeGitHub,
 	}
 
 	return repo, nil

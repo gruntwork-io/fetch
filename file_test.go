@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 
@@ -28,7 +29,7 @@ func TestDownloadGitTagZipFile(t *testing.T) {
 		ApiVersion: "v3",
 		Logger:     GetProjectLogger(),
 	}
-	src, err := source.NewSource(source.SourceTypeGitHub, config)
+	src, err := source.NewSource(source.TypeGitHub, config)
 	require.NoError(t, err)
 
 	cases := []struct {
@@ -64,7 +65,7 @@ func TestDownloadGitBranchZipFile(t *testing.T) {
 		ApiVersion: "v3",
 		Logger:     GetProjectLogger(),
 	}
-	src, err := source.NewSource(source.SourceTypeGitHub, config)
+	src, err := source.NewSource(source.TypeGitHub, config)
 	require.NoError(t, err)
 
 	cases := []struct {
@@ -100,7 +101,7 @@ func TestDownloadBadGitBranchZipFile(t *testing.T) {
 		ApiVersion: "v3",
 		Logger:     GetProjectLogger(),
 	}
-	src, err := source.NewSource(source.SourceTypeGitHub, config)
+	src, err := source.NewSource(source.TypeGitHub, config)
 	require.NoError(t, err)
 
 	cases := []struct {
@@ -131,7 +132,7 @@ func TestDownloadGitCommitFile(t *testing.T) {
 		ApiVersion: "v3",
 		Logger:     GetProjectLogger(),
 	}
-	src, err := source.NewSource(source.SourceTypeGitHub, config)
+	src, err := source.NewSource(source.TypeGitHub, config)
 	require.NoError(t, err)
 
 	cases := []struct {
@@ -169,7 +170,7 @@ func TestDownloadBadGitCommitFile(t *testing.T) {
 		ApiVersion: "v3",
 		Logger:     GetProjectLogger(),
 	}
-	src, err := source.NewSource(source.SourceTypeGitHub, config)
+	src, err := source.NewSource(source.TypeGitHub, config)
 	require.NoError(t, err)
 
 	cases := []struct {
@@ -205,7 +206,7 @@ func TestDownloadZipFileWithBadRepoValues(t *testing.T) {
 		ApiVersion: "v3",
 		Logger:     GetProjectLogger(),
 	}
-	src, err := source.NewSource(source.SourceTypeGitHub, config)
+	src, err := source.NewSource(source.TypeGitHub, config)
 	require.NoError(t, err)
 
 	cases := []struct {
@@ -279,7 +280,7 @@ func TestExtractFiles(t *testing.T) {
 		filepath.Walk(tempDir, func(path string, info os.FileInfo, err error) error {
 			relativeFilename := strings.TrimPrefix(path, tempDir)
 
-			if !info.IsDir() && stringInSlice(relativeFilename, tc.nonemptyFiles) {
+			if !info.IsDir() && slices.Contains(tc.nonemptyFiles, relativeFilename) {
 				if info.Size() == 0 {
 					t.Fatalf("Expected %s in %s to have non-zero file size, but found file size = %d.\n", relativeFilename, tc.localFilePath, info.Size())
 				}
@@ -323,14 +324,4 @@ func TestExtractFilesExtractFile(t *testing.T) {
 		}
 		return nil
 	})
-}
-
-// Return true if the given slice contains the given string
-func stringInSlice(s string, slice []string) bool {
-	for _, val := range slice {
-		if val == s {
-			return true
-		}
-	}
-	return false
 }

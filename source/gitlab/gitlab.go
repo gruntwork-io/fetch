@@ -30,7 +30,7 @@ func NewGitLabSource(config source.Config) source.Source {
 
 // Type returns the source type
 func (s *GitLabSource) Type() source.SourceType {
-	return source.SourceTypeGitLab
+	return source.TypeGitLab
 }
 
 // ParseUrl parses a GitLab repo URL into a Repo struct
@@ -75,7 +75,7 @@ func (s *GitLabSource) ParseUrl(repoUrl, token string) (source.Repo, error) {
 		Owner:   owner, // Can be nested: group/subgroup
 		Name:    name,
 		Token:   token,
-		Type:    source.SourceTypeGitLab,
+		Type:    source.TypeGitLab,
 	}
 
 	return repo, nil

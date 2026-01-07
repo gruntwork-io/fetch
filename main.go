@@ -205,7 +205,7 @@ func runFetch(c *cli.Context, logger *logrus.Entry) error {
 	}
 
 	// Auto-detect source type from URL if needed
-	if sourceType == source.SourceTypeAuto {
+	if sourceType == source.TypeAuto {
 		sourceType, err = source.DetectSourceType(options.RepoUrl)
 		if err != nil {
 			return err
@@ -220,7 +220,7 @@ func runFetch(c *cli.Context, logger *logrus.Entry) error {
 func runFetchWithSource(c *cli.Context, logger *logrus.Entry, options FetchOptions, sourceType source.SourceType) error {
 	// Get the appropriate token
 	token := options.GithubToken
-	if sourceType == source.SourceTypeGitLab && options.GitlabToken != "" {
+	if sourceType == source.TypeGitLab && options.GitlabToken != "" {
 		token = options.GitlabToken
 	}
 

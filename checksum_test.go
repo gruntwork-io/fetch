@@ -37,7 +37,7 @@ func TestVerifyReleaseAsset(t *testing.T) {
 		ApiVersion: "v3",
 		Logger:     logger,
 	}
-	src, err := source.NewSource(source.SourceTypeGitHub, config)
+	src, err := source.NewSource(source.TypeGitHub, config)
 	require.NoError(t, err)
 
 	repo, err := src.ParseUrl(SAMPLE_RELEASE_ASSET_GITHUB_REPO_URL, "")
@@ -75,7 +75,7 @@ func TestVerifyChecksumOfReleaseAsset(t *testing.T) {
 		ApiVersion: "v3",
 		Logger:     logger,
 	}
-	src, err := source.NewSource(source.SourceTypeGitHub, config)
+	src, err := source.NewSource(source.TypeGitHub, config)
 	require.NoError(t, err)
 
 	repo, err := src.ParseUrl(SAMPLE_RELEASE_ASSET_GITHUB_REPO_URL, "")

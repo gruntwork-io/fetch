@@ -25,7 +25,7 @@ func TestDownloadReleaseAssets(t *testing.T) {
 		ApiVersion: "v3",
 		Logger:     logger,
 	}
-	src, err := source.NewSource(source.SourceTypeGitHub, config)
+	src, err := source.NewSource(source.TypeGitHub, config)
 	require.NoError(t, err)
 
 	repo, err := src.ParseUrl(SAMPLE_RELEASE_ASSET_GITHUB_REPO_URL, "")
@@ -58,7 +58,7 @@ func TestDownloadReleaseAssetsWithRegexCharacters(t *testing.T) {
 		ApiVersion: "v3",
 		Logger:     logger,
 	}
-	src, err := source.NewSource(source.SourceTypeGitHub, config)
+	src, err := source.NewSource(source.TypeGitHub, config)
 	require.NoError(t, err)
 
 	const githubRepoUrl = "https://github.com/gruntwork-io/fetch-test-public"
@@ -95,7 +95,7 @@ func TestInvalidReleaseAssetsRegex(t *testing.T) {
 		ApiVersion: "v3",
 		Logger:     logger,
 	}
-	src, err := source.NewSource(source.SourceTypeGitHub, config)
+	src, err := source.NewSource(source.TypeGitHub, config)
 	require.NoError(t, err)
 
 	repo, err := src.ParseUrl(SAMPLE_RELEASE_ASSET_GITHUB_REPO_URL, "")
@@ -116,7 +116,7 @@ func TestInvalidReleaseAssetTag(t *testing.T) {
 		ApiVersion: "v3",
 		Logger:     logger,
 	}
-	src, err := source.NewSource(source.SourceTypeGitHub, config)
+	src, err := source.NewSource(source.TypeGitHub, config)
 	require.NoError(t, err)
 
 	repo, err := src.ParseUrl(SAMPLE_RELEASE_ASSET_GITHUB_REPO_URL, "")
