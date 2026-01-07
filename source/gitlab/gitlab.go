@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	urlpath "path"
 	"regexp"
 	"strings"
 
@@ -165,11 +166,14 @@ func (s *GitLabSource) GetReleaseInfo(repo source.Repo, tag string) (source.Rele
 	}
 
 	// GitLab assets are in assets.links (uploaded files)
+	// Note: link.Name is a human-readable description (e.g., "binary: Linux amd64")
+	// We extract the actual filename from the URL for matching
 	for _, link := range apiRelease.Assets.Links {
+		filename := urlpath.Base(link.Url)
 		release.Assets = append(release.Assets, source.ReleaseAsset{
 			Id:   link.Id,
 			Url:  link.Url,
-			Name: link.Name,
+			Name: filename,
 		})
 	}
 
