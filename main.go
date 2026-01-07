@@ -450,6 +450,11 @@ func downloadReleaseAssetsWithSource(logger *logrus.Entry, src source.Source, as
 		return nil, fmt.Errorf("No assets matching %s in release %s", assetRegex, tag)
 	}
 
+	// Create destination directory if it doesn't exist
+	if err := os.MkdirAll(destPath, 0755); err != nil {
+		return nil, fmt.Errorf("Failed to create destination directory %s: %s", destPath, err)
+	}
+
 	// Download assets concurrently
 	var wg sync.WaitGroup
 	results := make(chan AssetDownloadResult, len(matchingAssets))
