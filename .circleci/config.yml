@@ -64,6 +64,9 @@ jobs:
             sudo apt-get update
             sudo apt-get install -y gh
       - run:
+          name: Authenticate GitHub CLI
+          command: echo "$GITHUB_OAUTH_TOKEN" | gh auth login --with-token
+      - run:
           name: Generate checksums
           command: cd bin && sha256sum * > SHA256SUMS
       - run:
