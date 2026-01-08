@@ -25,10 +25,13 @@ func TestDetectSourceType(t *testing.T) {
 		{"https://www.gitlab.com/owner/repo", TypeGitLab, "www.gitlab.com"},
 		{"http://gitlab.com/owner/repo", TypeGitLab, "http gitlab.com"},
 
+		// Custom domains auto-detection
+		{"https://gitlab.internal.com/owner/repo", TypeGitLab, "custom GitLab domain detected via substring"},
+		{"https://github.enterprise.com/owner/repo", TypeGitHub, "custom GitHub domain detected via substring"},
+
 		// Custom domains default to GitHub (backward compatibility)
 		{"https://git.company.com/owner/repo", TypeGitHub, "custom domain defaults to GitHub"},
 		{"https://ghe.mycompany.com/owner/repo", TypeGitHub, "GitHub Enterprise domain"},
-		{"https://gitlab.internal.com/owner/repo", TypeGitHub, "custom GitLab domain defaults to GitHub"},
 	}
 
 	for _, tc := range cases {

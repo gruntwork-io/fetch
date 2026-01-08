@@ -7,8 +7,7 @@ import (
 )
 
 // DetectSourceType determines provider from URL
-// Only auto-detects public github.com and gitlab.com
-// For custom/self-hosted domains, user must specify --source flag
+// Auto-detects GitHub or GitLab if the hostname contains "github" or "gitlab"
 // Returns GitHub as default for unknown hosts (backward compatibility)
 func DetectSourceType(repoUrl string) (SourceType, error) {
 	u, err := url.Parse(repoUrl)
@@ -18,18 +17,17 @@ func DetectSourceType(repoUrl string) (SourceType, error) {
 
 	host := strings.ToLower(u.Host)
 
-	// Exact match for public GitLab only
-	if host == "gitlab.com" || host == "www.gitlab.com" {
+	// Substring match for GitLab domains (e.g., gitlab.mycompany.com)
+	if strings.Contains(host, "gitlab") {
 		return TypeGitLab, nil
 	}
 
-	// Exact match for public GitHub
-	if host == "github.com" || host == "www.github.com" {
+	// Substring match for GitHub domains (e.g., github.mycompany.com)
+	if strings.Contains(host, "github") {
 		return TypeGitHub, nil
 	}
 
 	// Default to GitHub for unknown domains (backward compatibility)
-	// Users with custom GitLab domains should use --source gitlab
 	return TypeGitHub, nil
 }
 
