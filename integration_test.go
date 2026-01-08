@@ -14,7 +14,10 @@ import (
 )
 
 func TestFetchWithBranchOption(t *testing.T) {
-	tmpDownloadPath := createTempDir(t, "fetch-branch-test")
+	// Use shared directory - public repo has both foo.txt and bar.txt
+	tmpDownloadPath, err := os.MkdirTemp("", "fetch-branch-test")
+	require.NoError(t, err)
+	t.Cleanup(func() { os.RemoveAll(tmpDownloadPath) })
 
 	cases := []struct {
 		name         string
@@ -36,8 +39,6 @@ func TestFetchWithBranchOption(t *testing.T) {
 		tc := tc
 
 		t.Run(tc.name, func(t *testing.T) {
-			t.Parallel()
-
 			cmd := fmt.Sprintf("fetch --repo %s --branch %s --source-path %s %s", tc.repoUrl, tc.branchName, tc.sourcePath, tmpDownloadPath)
 			_, erroutput, err := runFetchCommandWithOutput(t, cmd)
 			require.NoError(t, err)
@@ -125,7 +126,6 @@ func createTempDir(t *testing.T, prefix string) string {
 	if err != nil {
 		t.Fatalf("Could not create temporary directory due to error: %v", err)
 	}
-	defer os.RemoveAll(dir)
 	return dir
 }
 

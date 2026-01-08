@@ -21,6 +21,7 @@ authentication. Fetch makes it possible to handle all of these cases with a one-
 - Verify the SHA256 or SHA512 checksum of a binary asset.
 - Download from public repos, or from private repos by specifying a [GitHub Personal Access Token](https://help.github.com/articles/creating-an-access-token-for-command-line-use/).
 - Download from GitHub Enterprise.
+- Download from [GitLab](#gitlab-support) (public, private, and self-hosted instances).
 - When specifying a git tag, you can can specify either exactly the tag you want, or a [Tag Constraint Expression](#tag-constraint-expressions) to do things like "get the latest non-breaking version" of this repo. Note that fetch assumes git tags are specified according to [Semantic Versioning](http://semver.org/) principles.
 
 #### Quick examples
@@ -182,6 +183,62 @@ Download the release asset `foo.exe` from a GitHub release hosted on a GitHub En
 ```
 fetch --repo="https://ghe.mycompany.com/foo/bar" --ref="0.1.5" --release-asset="foo.exe" /tmp
 ```
+
+## GitLab Support
+
+Fetch supports GitLab repositories in addition to GitHub. GitLab is auto-detected for `gitlab.com` URLs.
+
+#### Real-World Example
+
+Download a release asset from GitLab Runner (a well-known public GitLab project):
+
+```
+fetch --repo="https://gitlab.com/gitlab-org/gitlab-runner" --tag="v17.0.0" --release-asset="gitlab-runner-linux-amd64" /tmp
+```
+
+#### Public GitLab
+
+Download from a public GitLab repository:
+
+```
+fetch --repo="https://gitlab.com/group/project" --tag="v1.0.0" /tmp
+```
+
+#### Private GitLab
+
+For private GitLab repositories, provide a [Personal Access Token](https://docs.gitlab.com/ee/user/profile/personal_access_tokens.html) with `read_api` scope:
+
+```
+export GITLAB_TOKEN=your_token
+fetch --repo="https://gitlab.com/group/project" --tag="v1.0.0" /tmp
+```
+
+Or use the `--gitlab-token` flag:
+
+```
+fetch --repo="https://gitlab.com/group/project" --gitlab-token="your_token" --tag="v1.0.0" /tmp
+```
+
+#### Self-hosted GitLab (Custom Domain)
+
+For self-hosted GitLab instances with custom domains, use the `--source gitlab` flag:
+
+```
+fetch --repo="https://git.company.com/group/project" --source=gitlab --gitlab-token="$GITLAB_TOKEN" --tag="v1.0.0" /tmp
+```
+
+#### Nested Groups (Subgroups)
+
+GitLab supports nested groups. Fetch handles these automatically:
+
+```
+fetch --repo="https://gitlab.com/org/team/subteam/project" --tag="v1.0.0" /tmp
+```
+
+#### GitLab CLI Options
+
+- `--source` (**Optional**): Force source type. Values: `github`, `gitlab`, `auto` (default). Use `gitlab` for self-hosted GitLab with custom domains.
+- `--gitlab-token` (**Optional**): GitLab Personal Access Token. Also available via `GITLAB_TOKEN` environment variable.
 
 ##### Release Instructions
 
