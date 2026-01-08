@@ -50,8 +50,6 @@ jobs:
   deploy:
     machine:
       image: ubuntu-2204:current
-    environment:
-      GH_TOKEN: ${GITHUB_OAUTH_TOKEN}
     steps:
       - checkout
       - attach_workspace:
