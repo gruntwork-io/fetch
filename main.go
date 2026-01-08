@@ -84,7 +84,7 @@ func CreateFetchCli(version string, writer io.Writer, errwriter io.Writer) *cli.
 		Flags: []cli.Flag{
 			&cli.StringFlag{
 				Name:  optionRepo,
-				Usage: "Required. Fully qualified URL of the GitHub repo.",
+				Usage: "Required. Fully qualified URL of the Git repo (GitHub or GitLab).",
 			},
 			&cli.StringFlag{
 				Name:  optionRef,
