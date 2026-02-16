@@ -2,7 +2,7 @@ version: 2.1
 
 env: &env
   environment:
-    GO_VERSION: 1.25.5
+    GO_VERSION: 1.26.0
 
 install_go: &install_go
   name: Install Go
