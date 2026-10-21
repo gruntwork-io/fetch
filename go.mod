@@ -1,6 +1,6 @@
 module github.com/gruntwork-io/fetch
 
-go 1.26
+go 1.27
 
 require (
 	github.com/dustin/go-humanize v1.0.1
