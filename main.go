@@ -15,7 +15,6 @@ import (
 	"github.com/gruntwork-io/fetch/source"
 	_ "github.com/gruntwork-io/fetch/source/github" // Register GitHub source
 	_ "github.com/gruntwork-io/fetch/source/gitlab" // Register GitLab source
-	"github.com/gruntwork-io/go-commons/logging"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 )
@@ -176,7 +175,7 @@ func initLogger(cliContext *cli.Context) error {
 	if err != nil {
 		return fmt.Errorf("Error: %s", err)
 	}
-	logging.SetGlobalLogLevel(level)
+	logrus.SetLevel(level)
 	return nil
 }
 
