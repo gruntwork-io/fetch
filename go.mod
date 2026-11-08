@@ -4,7 +4,6 @@ go 1.27
 
 require (
 	github.com/dustin/go-humanize v1.0.1
-	github.com/gruntwork-io/go-commons v0.17.2
 	github.com/hashicorp/go-version v1.8.0
 	github.com/sirupsen/logrus v1.9.4
 	github.com/stretchr/testify v1.10.0
