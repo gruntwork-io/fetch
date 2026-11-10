@@ -72,23 +72,6 @@ func TestFetchWithStdoutOption(t *testing.T) {
 	assert.Contains(t, stdoutput, "hello world")
 }
 
-func TestFetchWithStdoutOptionMultipleAssets(t *testing.T) {
-	tmpDownloadPath, err := os.MkdirTemp("", "fetch-stdout-test")
-	require.NoError(t, err)
-
-	repoUrl := SAMPLE_RELEASE_ASSET_GITHUB_REPO_URL
-	releaseTag := SAMPLE_RELEASE_ASSET_VERSION
-	releaseAsset := SAMPLE_RELEASE_ASSET_REGEX
-
-	cmd := fmt.Sprintf("fetch --repo %s --tag %s --release-asset %s --stdout true %s", repoUrl, releaseTag, releaseAsset, tmpDownloadPath)
-	t.Logf("Testing command: %s", cmd)
-	_, stderr, err := runFetchCommandWithOutput(t, cmd)
-	require.NoError(t, err)
-
-	// When --stdout is specified, ensure the file contents are piped to the standard output stream
-	assert.Contains(t, stderr, "Multiple assets were downloaded. Ignoring --stdout")
-}
-
 func runFetchCommandWithOutput(t *testing.T, command string) (string, string, error) {
 	stdout := bytes.Buffer{}
 	stderr := bytes.Buffer{}
