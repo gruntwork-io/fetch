@@ -143,3 +143,39 @@ func TestGetLatestAcceptableTagNoSuchTag(t *testing.T) {
 		}
 	}
 }
+
+func TestResolveDesiredTag(t *testing.T) {
+	t.Parallel()
+
+	// Tags that are not valid versions, like the pre-release tag from the original bug report.
+	oddTags := []string{"1.0.0", "testing_fix-multi-netif-ctrl-tab_07_06"}
+
+	cases := []struct {
+		name        string
+		options     FetchOptions
+		tags        []string
+		expectedTag string
+	}{
+		{"specific tag", FetchOptions{TagConstraint: "1.0.0"}, oddTags, "1.0.0"},
+		{"tag constraint", FetchOptions{TagConstraint: "~> 1.0.0"}, []string{"1.0.0", "1.0.3"}, "1.0.3"},
+		{"ref constraint", FetchOptions{GitRef: ">= 1.0.0"}, []string{"1.0.0", "1.2.0"}, "1.2.0"},
+		{"branch only", FetchOptions{BranchName: "master"}, oddTags, ""},
+		{"commit only", FetchOptions{CommitSha: "abc123"}, oddTags, ""},
+	}
+
+	for _, tc := range cases {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			tag, err := resolveDesiredTag(tc.options, tc.tags)
+			if err != nil {
+				t.Fatalf("Unexpected error from resolveDesiredTag: %s", err)
+			}
+
+			if tag != tc.expectedTag {
+				t.Fatalf("Expected tag %q, but received %q", tc.expectedTag, tag)
+			}
+		})
+	}
+}
