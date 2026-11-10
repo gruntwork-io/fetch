@@ -12,9 +12,9 @@ import (
 )
 
 // Expect to download 2 assets:
-// - health-checker_linux_386
-// - health-checker_linux_amd64
-const SAMPLE_RELEASE_ASSET_REGEX = "health-checker_linux_[a-z0-9]+"
+// - sample_linux_386
+// - sample_linux_amd64
+const SAMPLE_RELEASE_ASSET_REGEX = "sample_linux_[a-z0-9]+"
 
 func TestDownloadReleaseAssets(t *testing.T) {
 	tmpDir := mkTempDir(t)

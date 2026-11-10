@@ -10,17 +10,17 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-const SAMPLE_RELEASE_ASSET_GITHUB_REPO_URL = "https://github.com/gruntwork-io/health-checker"
-const SAMPLE_RELEASE_ASSET_VERSION = "v0.0.2"
-const SAMPLE_RELEASE_ASSET_NAME = "health-checker_linux_amd64"
+const SAMPLE_RELEASE_ASSET_GITHUB_REPO_URL = "https://github.com/gruntwork-io/fetch-test-public"
+const SAMPLE_RELEASE_ASSET_VERSION = "v0.0.5"
+const SAMPLE_RELEASE_ASSET_NAME = "sample_linux_amd64"
 
 // Checksums can be computed by running "shasum -a [256|512] /path/to/file" on any UNIX system
-const SAMPLE_RELEASE_ASSET_CHECKSUM_SHA256 = "4314590d802760c29a532e2ef22689d4656d184b3daa63f96bc8b8f76f5d22f0"
-const SAMPLE_RELEASE_ASSET_CHECKSUM_SHA512 = "28d9e487c1001e3c28d915c9edd3ed37632f10b923bd94d4d9ac6d28c0af659abbe2456da167763d51def2182fef01c3f73c67edf527d4ed1389a28ba10db332"
+const SAMPLE_RELEASE_ASSET_CHECKSUM_SHA256 = "d54d20eadbec9c9cc5ac6e0e371abc96d64a0d724d1cf45297fab6098026a69d"
+const SAMPLE_RELEASE_ASSET_CHECKSUM_SHA512 = "1690ac6a33e8184c37abeb250efe218e93ad3c2f2c899b97b6767192075e7a7c26314279fe346a2581a6c10cf25b8e425eeb2f5593e773de56a222576904d72a"
 
 var SAMPLE_RELEASE_ASSET_CHECKSUMS_SHA256 = map[string]bool{
-	"4314590d802760c29a532e2ef22689d4656d184b3daa63f96bc8b8f76f5d22f0": true,
-	"de31de3055a2374d3bb38d847323e39821265ae611d990cffaa6f80a11ad2609": true,
+	"d54d20eadbec9c9cc5ac6e0e371abc96d64a0d724d1cf45297fab6098026a69d": true,
+	"3ad00987ec952f521f89cd901e4cf4fcf25100a3145613131a893a52bc78ee24": true,
 }
 
 var SAMPLE_RELEASE_ASSET_CHECKSUMS_SHA256_NO_MATCH = map[string]bool{
