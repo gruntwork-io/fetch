@@ -250,27 +250,9 @@ func runFetchWithSource(c *cli.Context, logger *logrus.Entry, options FetchOptio
 	}
 
 	// Resolve tag constraint
-	var specific bool
-	var desiredTag string
-	var tagConstraint string
-
-	if options.GitRef != "" {
-		specific, desiredTag = isTagConstraintSpecificTag(options.GitRef)
-		tagConstraint = options.GitRef
-	} else {
-		specific, desiredTag = isTagConstraintSpecificTag(options.TagConstraint)
-		tagConstraint = options.TagConstraint
-	}
-
-	if !specific {
-		latestTag, err := getLatestAcceptableTag(tagConstraint, tags)
-		if err != nil {
-			if err.errorCode == invalidTagConstraintExpression {
-				return errors.New(getErrorMessage(invalidTagConstraintExpression, err.details))
-			}
-			return fmt.Errorf("Error computing latest tag: %s", err)
-		}
-		desiredTag = latestTag
+	desiredTag, err := resolveDesiredTag(options, tags)
+	if err != nil {
+		return err
 	}
 
 	// If no release asset and no source paths, download all files
@@ -320,6 +302,35 @@ func runFetchWithSource(c *cli.Context, logger *logrus.Entry, options FetchOptio
 	}
 
 	return nil
+}
+
+// resolveDesiredTag works out which tag to fetch from the --ref or --tag value and the tags available in the repo.
+func resolveDesiredTag(options FetchOptions, tags []string) (string, error) {
+	var specific bool
+	var desiredTag string
+	var tagConstraint string
+
+	if options.GitRef != "" {
+		specific, desiredTag = isTagConstraintSpecificTag(options.GitRef)
+		tagConstraint = options.GitRef
+	} else {
+		specific, desiredTag = isTagConstraintSpecificTag(options.TagConstraint)
+		tagConstraint = options.TagConstraint
+	}
+
+	// With only --branch or --commit there is no tag constraint, so there is no tag to compute.
+	if !specific && tagConstraint != "" {
+		latestTag, err := getLatestAcceptableTag(tagConstraint, tags)
+		if err != nil {
+			if err.errorCode == invalidTagConstraintExpression {
+				return "", errors.New(getErrorMessage(invalidTagConstraintExpression, err.details))
+			}
+			return "", fmt.Errorf("Error computing latest tag: %s", err)
+		}
+		desiredTag = latestTag
+	}
+
+	return desiredTag, nil
 }
 
 // downloadSourcePathsWithSource downloads source files using the source package
