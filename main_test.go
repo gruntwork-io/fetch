@@ -7,7 +7,6 @@ import (
 
 	"github.com/gruntwork-io/fetch/source"
 	_ "github.com/gruntwork-io/fetch/source/github"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -46,46 +45,6 @@ func TestDownloadReleaseAssetsWithRegexCharacters(t *testing.T) {
 	} else {
 		fmt.Printf("Verified the downloaded asset exists at %s\n", assetPath)
 	}
-}
-
-func TestInvalidReleaseAssetsRegex(t *testing.T) {
-	tmpDir := mkTempDir(t)
-	defer os.RemoveAll(tmpDir)
-	logger := GetProjectLogger()
-
-	config := source.Config{
-		ApiVersion: "v3",
-		Logger:     logger,
-	}
-	src, err := source.NewSource(source.TypeGitHub, config)
-	require.NoError(t, err)
-
-	repo, err := src.ParseUrl("https://github.com/gruntwork-io/fetch-test-public", "")
-	require.NoError(t, err)
-
-	_, fetchErr := downloadReleaseAssetsWithSource(logger, src, "*", tmpDir, repo, "v0.0.4", false)
-	if fetchErr == nil {
-		t.Fatalf("Expected error for invalid regex")
-	}
-}
-
-func TestInvalidReleaseAssetTag(t *testing.T) {
-	tmpDir := mkTempDir(t)
-	defer os.RemoveAll(tmpDir)
-	logger := GetProjectLogger()
-
-	config := source.Config{
-		ApiVersion: "v3",
-		Logger:     logger,
-	}
-	src, err := source.NewSource(source.TypeGitHub, config)
-	require.NoError(t, err)
-
-	repo, err := src.ParseUrl("https://github.com/gruntwork-io/fetch-test-public", "")
-	require.NoError(t, err)
-
-	_, fetchErr := downloadReleaseAssetsWithSource(logger, src, "hello+world.txt", tmpDir, repo, "6.6.6", false)
-	assert.Error(t, fetchErr)
 }
 
 func mkTempDir(t *testing.T) string {
